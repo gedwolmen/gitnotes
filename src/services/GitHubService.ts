@@ -117,7 +117,7 @@ export interface GitHubRepository {
   html_url: string;
   description: string;
   private: boolean;
-  /** GitHub repo size in KB (0 if unknown). Drives the large-repo API-mode nudge. */
+  /** GitHub repo size in KB (0 if unknown). Drives the large-repo warning. */
   size?: number;
 }
 
@@ -247,7 +247,7 @@ class GitHubServiceClass {
    * Per-process cache of `(owner/repo/path@ref) → sha`. Populated on every
    * successful read/write that surfaces a sha and invalidated on 409. Lets
    * the upsert / delete paths skip the GET-for-sha that #565 phase C calls
-   * out as a fixed cost on every API-mode write. Cold on app launch (1
+   * out as a fixed cost on every write. Cold on app launch (1
    * legacy GET on first touch); after that, in-session repeat saves cost
    * only the PUT/DELETE round-trip.
    */

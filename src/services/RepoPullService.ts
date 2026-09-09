@@ -9,7 +9,6 @@ import { canPersistNoteTags } from '../utils/noteTagSupport';
 import { TemplateRepoPreferenceService } from './TemplateRepoPreferenceService';
 import { parseTemplateMarkdown } from './TemplateMarkdownService';
 import type { NoteTemplate } from './TemplateService';
-import { SyncEngineService, NoteSyncQueueService } from './cloneSyncServiceImpl';
 import { GitFsService } from './git/GitFsService';
 import { resolveBranch } from './git/branchResolver';
 import { AuthService } from './AuthService';
@@ -79,15 +78,10 @@ async function handleCorruptionErrors<T>(fn: () => Promise<T>, repoPath: string,
 }
 
 /**
- * Picks the read transport for a repo based on the user's per-repo
- * SyncEngineService toggle. In 'clone' mode the working copy is cloned
- * lazily on first pull (and fetched on subsequent pulls); in 'api' mode the
- * existing GitHub Contents API path is used. Output shapes match — both
- * `listTree` returns `{ path, type, sha }[]` and `readFile` returns
- * `string | null` — so callers can swap transports without branching.
+ * Reads from the local cloned working tree. The working copy is cloned lazily
+ * on first pull and fetched (fast-forward) on subsequent pulls.
  */
 export type RepoReader = {
-  mode: 'api' | 'clone';
   listTree: () => Promise<{ path: string; type: 'blob' | 'tree'; sha: string; size?: number }[]>;
   readFile: (path: string) => Promise<string | null>;
 };
@@ -97,64 +91,53 @@ async function getRepoReader(
   owner: string,
   repo: string,
   branch: string,
-  provider?: GitHostProvider,
+  _provider?: GitHostProvider,
 ): Promise<RepoReader> {
-  const mode = await SyncEngineService.getMode(repoPath);
-  if (mode === 'clone') {
-    const token = (await AuthService.getToken()) ?? undefined;
-    const savedRepos = await StorageService.getSavedRepositories();
-    const repoId = savedRepos.find((r) => r.path === repoPath)?.id;
-    const cloned = await GitFsService.isCloned({ repoPath });
-    if (!cloned) {
-      await GitFsService.cloneExclusive({ repoPath, branch, token, repoId });
-    } else {
-      const result = await GitFsService.pullWithFastForward({ repoPath, branch, token });
-      if (!result.ok) {
-        if (result.reason === 'diverged') {
-          const remoteRefName = `refs/remotes/origin/${branch}`;
-          return {
-            mode,
-            listTree: () => handleCorruptionErrors(() => GitFsService.listTree({ repoPath, ref: remoteRefName }), repoPath, branch, token),
-            readFile: (path: string) =>
-              handleCorruptionErrors(() => GitFsService.readFile({ repoPath, ref: remoteRefName, filepath: path }), repoPath, branch, token),
-          };
-        }
-        const errorMsg = result.error ?? '';
-        const isMissingObject = /Could not find object|not foundobject|NotFoundError|Packfile trailer mismatch/i.test(errorMsg);
-        if (isMissingObject) {
-          console.warn(`[RepoPullService] clone appears corrupted (${errorMsg}), re-cloning...`);
-          const hasLocalCommits = await hasUnpushedCommits(repoPath, branch);
-          if (hasLocalCommits) {
-            throw new Error(
-              `Clone corruption detected in ${repoPath}@${branch} with unpushed local commits. ` +
-              `Please push your changes or reset before continuing.`,
-            );
-          }
-          await GitFsService.removeRepo({ repoPath });
-          await GitFsService.cloneExclusive({ repoPath, branch, token, repoId });
-          return {
-            mode,
-            listTree: () => GitFsService.listTree({ repoPath, ref: branch }),
-            readFile: (path: string) =>
-              GitFsService.readFile({ repoPath, ref: branch, filepath: path }),
-          };
-        }
-        const detail = result.error ? ` — ${result.error}` : '';
-        throw new Error(
-          `Local repo ${repoPath}@${branch} pull failed (${result.reason}${detail}). Will retry automatically.`,
-        );
+  const token = (await AuthService.getToken()) ?? undefined;
+  const savedRepos = await StorageService.getSavedRepositories();
+  const repoId = savedRepos.find((r) => r.path === repoPath)?.id;
+  const cloned = await GitFsService.isCloned({ repoPath });
+  if (!cloned) {
+    await GitFsService.cloneExclusive({ repoPath, branch, token, repoId });
+  } else {
+    const result = await GitFsService.pullWithFastForward({ repoPath, branch, token });
+    if (!result.ok) {
+      if (result.reason === 'diverged') {
+        const remoteRefName = `refs/remotes/origin/${branch}`;
+        return {
+          listTree: () => handleCorruptionErrors(() => GitFsService.listTree({ repoPath, ref: remoteRefName }), repoPath, branch, token),
+          readFile: (path: string) =>
+            handleCorruptionErrors(() => GitFsService.readFile({ repoPath, ref: remoteRefName, filepath: path }), repoPath, branch, token),
+        };
       }
+      const errorMsg = result.error ?? '';
+      const isMissingObject = /Could not find object|not foundobject|NotFoundError|Packfile trailer mismatch/i.test(errorMsg);
+      if (isMissingObject) {
+        console.warn(`[RepoPullService] clone appears corrupted (${errorMsg}), re-cloning...`);
+        const hasLocalCommits = await hasUnpushedCommits(repoPath, branch);
+        if (hasLocalCommits) {
+          throw new Error(
+            `Clone corruption detected in ${repoPath}@${branch} with unpushed local commits. ` +
+            `Please push your changes or reset before continuing.`,
+          );
+        }
+        await GitFsService.removeRepo({ repoPath });
+        await GitFsService.cloneExclusive({ repoPath, branch, token, repoId });
+        return {
+          listTree: () => GitFsService.listTree({ repoPath, ref: branch }),
+          readFile: (path: string) =>
+            GitFsService.readFile({ repoPath, ref: branch, filepath: path }),
+        };
+      }
+      const detail = result.error ? ` — ${result.error}` : '';
+      throw new Error(
+        `Local repo ${repoPath}@${branch} pull failed (${result.reason}${detail}). Will retry automatically.`,
+      );
     }
-    return {
-      mode,
-      listTree: () => GitHubService.getTreeRecursiveOrThrow(owner, repo, branch),
-      readFile: (path: string) => GitHubService.getFileContent(owner, repo, path, branch),
-    };
   }
   return {
-    mode,
-    listTree: () => GitHubService.getTreeRecursiveOrThrow(owner, repo, branch),
-    readFile: (path: string) => GitHubService.getFileContent(owner, repo, path, branch),
+    listTree: () => GitFsService.listTree({ repoPath, ref: branch }),
+    readFile: (path: string) => GitFsService.readFile({ repoPath, ref: branch, filepath: path }),
   };
 }
 
@@ -167,10 +150,10 @@ async function fetchDirectoryFiles(
   provider?: GitHostProvider,
   reader?: RepoReader,
 ): Promise<{ path: string; content: string }[]> {
-  // Route through the mode-aware reader so clone mode reads todos/canvases
-  // from the local clone (no Contents-API calls) and the recursive tree
-  // pulls nested files under `dirPath/` (#885). The `dirPath + '/'` prefix
-  // guards against sibling-dir false matches (e.g. `todos/` vs `todos-archive/`).
+  // Uses the provided reader (or gets one via getRepoReader) to read from
+  // the local clone. The recursive tree pulls nested files under `dirPath/`
+  // (#885). The `dirPath + '/'` prefix guards against sibling-dir false
+  // matches (e.g. `todos/` vs `todos-archive/`).
   const resolvedReader = reader ?? await getRepoReader(repoPath, owner, repo, branch, provider);
   const tree = await resolvedReader.listTree();
   const files = tree.filter(
@@ -197,31 +180,18 @@ const NOTE_EXTS = ['md', 'markdown', 'norg', 'org', 'txt'] as const;
 
 /**
  * Paths that exist locally (staged but not yet pushed) and must be immune to
- * the remote reconcile. API mode: pending sync-queue mutations. Clone mode:
- * the local branch tree, which includes unpushed local commits — otherwise a
- * pull that races an in-flight push would see the remote without the note and
- * drop the local copy (data loss after restart).
+ * the remote reconcile. Uses the local branch tree, which includes unpushed
+ * local commits — otherwise a pull that races an in-flight push would see the
+ * remote without the note and drop the local copy (data loss after restart).
  */
 async function collectPendingPaths(
   repoPath: string,
   branch: string,
-  mode: 'api' | 'clone',
   prefix: string,
 ): Promise<string[]> {
-  if (mode === 'clone') {
-    try {
-      const tree = await GitFsService.listTree({ repoPath, ref: branch });
-      return tree.filter((e) => e.type === 'blob' && e.path.startsWith(prefix)).map((e) => e.path);
-    } catch {
-      return [];
-    }
-  }
   try {
-    const queue = await NoteSyncQueueService.getAll();
-    return queue
-      .filter((m) => m.params.repo === repoPath && (m.params.branch ?? 'main') === branch)
-      .map((m) => m.params.filePath ?? '')
-      .filter((p) => p.startsWith(prefix));
+    const tree = await GitFsService.listTree({ repoPath, ref: branch });
+    return tree.filter((e) => e.type === 'blob' && e.path.startsWith(prefix)).map((e) => e.path);
   } catch {
     return [];
   }
@@ -371,12 +341,11 @@ async function pullNotesFromRepo(
 
     // Protect locally-staged-but-unpushed notes from the remote reconcile.
     // With stage-then-push, `updateNote({ filePath })` runs at SAVE time, so
-    // a note can carry a filePath before its push has reached GitHub (queue
-    // pending in API mode, unpushed local commit in clone mode). Dropping it
-    // here would DELETE a note the user just wrote — data loss after a
-    // restart mid-push. Only drop a note when we are sure the remote no
-    // longer has it AND nothing local is waiting to push it.
-    const protectedPaths = await collectPendingPaths(repoPath, branch, resolvedReader.mode, '');
+    // a note can carry a filePath before its push has reached GitHub (unpushed
+    // local commit). Dropping it here would DELETE a note the user just wrote
+    // — data loss after a restart mid-push. Only drop a note when we are sure
+    // the remote no longer has it AND nothing local is waiting to push it.
+    const protectedPaths = await collectPendingPaths(repoPath, branch, '');
     for (const p of protectedPaths) remoteFilePaths.add(p);
 
     let allNotes = await StorageService.getAllNotes();
@@ -408,8 +377,6 @@ async function pullNotesFromRepo(
       if (processedCount % 25 === 0) await yieldToMain();
       processedCount++;
       onProgress?.('Importing notes…', processedCount, noteBlobs.length);
-      const isTombstoned = await NoteSyncQueueService.isTombstoned(repoPath, branch, item.path);
-      if (isTombstoned) continue;
       const ext = item.path.split('.').pop()?.toLowerCase() ?? 'md';
       const format = noteFormatFromExt(ext);
       const tags = extractTagsFromContent(item.content, format);
@@ -470,12 +437,11 @@ async function pullNotesFromRepo(
     //   * Scoped to this (repoPath, branch) — never touches notes from other
     //     repos or branches.
     //   * Only deletes notes that have a `filePath` (i.e. originated from the
-    //     repo). Local-only drafts and pending uploads have no filePath until
-    //     `NoteSyncQueueService` writes one back after a successful push.
-    //   * Tree fetch uses the throwing `getTreeRecursiveOrThrow`, so we only
-    //     reach this point when the GitHub API responded successfully. An
+    //     repo). Local-only drafts have no filePath.
+    //   * Tree fetch uses the throwing listTree, so we only
+    //     reach this point when the local tree was read successfully. An
     //     empty `remoteFilePaths` means "the user actually deleted every note
-    //     on the remote," which is a legitimate signal to wipe local copies.
+    //     in the tree," which is a legitimate signal to wipe local copies.
     //     Transient failures throw and are caught below, returning 0 without
     //     running this pass.
     allNotes = allNotes.filter((n) => {
@@ -760,12 +726,10 @@ async function pullTodosFromRepo(
 
     // Reconcile: drop local todos whose backing file was deleted remotely.
     // Same safety scoping as notes and canvases reconcile — but never drop
-    // a todo that is staged-but-unpushed (pending queue / unpushed local
-    // commit), otherwise a restart mid-push loses it (data loss, mirrors the
-    // notes protection).
+    // a todo that is staged-but-unpushed (unpushed local commit), otherwise
+    // a restart mid-push loses it (data loss, mirrors the notes protection).
     const todoPending = new Set<string>();
-    const todoMode = await SyncEngineService.getMode(repoPath);
-    for (const p of await collectPendingPaths(repoPath, branch, todoMode, 'todos/')) {
+    for (const p of await collectPendingPaths(repoPath, branch, 'todos/')) {
       todoPending.add(p);
     }
     const before = allTodos.length;

@@ -1,11 +1,10 @@
 /**
  * Git host abstraction.
  *
- * GitNotes supports multiple git hosts (GitHub today, GitLab added as the
- * second). Each host has its own REST API for the operations the app
- * performs in API mode: branch listing, tree walks, file CRUD, and
- * authentication. This file defines a small, host-agnostic surface that
- * the rest of the app talks to.
+ * GitNotēs supports multiple git hosts (GitHub today, GitLab added as the
+ * second). Each host has its own REST API for operations like branch
+ * listing, tree walks, file CRUD, and authentication. This file defines
+ * a small, host-agnostic surface that the rest of the app talks to.
  *
  * Adding a third host (Gitea, Bitbucket, …) is a matter of writing a
  * new `GitHostService` implementation and registering it in

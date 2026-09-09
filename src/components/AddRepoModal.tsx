@@ -35,9 +35,9 @@ function pathExampleFor(provider: GitHostProvider): string {
 
 /**
  * Minimal add-repository dialog that lets the user pick a host and enter
- * a `namespace/project` path. The host choice is purely about which REST
- * API we'll talk to in API mode; the underlying git protocol is host
- * agnostic, so a clone-mode workflow works for either.
+ * a `namespace/project` path. The host choice determines which REST
+ * API we'll use for provider operations; the underlying git protocol is
+ * host agnostic.
  */
 export function AddRepoModal({ visible, onClose, onAdded, colors }: AddRepoModalProps) {
   const { t } = useTranslation();

@@ -2,9 +2,9 @@ import { GitHubService } from './GitHubService';
 import { StorageService } from './StorageService';
 import { ThoughtDump, createThoughtDump, serializeThoughtDump, parseThoughtDump } from '../models/ThoughtDump';
 import { parseRepoPath } from '../utils/gitPathParser';
-import { SyncEngineService } from './cloneSyncServiceImpl';
 import { resolveBranch } from './git/branchResolver';
 import { CommitService } from './git/CommitService';
+import { CloneSyncService } from './cloneSyncServiceImpl';
 import type { GitHostProvider } from './git/GitHost';
 
 const THOUGHTS_DIR = 'thoughts/';
@@ -119,52 +119,33 @@ export class ThoughtDumpService {
 
     let repoPath: string;
     let branch: string;
-    let provider: GitHostProvider | undefined;
-
     if (options?.repoPath) {
       repoPath = options.repoPath;
       branch = await resolveBranch(repoPath, options.branch);
-      provider = options.provider;
     } else {
       const repo = await getFirstRepo();
       if (!repo) return [];
       repoPath = repo.repoPath;
       branch = repo.branch ?? 'main';
-      provider = repo.provider;
     }
 
     const repoInfo = parseRepoPath(repoPath);
     if (!repoInfo) return [];
 
-    const mode = await SyncEngineService.getMode(repoPath);
     const dumps: ThoughtDump[] = [];
 
     try {
-      if (mode === 'clone') {
-        const { GitFsService } = await import('./git/GitFsService');
-        const tree = await GitFsService.listTree({ repoPath, ref: branch });
-        const thoughtBlobs = tree.filter(
-          (item) => item.type === 'blob' && item.path.startsWith(THOUGHTS_DIR) && item.path.endsWith('.md'),
-        );
+      const { GitFsService } = await import('./git/GitFsService');
+      const tree = await GitFsService.listTree({ repoPath, ref: branch });
+      const thoughtBlobs = tree.filter(
+        (item) => item.type === 'blob' && item.path.startsWith(THOUGHTS_DIR) && item.path.endsWith('.md'),
+      );
 
-        for (const blob of thoughtBlobs) {
-          const content = await GitFsService.readFile({ repoPath, ref: branch, filepath: blob.path });
-          if (!content) continue;
-          const parsed = parseThoughtDump(content, blob.path);
-          if (parsed) dumps.push(parsed);
-        }
-      } else {
-        const tree = await GitHubService.getTreeRecursiveOrThrow(repoInfo.owner, repoInfo.repo, branch);
-        const thoughtBlobs = tree.filter(
-          (item) => item.type === 'blob' && item.path.startsWith(THOUGHTS_DIR) && item.path.endsWith('.md'),
-        );
-
-        for (const blob of thoughtBlobs) {
-          const content = await GitHubService.getFileContent(repoInfo.owner, repoInfo.repo, blob.path, branch);
-          if (!content) continue;
-          const parsed = parseThoughtDump(content, blob.path);
-          if (parsed) dumps.push(parsed);
-        }
+      for (const blob of thoughtBlobs) {
+        const content = await GitFsService.readFile({ repoPath, ref: branch, filepath: blob.path });
+        if (!content) continue;
+        const parsed = parseThoughtDump(content, blob.path);
+        if (parsed) dumps.push(parsed);
       }
     } catch (error) {
       console.warn('[ThoughtDumpService] list failed:', error);
@@ -173,7 +154,7 @@ export class ThoughtDumpService {
     return dumps;
   }
 
-  static async delete(id: string, options: ThoughtDumpDeleteOptions): Promise<boolean> {
+  static async delete(_id: string, options: ThoughtDumpDeleteOptions): Promise<boolean> {
     if (!GitHubService.isAuthenticated()) return false;
 
     const repoPath = options.repoPath;
@@ -183,19 +164,19 @@ export class ThoughtDumpService {
 
     const result = await enqueueRepoWrite(repoInfo.owner, repoInfo.repo, branch, async () => {
       try {
-        const commitResult = await CommitService.commit({
-          repo: repoPath,
+        const saveResult = await CloneSyncService.save({
+          repoPath,
           branch,
           filePath: options.filePath,
           message: `Delete thought dump: ${options.filePath}`,
-          delete: true,
+          intent: 'delete',
         });
-        if (!commitResult.success) {
-          console.warn('[ThoughtDumpService] delete commit failed:', commitResult.error);
+        if (!saveResult.success) {
+          console.warn('[ThoughtDumpService] delete failed:', saveResult.error);
         }
-        return commitResult.success;
+        return saveResult.success;
       } catch (error) {
-        console.warn('[ThoughtDumpService] delete commit failed:', error);
+        console.warn('[ThoughtDumpService] delete failed:', error);
         return false;
       }
     });

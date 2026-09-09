@@ -19,7 +19,7 @@ import { GitHubService, type GitHubRepository } from '../services/GitHubService'
 import { RepoFileSyncService } from '../services/RepoFileSyncService';
 import { TemplateRepoPreferenceService, type TemplateRepoPreference } from '../services/TemplateRepoPreferenceService';
 import { serializeTemplate, templateSlug } from '../services/TemplateMarkdownService';
-import { NoteSyncQueueService, SyncEngineService } from '../services/cloneSyncServiceImpl';
+import { NoteSyncQueueService } from '../services/cloneSyncServiceImpl';
 
 import { GitFsService } from '../services/git/GitFsService';
 import { cancelInflightGitHttp } from '../services/git/gitHttp';
@@ -561,14 +561,7 @@ export default function SettingsScreen() {
       result.counts.todos === 0 &&
       result.counts.templates === 0
     ) {
-      try {
-        const mode = await SyncEngineService.getMode(repoPath);
-        if (mode === 'clone') {
-          console.warn('[SettingsScreen] add-repo import pulled zero contents', { repoPath, counts: result.counts });
-        }
-      } catch {
-        /* noop - expected: logs already emitted by SyncEngineService */
-      }
+      console.warn('[SettingsScreen] add-repo import pulled zero contents', { repoPath, counts: result.counts });
     }
     setShowRepoPickerModal(false);
     return 'imported';

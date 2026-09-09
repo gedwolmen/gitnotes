@@ -48,16 +48,15 @@ function serializeTodo(todo: Partial<Todo>): string {
 /**
  * One-shot import that copies every locally-tracked file with `repo ===
  * repoPath` into the cloned working tree, staging + committing each one
- * without pushing. The point is to lift offline edits (notes the user wrote
- * in API mode that never reached the remote) into the new clone before the
- * first pull-fast-forward — without this step the next pull would fast-forward
+ * without pushing. This lifts offline edits into the clone before the first
+ * pull-fast-forward — without this step the next pull would fast-forward
  * over them. Pushes are owned by the stage/push engine.
  *
  * Safe to re-run: writeAndCommit is idempotent at the working-tree level
  * (overwrites + git-add will produce a no-op commit if content matches HEAD).
  *
- * Caller must ensure `SyncEngineService.getMode(repoPath) === 'clone'` and
- * the working copy already exists (the Settings "Clone" action does both).
+ * Caller must ensure the working copy already exists (the Settings "Clone"
+ * action does this).
  */
 export class CloneMigrationService {
   static async migrateRepo(repoPath: string, branch: string): Promise<MigrationReport> {
@@ -169,8 +168,7 @@ export class CloneMigrationService {
       }
     }
 
-    // Migration supersedes this repo's API-mode queue: drop leftovers so
-    // the Stage cannot show a mixed API/clone state (issue #902).
+    // Migration purges the sync queue so the Stage cannot show stale entries.
     await NoteSyncQueueService.purgeForRepo(repoPath);
 
     if (report.failures.length > 0) report.success = report.failures.length === 0;

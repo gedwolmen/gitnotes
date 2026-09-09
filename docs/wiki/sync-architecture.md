@@ -1,21 +1,10 @@
 # Sync Architecture
 
-> Deep-dive on GitNotēs' two sync modes. See [Architecture](./architecture.md) for context and [Services](./services.md) for the underlying services.
+> Deep-dive on GitNotēs' clone sync. See [Architecture](./architecture.md) for context and [Services](./services.md) for the underlying services.
 
-GitNotēs supports two synchronization modes, controlled per-repository via the `@gitnotes:sync_engine_modes` preference. The default mode is **`clone`**. **API mode is currently a design intent** — the `SyncEngineService` stub always returns `'clone'`; API mode wiring exists in the architecture docs but is not yet live.
+GitNotēs uses **clone mode**: local git working tree with commit-on-save and write-through push.
 
-## Mode Overview
-
-| Aspect | Clone Mode | API Mode |
-|--------|-----------|----------|
-| Push trigger | Commit-on-save + background push | Immediate on save/complete |
-| Network budget | 8 seconds per push | Unlimited (blocking) |
-| Offline support | Queue in ClonePendingQueue | Not supported |
-| Conflict handling | Block on ConflictResolverScreen | Block on ConflictResolverScreen |
-| User blocked during sync? | No (background) | Yes (spinner) |
-| Pull frequency | On-demand + background | After each push |
-
-## Clone Mode (Default)
+## Clone Mode
 
 Clone mode is designed for **offline-first** usage. Changes are written locally, then staged and committed by the user before being pushed asynchronously.
 
@@ -99,94 +88,33 @@ tryPushNow → 409 Conflict
 
 ---
 
-## API Mode
-
-API mode is designed for **real-time collaboration** where changes must appear on other devices immediately.
-
-### Write-Through Push Flow
-
-```
-User edits note
-  → NoteEditorScreen saves
-    → NoteGitHubSyncService.upsert({ content, filePath, ... })
-      → GitHub API: PUT /repos/:owner/:repo/contents/:path
-        → Success: → RepoPullService.pull() to update local state
-          → Returns { success: true }
-        → Failure: → show error, do NOT save locally (or save with conflict flag)
-```
-
-### User Blocking
-
-During a push or pull in API mode, the UI is locked:
-
-```
-API push in progress
-  → SyncStatusScreen / blocking spinner
-    → User cannot edit
-      → Push completes: unlock UI
-      → Push fails: show error, unlock UI
-```
-
-This prevents concurrent edits from racing the sync operation.
-
-### Pull After Push
-
-After every successful push, a pull is issued to keep local state consistent:
-
-```
-API push success
-  → RepoPullService.pull()
-    → git fetch + git merge (or rebase)
-      → File changes merged into working tree
-        → noteStore.reload() to pick up changes
-```
-
----
-
-## Per-Repo Override
-
-Each repository can override the sync mode via a Git config key:
-
-```
-@gitnotes:sync_engine_modes = {
-  "owner/repo": "api",  // override for specific repo
-  "another/owner": "clone"
-}
-```
-
-This is stored in `AsyncStorage` and read by `SyncEngineService.getMode(repoPath)`.
-
-Default: `'clone'` for all repositories.
-
----
-
 ## Sync State Machine
 
 ```
                     ┌──────────────────────────────────────┐
                     │                                      │
     ┌──────┐      ┌▼────────┐     ┌──────┐    ┌────────▼────────┐
-───►│ IDLE │──────►│ COMMITTING │───►│ PUSHING │───►│ PUSH_COMPLETE │
+ ───►│ IDLE │──────►│ COMMITTING │───►│ PUSHING │───►│ PUSH_COMPLETE │
     └──┬───┘      └──────┬───┘     └──┬────┘    └─────────┬──────┘
        ▲                    │           │                    │
        │                    │ 409       │ error             │ pull
        │                    ▼           ▼                    ▼
        │              ┌──────────┐ ┌────────┐        ┌─────────┐
        └──────────────►│ CONFLICT │ │RETRY   │        │PULLING  │
-                       │ (blocked)│ └────────┘        └────┬────┘
-                       └──────────┘                          │
-                                                            ▼
-                                                       ┌─────────┐
-                               ┌───────────────────────►│  IDLE  │
-                               │                         └─────────┘
-                               │ local changes
-                               ▼
-                         ┌───────────┐
-                         │  DIRTY   │◄── new edit
-                         └─────┬─────┘
-                               │
-                               ▼
-                         (commit on next save)
+                      │ (blocked)│ └────────┘        └────┬────┘
+                      └──────────┘                          │
+                                                             ▼
+                                                        ┌─────────┐
+                                ┌───────────────────────►│  IDLE  │
+                                │                         └─────────┘
+                                │ local changes
+                                ▼
+                          ┌───────────┐
+                          │  DIRTY   │◄── new edit
+                          └─────┬─────┘
+                                │
+                                ▼
+                          (commit on next save)
 ```
 
 ---
@@ -199,7 +127,6 @@ Default: `'clone'` for all repositories.
 | `NoteSyncQueueService` | Offline mutation queue |
 | `BackgroundSyncService` | OS background sync task |
 | `ForegroundSyncService` | Foreground change monitoring |
-| `SyncEngineService` | Mode manager + per-repo overrides |
 | `RepoPullService` | Pull changes from remote |
 | `ConflictResolverScreen` | User-facing conflict UI |
 | `GitEngine.stage` | Stage files for commit (Rust) |

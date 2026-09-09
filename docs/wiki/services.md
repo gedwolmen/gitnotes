@@ -87,7 +87,6 @@
 | `NoteSyncQueueService.ts` | Queues note mutations when offline. Drains queue when connectivity returns. |
 | `BackgroundSyncService.ts` | OS background task for sync — runs when app is backgrounded, syncs up to 50 files. |
 | `ForegroundSyncService.ts` | Active sync when app is in foreground — monitors file changes, triggers incremental sync. |
-| `SyncEngineService.ts` | Central sync orchestrator — manages mode (clone vs API), per-repo overrides, sync scheduling. |
 | `RepoFileSyncService.ts` | Syncs individual files to/from the repo — handles note files, attachment files, canvas files. |
 | `RepoPullService.ts` | Pulls changes from remote — fetch + merge/rebase into local working tree. |
 

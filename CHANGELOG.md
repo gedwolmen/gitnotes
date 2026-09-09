@@ -159,7 +159,7 @@ All notable fixes and feature changes to GitNotēs are documented here.
 
 ### Unify pending-work indicator into a single floating push button
 
-**fix(ui)** — `FloatingPushButton` is now the only surface for "unpushed work" pending notification. In **clone mode** it counts unpushed git commits (`UnpushedCommitsService.count`); in **API mode** it counts pending sync-queue items for the active repo+branch (`NoteSyncQueueService.getAll`, filtered). Each mode refreshes on its own trigger (commit revision + 30s poll for clone; queue subscription for API). The long-press action is also mode-aware: clone mode pushes unpushed commits as before; API mode drains the queue then pulls. The duplicate top-right `UnpushedQueueBadge` rendered inside `NotesListScreen` is removed — it tracked a different counter and caused two push indicators to appear at once.
+**fix(ui)** — `FloatingPushButton` is now the only surface for "unpushed work" pending notification. It counts unpushed git commits (`UnpushedCommitsService.count`), refreshed on commit revision changes. The long-press action pushes unpushed commits. The duplicate top-right `UnpushedQueueBadge` rendered inside `NotesListScreen` is removed — it tracked a different counter and caused two push indicators to appear at once.
 
 ### Immediate floating push-button refresh (#1287)
 
@@ -181,7 +181,7 @@ All notable fixes and feature changes to GitNotēs are documented here.
 
 **fix(i18n)** — Recent PRs added 4 keys to `en.json` (`common.connecting`, `settings.unpushedCommitsTitle`, `settings.unpushedCommitsBody`, `hints.settings.pauseForegroundSync`) without mirroring them in `es/fr/de/ja/ko`. The i18n-key-parity test treated every missing key as a failure and broke CI on every locale. Translations backfilled for all 5 locales.
 
-**test(sync)** — Four test files were left referring to the staging layer deleted by #1249 (`StagingService`, `stageStore`). Updated to assert the new commit-on-save flow: `HomeScreen.color-select` asserts `NoteSyncQueueService.enqueueNoteUpsert`; `todo-delete-sync` and `notes-delete-lock` drop drain-on-save assertions (#927 tracks the API-mode write-through gap); `sync-locking.integration` S2 checks the queue holds the mutation, S3 marked `.skip`. Before: 14 suites / 27 tests failed. After: 9 suites / 13 tests fail (separate categories: Skia mocks, `AccountsProvider` wrap, behavior gaps in `localGitWriter` / `GitSyncGate` / `ForegroundSyncService` / `git-state-ui` / `header-blur` / `CloneProgressModal`).
+**test(sync)** — Four test files were left referring to the staging layer deleted by #1249 (`StagingService`, `stageStore`). Updated to assert the new commit-on-save flow: `HomeScreen.color-select` asserts `NoteSyncQueueService.enqueueNoteUpsert`; `todo-delete-sync` and `notes-delete-lock` drop drain-on-save assertions; `sync-locking.integration` S2 checks the queue holds the mutation, S3 marked `.skip`. Before: 14 suites / 27 tests failed. After: 9 suites / 13 tests fail (separate categories: Skia mocks, `AccountsProvider` wrap, behavior gaps in `localGitWriter` / `GitSyncGate` / `ForegroundSyncService` / `git-state-ui` / `header-blur` / `CloneProgressModal`).
 
 ### iPad Notes grid shows all Markdown files (#1280)
 
@@ -195,7 +195,7 @@ All notable fixes and feature changes to GitNotēs are documented here.
 
 ### Git Sync: Remove staging, move to commit-based model (#1249)
 
-**refactor(sync)** — Replaces Clone-mode stage-then-push with commit-on-save + explicit push-with-diff. `CommitService.commit()` creates local `push:false` commits on every save. `UnpushedCommitsService` tracks unpushed commits. Push triggers: FAB press-and-hold, Push/Push-all buttons on PushScreen, 3-min foreground idle, OS background task (≤10 files). API mode unchanged.
+**refactor(sync)** — Replaces Clone-mode stage-then-push with commit-on-save + explicit push-with-diff. `CommitService.commit()` creates local `push:false` commits on every save. `UnpushedCommitsService` tracks unpushed commits. Push triggers: FAB press-and-hold, Push/Push-all buttons on PushScreen, 3-min foreground idle, OS background task (≤10 files).
 
 **fix(sync)** — Fixes 19 bugs: FloatingPushButton replaces FloatingStageButton; full-page spinner during conflict resolution; pull-to-refresh spinner positioning; push auth error surfaces real message; Settings sync-frequency defaults off for new users; folder selector shows current branch; custom-folder notes persist; and more.
 
@@ -215,15 +215,15 @@ All notable fixes and feature changes to GitNotēs are documented here.
 
 **fix(sync)** — `expo-secure-store` and `expo-notifications` no longer throw `ERR_KEY_CHAIN` / `ERR_NOTIFICATIONS_KEYCHAIN_ACCESS` on the iOS simulator. A new config plugin (`plugins/withKeychainAccessGroup.js`) injects `keychain-access-groups` into the entitlements plist at prebuild time so the generated `ios/` keeps the entitlement across `expo prebuild` runs.
 
-### Hide push button in API mode (#1035)
+### Hide push button during sync (#1035)
 
-**fix(sync)** — `StagingService.pushStaged` and `StagePushScheduler.drainPushQueue` no longer get stuck in a grayed-spinner state after a long-held sync-gate cycle or a slow push. Two race windows fixed: state-reset moved into the OUTER `finally`, plus a `forceUnlockPushState()` escape hatch for `SyncBlockOverlay` cancel handlers and mode switches. Large repos now recommend API mode and the API warning is dropped.
+**fix(sync)** — `StagingService.pushStaged` and `StagePushScheduler.drainPushQueue` no longer get stuck in a grayed-spinner state after a long-held sync-gate cycle or a slow push. Two race windows fixed: state-reset moved into the OUTER `finally`, plus a `forceUnlockPushState()` escape hatch for `SyncBlockOverlay` cancel handlers and mode switches.
 
 ## 2026-08-22
 
 ### Clone-mode bulk delete can't resurrect (#1030)
 
-**fix(clone)** — bulk delete in clone mode no longer leaves files in the working tree where the next ForegroundSync pull re-imports them. `NotesListScreen.handleBulkDelete` now branches by sync mode per note: clone mode routes each delete through `deleteNote(id)` → `StagingService.stageDelete` (immediate `deleteAndCommit({ push: false })`); API mode keeps the batched `enqueueNoteDeletes` path.
+**fix(clone)** — bulk delete in clone mode no longer leaves files in the working tree where the next ForegroundSync pull re-imports them. `NotesListScreen.handleBulkDelete` routes each delete through `deleteNote(id)` → `StagingService.stageDelete` (immediate `deleteAndCommit({ push: false })`).
 
 ### Clone cancel aborts in-flight HTTP (#1016, #1017)
 
@@ -275,7 +275,7 @@ All notable fixes and feature changes to GitNotēs are documented here.
 
 ### Floating push button hides after push (#925 follow-up)
 
-**fix(sync)** — `pushStaged()` now broadcasts `notifyStagedChanged()` after the clone-mode push loop succeeds, so `pendingCount` drops to 0 and the floating push button hides immediately instead of lingering until the Stage screen is opened. Only fires on success; API-mode pushes keep the existing queue subscription contract.
+**fix(sync)** — `pushStaged()` now broadcasts `notifyStagedChanged()` after the clone-mode push loop succeeds, so `pendingCount` drops to 0 and the floating push button hides immediately instead of lingering until the Stage screen is opened. Only fires on success.
 
 ### Center New Chat button label
 

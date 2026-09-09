@@ -3,7 +3,7 @@ import { create } from 'zustand';
 import * as FileSystem from 'expo-file-system/legacy';
 import { Note, NoteCreateInput, NoteUpdateInput, sortNotesWithPinnedFirst, filterNotesBySearch } from '../models/Note';
 import { StorageService } from '../services/StorageService';
-import { NoteSyncQueueService, SyncEngineService, CloneSyncService, type MutationSucceededEvent, type DroppedMutationEvent, type NoteDeleteParams, type SaveResult } from '../services/cloneSyncServiceImpl';
+import { NoteSyncQueueService, CloneSyncService, type MutationSucceededEvent, type DroppedMutationEvent, type SaveResult } from '../services/cloneSyncServiceImpl';
 import { CommitService } from '../services/git/CommitService';
 import { resolveDefaultFolder, resolveDefaultRepo } from '../services/git/defaultsPolicy';
 import { recordDeleteFailure } from '../services/git/deleteFailures';
@@ -30,7 +30,7 @@ interface NoteActions {
   createNote: (input: NoteCreateInput) => Promise<Note | null>;
   updateNote: (input: NoteUpdateInput) => Promise<Note | null>;
   /**
-   * Upsert a note's content to git (clone mode) or enqueue for API push (API mode).
+   * Upsert a note's content to git via CloneSyncService.
    * Returns SaveResult — caller (editor screen) decides navigation based on success.
    */
   upsertNote: (input: NoteUpdateInput & {
@@ -107,49 +107,46 @@ export const useNoteStore = create<NoteState & NoteActions>()((set, get) => ({
       const folderPath = input.folderPath ?? resolveDefaultFolder('note');
       const filePath = `${folderPath}/${slug}${ext}`;
 
-      const mode = await SyncEngineService.getMode(repo);
-      if (mode === 'clone') {
-        if (input.isAiCreated) {
-          const saveResult = await CloneSyncService.save({
-            repoPath: repo,
+      if (input.isAiCreated) {
+        const saveResult = await CloneSyncService.save({
+          repoPath: repo,
+          branch: input.branch ?? 'main',
+          filePath,
+          content: input.content ?? '',
+          message: `Create note: ${title || filePath}`,
+          intent: 'upsert',
+        });
+        if (!saveResult.success) {
+          set({ error: saveResult.error ?? 'Failed to write note to disk' });
+          return null;
+        }
+      } else {
+        const opId = gitOperationRegistry.begin({
+          kind: 'upsert',
+          repo,
+          branch: input.branch ?? 'main',
+          path: filePath,
+          entityIds: [],
+          status: 'running',
+          attempts: 0,
+        });
+        try {
+          const commitResult = await CommitService.commit({
+            repo,
             branch: input.branch ?? 'main',
             filePath,
             content: input.content ?? '',
             message: `Create note: ${title || filePath}`,
-            intent: 'upsert',
           });
-          if (!saveResult.success) {
-            set({ error: saveResult.error ?? 'Failed to write note to disk' });
+          if (!commitResult.success) {
+            gitOperationRegistry.fail(opId, commitResult.error ?? 'Failed to create note');
+            set({ error: commitResult.error ?? 'Failed to create note' });
             return null;
           }
-        } else {
-          const opId = gitOperationRegistry.begin({
-            kind: 'upsert',
-            repo,
-            branch: input.branch ?? 'main',
-            path: filePath,
-            entityIds: [],
-            status: 'running',
-            attempts: 0,
-          });
-          try {
-            const commitResult = await CommitService.commit({
-              repo,
-              branch: input.branch ?? 'main',
-              filePath,
-              content: input.content ?? '',
-              message: `Create note: ${title || filePath}`,
-            });
-            if (!commitResult.success) {
-              gitOperationRegistry.fail(opId, commitResult.error ?? 'Failed to create note');
-              set({ error: commitResult.error ?? 'Failed to create note' });
-              return null;
-            }
-            gitOperationRegistry.succeed(opId);
-          } catch (commitError) {
-            gitOperationRegistry.fail(opId, commitError instanceof Error ? commitError.message : 'Commit failed');
-            throw commitError;
-          }
+          gitOperationRegistry.succeed(opId);
+        } catch (commitError) {
+          gitOperationRegistry.fail(opId, commitError instanceof Error ? commitError.message : 'Commit failed');
+          throw commitError;
         }
       }
 
@@ -186,41 +183,38 @@ export const useNoteStore = create<NoteState & NoteActions>()((set, get) => ({
         const newPath = input.filePath ?? deriveDefaultNotePath(virtualNote);
 
         if (oldPath && newPath && oldPath !== newPath) {
-          const mode = await SyncEngineService.getMode(existingNote.repo);
-          if (mode === 'clone') {
-            const content = input.content ?? existingNote.content ?? '';
-            const opId = gitOperationRegistry.begin({
-              kind: 'rename',
+          const content = input.content ?? existingNote.content ?? '';
+          const opId = gitOperationRegistry.begin({
+            kind: 'rename',
+            repo: existingNote.repo,
+            branch: existingNote.branch ?? 'main',
+            path: newPath,
+            entityIds: [existingNote.id],
+            status: 'running',
+            attempts: 0,
+          });
+          try {
+            const commitResult = await CommitService.commit({
               repo: existingNote.repo,
               branch: existingNote.branch ?? 'main',
-              path: newPath,
-              entityIds: [existingNote.id],
-              status: 'running',
-              attempts: 0,
+              prevFilePath: oldPath,
+              filePath: newPath,
+              content,
+              message: `Rename note: ${input.title ?? existingNote.title}`,
             });
-            try {
-              const commitResult = await CommitService.commit({
-                repo: existingNote.repo,
-                branch: existingNote.branch ?? 'main',
-                prevFilePath: oldPath,
-                filePath: newPath,
-                content,
-                message: `Rename note: ${input.title ?? existingNote.title}`,
-              });
-              if (!commitResult.success) {
-                gitOperationRegistry.fail(opId, commitResult.error ?? 'Failed to rename note');
-                set({ error: commitResult.error ?? 'Failed to rename note' });
-                return null;
-              }
-              gitOperationRegistry.succeed(opId);
-            } catch (renameError) {
-              gitOperationRegistry.fail(opId, renameError instanceof Error ? renameError.message : 'Rename failed');
-              throw renameError;
+            if (!commitResult.success) {
+              gitOperationRegistry.fail(opId, commitResult.error ?? 'Failed to rename note');
+              set({ error: commitResult.error ?? 'Failed to rename note' });
+              return null;
             }
-            // Commit succeeded — update filePath on the note so subsequent syncs
-            // use the correct path and don't try to re-create the file.
-            input = { ...input, filePath: newPath };
+            gitOperationRegistry.succeed(opId);
+          } catch (renameError) {
+            gitOperationRegistry.fail(opId, renameError instanceof Error ? renameError.message : 'Rename failed');
+            throw renameError;
           }
+          // Commit succeeded — update filePath on the note so subsequent syncs
+          // use the correct path and don't try to re-create the file.
+          input = { ...input, filePath: newPath };
         }
       }
 
@@ -242,59 +236,36 @@ export const useNoteStore = create<NoteState & NoteActions>()((set, get) => ({
 
   upsertNote: async (input) => {
     const { repoPath, branch, filePath, content } = input;
-    const mode = await SyncEngineService.getMode(repoPath);
 
-    if (mode === 'clone') {
-      try {
-        const taggedContent = applyNoteColorToContent(
-          applyNoteTagsToContent(content ?? '', input.format, input.tags ?? []),
-          input.format,
-          input.color,
-        );
-        const saveResult = await CloneSyncService.save({
-          repoPath,
-          branch,
-          filePath,
-          content: taggedContent,
-          message: `Update note: ${input.title ?? filePath}`,
-          intent: 'upsert',
-        });
-        if (!saveResult.success) {
-          return saveResult;
-        }
-        const updatedNote = await StorageService.updateNote(input);
-        if (updatedNote) {
-          set((state) => ({
-            notes: sortNotesWithPinnedFirst(
-              state.notes.map((note) => (note.id === updatedNote.id ? updatedNote : note))
-            ),
-          }));
-        }
+    try {
+      const taggedContent = applyNoteColorToContent(
+        applyNoteTagsToContent(content ?? '', input.format, input.tags ?? []),
+        input.format,
+        input.color,
+      );
+      const saveResult = await CloneSyncService.save({
+        repoPath,
+        branch,
+        filePath,
+        content: taggedContent,
+        message: `Update note: ${input.title ?? filePath}`,
+        intent: 'upsert',
+      });
+      if (!saveResult.success) {
         return saveResult;
-      } catch {
-        return { success: false, error: 'unknown' };
       }
+      const updatedNote = await StorageService.updateNote(input);
+      if (updatedNote) {
+        set((state) => ({
+          notes: sortNotesWithPinnedFirst(
+            state.notes.map((note) => (note.id === updatedNote.id ? updatedNote : note))
+          ),
+        }));
+      }
+      return saveResult;
+    } catch {
+      return { success: false, error: 'unknown' };
     }
-
-    await NoteSyncQueueService.enqueueNoteUpsert({
-      repo: repoPath,
-      branch,
-      filePath,
-      title: input.title ?? '',
-      content,
-      format: input.format,
-      tags: input.tags,
-      color: input.color,
-    });
-    const updatedNote = await StorageService.updateNote(input);
-    if (updatedNote) {
-      set((state) => ({
-        notes: sortNotesWithPinnedFirst(
-          state.notes.map((note) => (note.id === updatedNote.id ? updatedNote : note))
-        ),
-      }));
-    }
-    return { success: true };
   },
 
   deleteNote: async (id) => {
@@ -307,17 +278,9 @@ export const useNoteStore = create<NoteState & NoteActions>()((set, get) => ({
       if (note.repo) {
         const repoPath = note.repo;
         const filePath = note.filePath ?? deriveDefaultNotePath(note);
-        if (filePath) {
-          armDeleteCompletionHandlers();
-          const deleteParams: NoteDeleteParams = {
-            repo: repoPath,
-            branch: note.branch,
-            filePath,
-            title: note.title,
-            accountId: note.accountId,
-            localNoteId: id,
-          };
-          const beginDeleteOp = () =>
+          if (filePath) {
+            armDeleteCompletionHandlers();
+            const beginDeleteOp = () =>
             gitOperationRegistry.begin({
               kind: 'delete',
               repo: repoPath,
@@ -327,62 +290,35 @@ export const useNoteStore = create<NoteState & NoteActions>()((set, get) => ({
               status: 'running',
               attempts: 0,
             });
-          const mode = await SyncEngineService.getMode(repoPath);
-          if (mode === 'clone') {
-            const opId = beginDeleteOp();
-            try {
-              const saveResult = await CloneSyncService.save({
-                repoPath,
-                branch: note.branch ?? 'main',
-                filePath,
-                message: `Delete note: ${note.title ?? filePath}`,
-                intent: 'delete',
-              });
-              if (!saveResult.success) {
-                gitOperationRegistry.fail(opId, saveResult.error ?? 'Failed to delete note');
-                set({ error: saveResult.error ?? 'Failed to delete note' });
-                return false;
-              }
-            } catch (commitError) {
-              const commitErrorMessage =
-                commitError instanceof Error ? commitError.message : 'Failed to delete note';
-              gitOperationRegistry.fail(opId, commitErrorMessage);
-              set({ error: commitErrorMessage });
+          const opId = beginDeleteOp();
+          try {
+            const saveResult = await CloneSyncService.save({
+              repoPath,
+              branch: note.branch ?? 'main',
+              filePath,
+              message: `Delete note: ${note.title ?? filePath}`,
+              intent: 'delete',
+            });
+            if (!saveResult.success) {
+              gitOperationRegistry.fail(opId, saveResult.error ?? 'Failed to delete note');
+              set({ error: saveResult.error ?? 'Failed to delete note' });
               return false;
             }
-            const success = await StorageService.deleteNote(id);
-            if (success) {
-              set((state) => ({ notes: state.notes.filter((n) => n.id !== id) }));
-              gitOperationRegistry.succeed(opId);
-            } else {
-              gitOperationRegistry.fail(opId, 'Failed to delete note locally');
-            }
-            return success;
-          }
-          // API mode: enqueue the delete, then remove locally immediately.
-          try {
-            await NoteSyncQueueService.enqueueNoteDelete(deleteParams);
-          } catch (err) {
-            set({ error: err instanceof Error ? err.message : 'Failed to enqueue note delete' });
+          } catch (commitError) {
+            const commitErrorMessage =
+              commitError instanceof Error ? commitError.message : 'Failed to delete note';
+            gitOperationRegistry.fail(opId, commitErrorMessage);
+            set({ error: commitErrorMessage });
             return false;
           }
-          // Remove locally now — the row must vanish immediately; the
-          // push button (not the row) signals pending work.
-          const opId = beginDeleteOp();
           const success = await StorageService.deleteNote(id);
           if (success) {
             set((state) => ({ notes: state.notes.filter((n) => n.id !== id) }));
             gitOperationRegistry.succeed(opId);
-          } else if (!get().notes.some((n) => n.id === id)) {
-            // The write-through drain already completed the delete and its
-            // side-channel removed the row (note gone from state + storage).
-            // `StorageService.deleteNote` returns false for the already-removed
-            // id — treat that as success, not as a failed delete.
-            gitOperationRegistry.succeed(opId);
           } else {
             gitOperationRegistry.fail(opId, 'Failed to delete note locally');
           }
-          return success || !get().notes.some((n) => n.id === id);
+          return success;
         }
         // Repo-backed note with no derivable path: nothing to enqueue, so
         // fall through to the instant local delete below.
