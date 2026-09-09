@@ -7,7 +7,6 @@
 
 import * as FileSystem from 'expo-file-system/legacy';
 import { parseRepoPath } from '../utils/gitPathParser';
-import * as GitEngine from './git/engine/GitEngine';
 
 const CLONES_SUBDIR = 'GitNotes/';
 
@@ -175,7 +174,6 @@ export const CloneSyncService = {
     try {
       if (intent === 'delete') {
         await FileSystem.deleteAsync(fullPath, { idempotent: true });
-        await GitEngine.remove(repoDir, [relPath]);
         return { success: true };
       }
 

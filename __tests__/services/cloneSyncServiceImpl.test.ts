@@ -33,4 +33,21 @@ describe('CloneSyncService.save', () => {
     );
     expect(GitEngine.stage).not.toHaveBeenCalled();
   });
+
+  it('deletes clone-mode files without staging the deletion', async () => {
+    const result = await CloneSyncService.save({
+      repoPath: 'owner/repo',
+      branch: 'main',
+      filePath: 'notes/example.md',
+      message: 'Delete example',
+      intent: 'delete',
+    });
+
+    expect(result).toEqual({ success: true });
+    expect(FileSystem.deleteAsync).toHaveBeenCalledWith(
+      'file:///documents/GitNotes/owner/repo/notes/example.md',
+      { idempotent: true },
+    );
+    expect(GitEngine.remove).not.toHaveBeenCalled();
+  });
 });
