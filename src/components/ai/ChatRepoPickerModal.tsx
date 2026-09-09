@@ -5,7 +5,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
-  FlatList,
   ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -13,13 +12,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTokens } from '../../contexts/ThemeContext';
 import { useRepoStore } from '../../stores/repoStore';
 import { useAIStore } from '../../stores/aiStore';
-import { GitService, GitBranch } from '../../services/GitService';
 import { GitHubService, GitHubRepository } from '../../services/GitHubService';
 import { LastUsedRepoService } from '../../services/LastUsedRepoService';
 import SearchBar from '../SearchBar';
 import { HapticService } from '../../utils/haptics';
 import * as ChatStorageService from '../../services/ChatStorageService';
 import { Modal, Button, Surface } from '../ui';
+import { getActiveBranch } from '../../services/git/activeBranchStore';
 
 interface ChatRepoPickerModalProps {
   visible: boolean;
@@ -53,10 +52,6 @@ export const ChatRepoPickerModal: React.FC<ChatRepoPickerModalProps> = ({
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRepoPath, setSelectedRepoPath] = useState<string | null>(null);
-  const [branch, setBranch] = useState('main');
-  const [branches, setBranches] = useState<GitBranch[]>([]);
-  const [loadingBranches, setLoadingBranches] = useState(false);
-  const [showBranchPicker, setShowBranchPicker] = useState(false);
   const [isInitializing, setIsInitializing] = useState(false);
   const [initError, setInitError] = useState<string | null>(null);
 
@@ -151,20 +146,9 @@ export const ChatRepoPickerModal: React.FC<ChatRepoPickerModalProps> = ({
     });
   }, [visible, repositories]);
 
-  const handleSelectRepo = async (path: string) => {
+  const handleSelectRepo = (path: string) => {
     setSelectedRepoPath(path);
     setInitError(null);
-    setLoadingBranches(true);
-    try {
-      const fetchedBranches = await GitService.getBranches(path);
-      setBranches(fetchedBranches);
-      const currentBranch = fetchedBranches.find((b) => b.isCurrent);
-      setBranch(currentBranch?.name || 'main');
-    } catch {
-      setBranches([]);
-    } finally {
-      setLoadingBranches(false);
-    }
     HapticService.selection();
   };
 
@@ -189,23 +173,15 @@ export const ChatRepoPickerModal: React.FC<ChatRepoPickerModalProps> = ({
     }
   };
 
-  const handleBranchSelect = (branchName: string) => {
-    setBranch(branchName);
-    setShowBranchPicker(false);
-    setInitError(null);
-    HapticService.selection();
-  };
-
   const handleConfirm = async () => {
     if (!selectedRepoPath) return;
 
-    // For newly-added repos, the repoStore entry may not exist in the
-    // pre-merge `repositories` snapshot yet (addRepository updates the
-    // store but the modal may have rendered with a stale closure). Fall
-    // back to parsing selectedRepoPath so we never bail out silently.
     const repo = repositories.find((r) => r.path === selectedRepoPath);
     const owner = repo?.path.split('/')[0] || selectedRepoPath.split('/')[0] || '';
     const name = repo?.path.split('/')[1] || selectedRepoPath.split('/')[1] || repo?.name || '';
+    const repoId = repo?.id;
+    const activeBranchState = repoId ? await getActiveBranch(repoId) : null;
+    const branch = activeBranchState?.activeBranch ?? 'main';
 
     setIsInitializing(true);
     setInitError(null);
@@ -421,26 +397,6 @@ export const ChatRepoPickerModal: React.FC<ChatRepoPickerModalProps> = ({
                 )}
               </ScrollView>
 
-              {selectedRepoPath && (
-                <View className="flex-row items-center mt-3 mb-1">
-                  <Text className="text-md font-medium mr-2.5 text-text">Branch:</Text>
-                  <TouchableOpacity
-                    testID="chat-repo-picker.button.select-branch"
-                    className="flex-1 flex-row items-center justify-between px-3 py-2.5 rounded-lg border border-border min-h-11"
-                    onPress={() => setShowBranchPicker(true)}
-                    disabled={loadingBranches}
-                  >
-                    {loadingBranches ? (
-                      <ActivityIndicator size="small" color={colors.primary} />
-                    ) : (
-                      <>
-                        <Text className="text-md flex-1 text-text">{branch}</Text>
-                        <Ionicons name="chevron-down" size={16} color={colors.textSecondary} />
-                      </>
-                    )}
-                  </TouchableOpacity>
-                </View>
-              )}
             </>
           )}
         </View>
@@ -486,44 +442,6 @@ export const ChatRepoPickerModal: React.FC<ChatRepoPickerModalProps> = ({
           </Button>
         </View>
       </View>
-
-      {/* Branch Picker Modal */}
-      <Modal visible={showBranchPicker} onRequestClose={() => setShowBranchPicker(false)} bottomSheet contentStyle={{ height: '50%' }}>
-        <View className="flex-row items-center justify-between px-4 py-3.5 border-b border-border" style={{ borderBottomWidth: StyleSheet.hairlineWidth }}>
-          <Text className="text-md font-semibold text-text">Select Branch</Text>
-          <TouchableOpacity onPress={() => setShowBranchPicker(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Ionicons name="close" size={24} color={colors.textSecondary} />
-          </TouchableOpacity>
-        </View>
-        <FlatList
-          data={branches}
-          keyExtractor={(item) => item.name}
-          contentContainerStyle={{ paddingBottom: 8 }}
-          keyboardShouldPersistTaps="handled"
-          renderItem={({ item }) => {
-            const isSelected = item.name === branch;
-            return (
-              <TouchableOpacity
-                testID={`chat-repo-picker.button.branch-${item.name}`}
-                className="flex-row items-center justify-between px-4 py-3.5 border-b border-border"
-                style={{ borderBottomWidth: StyleSheet.hairlineWidth }}
-                onPress={() => handleBranchSelect(item.name)}
-              >
-                <View className="flex-row items-center gap-2.5 flex-1">
-                  <Ionicons name="git-branch-outline" size={18} color={isSelected ? colors.primary : colors.textSecondary} />
-                  <Text className="text-md text-text">{item.name}</Text>
-                  {item.isCurrent && (
-                    <View className="px-1.5 py-0.5 rounded" style={{ backgroundColor: colors.primary + '20' }}>
-                      <Text className="text-xs font-semibold text-primary">default</Text>
-                    </View>
-                  )}
-                </View>
-                {isSelected && <Ionicons name="checkmark" size={20} color={colors.primary} />}
-              </TouchableOpacity>
-            );
-          }}
-        />
-      </Modal>
     </Modal>
   );
 };

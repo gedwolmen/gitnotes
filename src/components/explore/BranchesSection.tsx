@@ -7,6 +7,7 @@ import { Input, InputField } from '@/components/ui/Input';
 import * as GitEngine from '@/services/git/engine/GitEngine';
 import type { BranchInfo } from '@/services/git/engine/GitEngine';
 import { GitFsService } from '@/services/git/GitFsService';
+import { GitBranchCoordinator } from '@/services/git/GitBranchCoordinator';
 import type { SectionProps } from './exploreShared';
 import { useTokens } from '@/contexts/ThemeContext';
 
@@ -14,7 +15,7 @@ type BranchRow =
   | { kind: 'header'; key: string; title: string; count: number }
   | { kind: 'branch'; key: string; branch: BranchInfo };
 
-export function BranchesSection({ repo, active, onChanged, chromeTopInset = 0 }: SectionProps) {
+export function BranchesSection({ repo, active, onChanged, chromeTopInset = 0, branchInvalidationKey: _branchInvalidationKey = 0 }: SectionProps) {
   const { colors } = useTokens();
   const [branches, setBranches] = useState<BranchInfo[] | null>(null);
   const [loading, setLoading] = useState(false);
@@ -86,7 +87,8 @@ export function BranchesSection({ repo, active, onChanged, chromeTopInset = 0 }:
     async (name: string) => {
       setBusy(`checkout:${name}`);
       try {
-        await GitEngine.checkoutBranch(repo.localPath, name);
+        const coordinator = GitBranchCoordinator;
+        await coordinator.checkout(repo.localPath, name, 'origin');
         onChanged();
         setVersion((value) => value + 1);
       } catch (caught) {

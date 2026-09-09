@@ -185,14 +185,21 @@ The canonical route param types are in `src/navigation/types.ts`:
 
 ### ExploreScreen
 
-**Purpose:** Git repository explorer — view commits, diffs, files, and pull requests.
+**Purpose:** Git repository explorer — view commits, diffs, files, branches, and pull requests. Branch-aware: shows the active checked-out branch from `activeBranchStore`, and all branch operations are routed through `GitBranchCoordinator` for checkout safety.
+
+**Wrapped by:** `CheckoutSafetyProvider` — gates mutation operations while checkout is running.
 
 **Sections:**
-- `CommitsSection` — recent commits list
-- `ChangesSection` — unstaged/staged changes
 - `FilesSection` — repo file tree
-- `PullRequestsSection` — open PRs (GitHub only)
+- `ChangesSection` — unstaged/staged changes in working tree
+- `StagingSection` — staged files ready to commit
+- `CommitsSection` — recent commit history
+- `BranchesSection` — local and remote branches; checkout via `GitBranchCoordinator`
+- `RemotesSection` — configured remotes
 - `ConflictsSection` — unresolved merge conflicts
+- `PullRequestsSection` — open PRs (GitHub only)
+- `IssuesSection` — repo issues (GitHub only)
+- `RepoInfoSection` — repo metadata (name, URL, branch, ahead/behind)
 
 ---
 

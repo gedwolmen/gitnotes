@@ -4,7 +4,6 @@ const KEY = '@gitnotes:thought_dump_repo';
 
 export interface ThoughtDumpTarget {
   repoPath: string;
-  branch?: string;
 }
 
 // Remembers the repo the user last dumped a thought into, so the next
@@ -31,12 +30,11 @@ export class ThoughtDumpRepoPreferenceService {
 
     return {
       repoPath: target.repoPath,
-      branch: typeof target.branch === 'string' ? target.branch : undefined,
     };
   }
 
-  static async set(repoPath: string, branch?: string): Promise<void> {
-    await AsyncStorage.setItem(KEY, JSON.stringify({ repoPath, branch }));
+  static async set(repoPath: string): Promise<void> {
+    await AsyncStorage.setItem(KEY, JSON.stringify({ repoPath }));
   }
 
   static async clear(): Promise<void> {

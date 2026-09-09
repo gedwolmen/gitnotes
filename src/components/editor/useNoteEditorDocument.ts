@@ -159,7 +159,6 @@ export function useNoteEditorDocument({
     if (initialRepo || initialBranch || initialFolderPath) return;
     void LastSelectionPreferenceService.get('note').then((sel) => {
       if (!repo && sel.repo) setRepo(sel.repo);
-      if (!branch && sel.branch) setBranch(sel.branch);
       if (!folderPath && sel.folder) setFolderPath(sel.folder);
     });
   }, [noteId, initialRepo, initialBranch, initialFolderPath]);
@@ -301,9 +300,9 @@ export function useNoteEditorDocument({
     setFolderPath(folder?.path);
     setHasChanges(true);
     if (repo) {
-      void LastSelectionPreferenceService.set('note', { repo, branch, folder: folder?.path });
+      void LastSelectionPreferenceService.set('note', { repo, folder: folder?.path });
     }
-  }, [repo, branch]);
+  }, [repo]);
 
   const handleTagsChange = useCallback((newTags: string[]) => {
     setTags(newTags);

@@ -31,9 +31,20 @@
 
 | File | Purpose |
 |------|---------|
+| `GitBranchCoordinator.ts` | State machine for checkout safety in Git-tab. Enforces idle-state invariant: no staged/modified files block checkout, mutations rejected during checkout-running state. Coordinates with `GitSyncGate` for cycle acquisition. |
+| `activeBranchStore.ts` | Tracks the active checked-out branch per repository. Reconciles persisted state against local HEAD on every read; marks stale when HEAD differs from persisted value. Git-tab checkout is authoritative app-wide. |
 | `resolveBranch.ts` | Resolves which branch to sync to based on repo config, user preference, and conflict state. Re-exports from `branchResolver.ts`. |
 | `RepoRemovalCascade.ts` | Handles complete removal of a cloned repository — deletes files, clears caches, removes from store. |
 | `RepoAccessPreflight.ts` | Pre-flight checks before granting access to a repo — verifies credentials, permissions, API availability. |
+
+#### Branch Model
+
+GitNotēs uses a **centralized branch model** for clone-mode repositories:
+
+- **One active checked-out branch per clone.** The Git tab owns branch state; only `GitBranchCoordinator.checkout()` transitions HEAD. All other services read branch state from `activeBranchStore`.
+- **Git-tab ownership.** The Explore tab (Git UI) is the sole authority for branch operations. Note editing never triggers implicit branch switches.
+- **Operation state/locking.** `GitBranchCoordinator` maintains a state machine (`idle | checkout-running | mutation-running | failed`). Mutations (stage, commit, discard) are rejected while `checkout-running`; checkout is rejected when files are staged/modified/conflicted.
+- **Queue pause semantics.** `NoteSyncQueueService` tracks `{ repoId, repoPath, branch }` on every queue item. On branch switch, all non-active-branch items are paused; only the active branch's pending items drain. This prevents cross-branch sync drift.
 
 ### Sync & Recovery
 

@@ -40,19 +40,39 @@ tryPushNow (8 second budget)
 
 ### Offline Queue
 
-When offline, mutations are queued in `ClonePendingQueue` (persisted to AsyncStorage):
+When offline, mutations are queued in `NoteSyncQueueService` (persisted to AsyncStorage). **ClonePendingQueue is fictional — not implemented.**
+
+Queue items explicitly track branch identity:
+
+```typescript
+interface QueueItem {
+  id: string;
+  repoId: string;
+  repoPath: string;
+  branch: string;         // ← branch identity required on every item
+  entityType: EntityType; // 'note' | 'canvas' | 'todo' | 'journal'
+  entityId: string;
+  payload: Record<string, unknown>;
+  status: 'pending' | 'paused' | 'done' | 'failed';
+  createdAt: number;
+  attempts: number;
+}
+```
+
+**Branch-aware drain:** `dequeue(repoId, branch)` returns only items matching both `repoId` AND `branch`. On checkout, all non-active-branch items are paused via `pauseAllExcept(activeRepoId, activeBranch)`. This prevents cross-branch sync drift.
 
 ```
 CloneSyncService.save (offline)
-  → ClonePendingQueue.enqueue(mutation)
+  → NoteSyncQueueService.enqueue({ repoId, repoPath, branch, ... })
     → Returns { success: true, queued: true }
 
 Network restored (NetInfo online-transition)
-  → ClonePendingQueue.drain()
-    → For each queued mutation:
-        → Retry CloneSyncService.save
-          → Push via tryPushNow
+  → NoteSyncQueueService.drain(repoId, activeBranch)
+    → Only items matching active branch are returned
+      → Push via tryPushNow
 ```
+
+**Queue pause semantics:** When the user switches to a different branch, `pauseForBranchSwitch(branch)` marks all that branch's pending items as `paused`. They are resumed (marked `pending` again) only when the user switches back to that branch and HEAD still matches — stale branch state produces an error, not silent fallback to `main`.
 
 ### Clone Storage Location
 
@@ -75,6 +95,23 @@ tryPushNow → 409 Conflict
       → On keep-local: force push (`git push --force`)
       → On keep-remote: discard local changes, re-clone from remote
       → On manual merge: user edits the conflicting file directly, then re-saves (which creates a new commit)
+```
+
+### Push Marker Preflight/Postflight Coordination
+
+`GitSyncGate` coordinates push/pull races via per-repo push markers:
+
+- **`markPushActive(repo, branch)`** — set before a mutation flight (drain group, write); publishes a running op to the git-operation registry
+- **`clearPushActive(repo, branch)`** — clear after push completes; registry op succeeds
+- **`waitForIdle(repo?)`** — preflight wait; pull steps call this before reading origin to avoid the deleted-note resurrection window (pulling mid-push can resurrect deleted files)
+
+Single-repo syncs wait only on that repo's markers; all-repos syncs wait app-wide because any push could affect the read.
+
+```
+manualSync / ForegroundSync
+  → waitForIdle(repo)         # preflight: wait for in-flight pushes to clear
+  → pullFromSingleRepo(repo)  # safe to read origin
+  → refresh stores
 ```
 
 ### Push Trigger Sources (code references)
@@ -124,12 +161,14 @@ tryPushNow → 409 Conflict
 | Service | Role |
 |---------|------|
 | `CloneSyncService` | Clone mode file write + commit |
-| `NoteSyncQueueService` | Offline mutation queue |
+| `NoteSyncQueueService` | AsyncStorage-backed branch-aware mutation queue; tracks `{ repoId, repoPath, branch }` per item; drains only active-branch items |
 | `BackgroundSyncService` | OS background sync task |
 | `ForegroundSyncService` | Foreground change monitoring |
 | `RepoPullService` | Pull changes from remote |
 | `ConflictResolverScreen` | User-facing conflict UI |
 | `GitEngine.stage` | Stage files for commit (Rust) |
+| `GitSyncGate` | App-wide cycle mutex + per-repo push markers; preflight wait before pull |
+| `GitBranchCoordinator` | Checkout safety state machine; blocks checkout when files are staged/modified/conflicted |
 
 ---
 
