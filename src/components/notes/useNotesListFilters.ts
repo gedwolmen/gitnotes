@@ -66,30 +66,41 @@ export function useNotesListFilters({
   });
 
   const [ftsIds, setFtsIds] = useState<Set<string>>(new Set());
+  const [isSearching, setIsSearching] = useState(false);
   const searchQueryRef = useRef(searchQuery);
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   searchQueryRef.current = searchQuery;
 
   useEffect(() => {
     const q = searchQuery.trim();
     if (!q) {
       setFtsIds(new Set());
+      setIsSearching(false);
       return;
     }
-    const currentQuery = q;
-    const words = currentQuery.split(/\s+/);
-    const prefixQuery = words.map((w) => `${w}*`).join(' ');
-    getDocService()
-      .index.searchFts(prefixQuery)
-      .then((ids) => {
-        if (searchQueryRef.current.trim() === currentQuery) {
-          setFtsIds(new Set(ids));
-        }
-      })
-      .catch(() => {
-        if (searchQueryRef.current.trim() === currentQuery) {
-          setFtsIds(new Set());
-        }
-      });
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+    setIsSearching(true);
+    debounceTimerRef.current = setTimeout(() => {
+      const currentQuery = q;
+      const words = currentQuery.split(/\s+/);
+      const prefixQuery = words.map((w) => `${w}*`).join(' ');
+      getDocService()
+        .index.searchFts(prefixQuery)
+        .then((ids) => {
+          if (searchQueryRef.current.trim() === currentQuery) {
+            setFtsIds(new Set(ids));
+            setIsSearching(false);
+          }
+        })
+        .catch(() => {
+          if (searchQueryRef.current.trim() === currentQuery) {
+            setFtsIds(new Set());
+            setIsSearching(false);
+          }
+        });
+    }, 300);
   }, [searchQuery, filteredNotes]);
 
   const filters = rawFilters as NotesListFilters;
@@ -239,5 +250,6 @@ export function useNotesListFilters({
     handleSelectFolder,
     handleToggleTag,
     handleToggleColor,
+    isSearching,
   };
 }
