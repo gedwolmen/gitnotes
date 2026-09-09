@@ -38,7 +38,7 @@ type NativeGitEngineModule = {
   discardFiles(path: string, paths: string[]): Promise<void>;
   stageFileLines(path: string, filePath: string, hunks: HunkSelection[]): Promise<void>;
   commit(path: string, message: string, authorName: string, authorEmail: string): Promise<CommitInfo>;
-  recentCommits(path: string, limit: number): Promise<CommitInfo[]>;
+  recentCommits(path: string, skip: number, limit: number): Promise<CommitInfo[]>;
   commitDiff(path: string, commitId: string): Promise<FileDiff[]>;
   checkoutCommit(path: string, commitId: string): Promise<void>;
   resetSoft(path: string, commitId: string): Promise<void>;
@@ -113,7 +113,7 @@ type GeneratedKey = { publicKey: string; privateKey: string };
 type GitEngineError = { message: string; corruption?: boolean };
 type GitProgressEvent = { phase: string; loaded: number; total: number; kind?: string; received: number; percent: number };
 type GitProgressKind = string;
-type HunkSelection = { oldStart: number; oldLines: number; newStart: number; newLines: number };
+type HunkSelection = { lineIndices: number[] };
 type NativeCredential = { kind: string; username?: string; privateKey?: string; publicKey?: string | null; passphrase?: string | null; password?: string };
 type PullKind = string;
 type PullResult = { ok: boolean; error?: string };
@@ -376,9 +376,9 @@ export async function commit(repoPath: string, message: string, author: Author):
   return run(() => GitEngineModule!.commit(repoPath, message, author.name, author.email), { id: '', message: '', author: { name: '', email: '' }, timestamp: 0, parentCount: 0, authorTime: 0 });
 }
 
-export async function log(repoPath: string, limit = 50): Promise<CommitInfo[]> {
+export async function log(repoPath: string, limit = 50, skip = 0): Promise<CommitInfo[]> {
   if (!GitEngineModule) return [];
-  return run(() => GitEngineModule!.recentCommits(repoPath, limit), []);
+  return run(() => GitEngineModule!.recentCommits(repoPath, skip, limit), []);
 }
 
 /** Per-file diff of one commit against its first parent (`git show`-style). */

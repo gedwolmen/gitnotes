@@ -12,7 +12,7 @@ import {
   type FloatingButtonPosition,
 } from './floatingGitButtonGeometry';
 
-const EDGE_INSET = 24;
+const EDGE_INSET = 16;
 const MINIMUM_TOP_BOUND = 60;
 const MINIMUM_BOTTOM_CLEARANCE = 100;
 const STORAGE_KEY = 'git-button-position';

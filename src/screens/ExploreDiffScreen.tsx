@@ -75,56 +75,10 @@ export default function ExploreDiffScreen() {
     });
   }, []);
 
-  /**
-   * Convert selected line indices to HunkSelection[].
-   * Groups consecutive lines into hunks based on old/new line numbers.
-   */
   function lineIndicesToHunkSelections(lines: DiffLine[], indices: Set<number>): HunkSelection[] {
     const selectedLines = lines.filter((l) => indices.has(l.index));
     if (selectedLines.length === 0) return [];
-
-    // Sort by old line number
-    const sorted = [...selectedLines].sort((a, b) => (a.oldLineno ?? 0) - (b.oldLineno ?? 0));
-
-    const hunks: HunkSelection[] = [];
-    let currentHunk: DiffLine[] = [];
-
-    for (const line of sorted) {
-      if (currentHunk.length === 0) {
-        currentHunk.push(line);
-      } else {
-        const prev = currentHunk[currentHunk.length - 1];
-        const gap = (line.oldLineno ?? 0) - (prev.oldLineno ?? 0);
-        if (gap <= 1) {
-          currentHunk.push(line);
-        } else {
-          // Finish current hunk
-          const oldStart = currentHunk[0].oldLineno ?? 0;
-          const newStart = currentHunk[0].newLineno ?? 0;
-          hunks.push({
-            oldStart,
-            oldLines: currentHunk.filter((l) => l.origin?.startsWith('Deletion')).length,
-            newStart,
-            newLines: currentHunk.filter((l) => l.origin?.startsWith('Addition')).length,
-          });
-          currentHunk = [line];
-        }
-      }
-    }
-
-    // Don't forget the last hunk
-    if (currentHunk.length > 0) {
-      const oldStart = currentHunk[0].oldLineno ?? 0;
-      const newStart = currentHunk[0].newLineno ?? 0;
-      hunks.push({
-        oldStart,
-        oldLines: currentHunk.filter((l) => l.origin?.startsWith('Deletion')).length,
-        newStart,
-        newLines: currentHunk.filter((l) => l.origin?.startsWith('Addition')).length,
-      });
-    }
-
-    return hunks;
+    return [{ lineIndices: selectedLines.map((line) => line.index) }];
   }
 
   const stageSelectedLines = useCallback(async () => {
@@ -253,10 +207,9 @@ export default function ExploreDiffScreen() {
               disabled={selected.size === 0 || staging}
               onPress={() => void stageSelectedLines()}
               testID="explore-diff.stage-selected"
-            >
-              {staging ? <ActivityIndicator size="small" color="#ffffff" /> : null}
-              Stage selected
-            </Button>
+              label={staging ? undefined : 'Stage selected'}
+              leadingIcon={staging ? <ActivityIndicator size="small" color="#ffffff" /> : undefined}
+            />
           </View>
         </View>
       )}

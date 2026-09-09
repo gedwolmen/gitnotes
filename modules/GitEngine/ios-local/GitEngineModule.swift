@@ -468,8 +468,8 @@ public class GitEngineModule: Module {
       )
     }.runOnQueue(engineQueue)
 
-    AsyncFunction("recentCommits") { (path: String, limit: UInt32) -> [[String: Any]] in
-      try recentCommits(path: GitEngineModule.fsPath(path), limit: limit).map(commitDict)
+    AsyncFunction("recentCommits") { (path: String, skip: UInt32, limit: UInt32) -> [[String: Any]] in
+      try recentCommits(path: GitEngineModule.fsPath(path), skip: skip, limit: limit).map(commitDict)
     }.runOnQueue(engineQueue)
 
     AsyncFunction("commitDiff") { (path: String, commitId: String) -> [[String: Any]] in

@@ -400,7 +400,7 @@ pub fn commit_changes(path: &Path, message: &str, author: &Author) -> Result<Com
 }
 
 /// Recent commit history (`git log`), newest first.
-pub fn recent_commits(path: &Path, limit: u32) -> Result<Vec<CommitInfo>> {
+pub fn recent_commits(path: &Path, skip: u32, limit: u32) -> Result<Vec<CommitInfo>> {
     run_with_lock(path, || {
         let repo = open_repo(path)?;
         let mut revwalk = repo.revwalk()?;
@@ -409,6 +409,9 @@ pub fn recent_commits(path: &Path, limit: u32) -> Result<Vec<CommitInfo>> {
             Ok(()) => {}
             Err(e) if e.code() == git2::ErrorCode::UnbornBranch => return Ok(Vec::new()),
             Err(e) => return Err(EngineError::Git(e)),
+        }
+        if skip > 0 {
+            let _ = revwalk.skip(skip as usize);
         }
         let mut out = Vec::new();
         for oid in revwalk.take(limit.max(1) as usize) {

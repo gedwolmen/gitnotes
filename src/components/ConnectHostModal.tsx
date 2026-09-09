@@ -67,13 +67,6 @@ export function ConnectHostModal({
   const [token, setToken] = useState('');
   const [tokenVisible, setTokenVisible] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
-  // Tracked for future UX (render verified identity banner above Save).
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [verifiedLogin, setVerifiedLogin] = useState<{
-    login: string;
-    name: string;
-    avatarUrl?: string | null;
-  } | null>(null);
 
   // Reset state when modal closes or preset changes.
   useEffect(() => {
@@ -82,7 +75,6 @@ export function ConnectHostModal({
       setProvider(initial);
       setInstanceBaseUrl(GIT_HOST_API_BASES[initial]);
       setToken('');
-      setVerifiedLogin(null);
       setTokenVisible(false);
       setIsTesting(false);
     }
@@ -94,7 +86,6 @@ export function ConnectHostModal({
     (next: GitHostProvider) => {
       setProvider(next);
       setInstanceBaseUrl(GIT_HOST_API_BASES[next]);
-      setVerifiedLogin(null);
     },
     [],
   );
@@ -119,7 +110,6 @@ export function ConnectHostModal({
     }
 
     setIsTesting(true);
-    setVerifiedLogin(null);
     try {
       const result = await testToken(
         provider,
@@ -127,9 +117,6 @@ export function ConnectHostModal({
         supportsSelfHost ? instanceBaseUrl.trim() : null,
       );
       if (result.ok) {
-        // We don't have the user profile from `testToken`; the connectHost call
-        // below will verify it again and persist the profile.
-        setVerifiedLogin({ login: '…', name: '…' });
         Alert.alert(t('connectHost.success.testTitle'), t('connectHost.success.testBody'));
       } else {
         Alert.alert(t('connectHost.error.invalidToken'), t('connectHost.error.invalidTokenBody'));
@@ -269,7 +256,6 @@ export function ConnectHostModal({
               value={instanceBaseUrl}
               onChangeText={(v) => {
                 setInstanceBaseUrl(v);
-                setVerifiedLogin(null);
               }}
               placeholder={GIT_HOST_API_BASES[provider]}
               placeholderTextColor={colors.textSecondary}
@@ -304,10 +290,9 @@ export function ConnectHostModal({
         <View style={[styles.tokenRow, { marginBottom: spacing[3] }]}>
           <TextInput
             value={token}
-            onChangeText={(v) => {
-              setToken(v);
-              setVerifiedLogin(null);
-            }}
+              onChangeText={(v) => {
+                setToken(v);
+              }}
             placeholder={t('connectHost.tokenPlaceholder')}
             placeholderTextColor={colors.textSecondary}
             autoCapitalize="none"

@@ -4053,11 +4053,12 @@ public func pushRepoWithIntegrate(path: String, remoteName: String, repoId: Stri
 /**
  * Recent commit history.
  */
-public func recentCommits(path: String, limit: UInt32)throws  -> [CommitInfo]  {
+public func recentCommits(path: String, skip: UInt32, limit: UInt32)throws  -> [CommitInfo]  {
     return try  FfiConverterSequenceTypeCommitInfo.lift(try rustCallWithError(FfiConverterTypeBridgeError_lift) {
         uniffiCallStatus in
     uniffi_gitnotes_git2_fn_func_recent_commits(
         FfiConverterString.lower(path),
+        FfiConverterUInt32.lower(skip),
         FfiConverterUInt32.lower(limit),uniffiCallStatus
     )
 })

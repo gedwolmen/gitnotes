@@ -48,7 +48,6 @@ import { reconcileThoughtDumps } from './src/services/ai/thoughtDumpIndexing';
 import { LastSelectionPreferenceService } from './src/services/LastSelectionPreferenceService';
 import { useProStore } from './src/stores/proStore';
 import { enforceTierLimits } from './src/services/TierLimits';
-import Constants from 'expo-constants';
 import * as PushNotificationService from './src/services/PushNotificationService';
 import { hideDevMenuFloatingActionButton } from './src/utils/devMenuFab';
 

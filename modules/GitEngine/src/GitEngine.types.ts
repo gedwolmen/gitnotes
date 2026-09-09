@@ -242,7 +242,7 @@ export interface GitEngineModule {
   discardFiles(path: string, paths: string[]): Promise<void>;
   stageFileLines(path: string, filePath: string, hunks: HunkSelection[]): Promise<void>;
   commit(path: string, message: string, authorName: string, authorEmail: string): Promise<CommitInfo>;
-  recentCommits(path: string, limit: number): Promise<CommitInfo[]>;
+  recentCommits(path: string, skip: number, limit: number): Promise<CommitInfo[]>;
   commitDiff(path: string, commitId: string): Promise<FileDiff[]>;
   checkoutCommit(path: string, commitId: string): Promise<void>;
   resetSoft(path: string, commitId: string): Promise<void>;
