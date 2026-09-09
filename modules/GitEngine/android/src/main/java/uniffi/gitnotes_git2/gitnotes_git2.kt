@@ -869,7 +869,7 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_gitnotes_git2_fn_func_push_repo_with_integrate(`path`: RustBuffer.ByValue,`remoteName`: RustBuffer.ByValue,`repoId`: RustBuffer.ByValue,`credentialSource`: RustBuffer.ByValue,`listener`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
-    external fun uniffi_gitnotes_git2_fn_func_recent_commits(`path`: RustBuffer.ByValue,`limit`: Int,uniffi_out_err: UniffiRustCallStatus, 
+    external fun uniffi_gitnotes_git2_fn_func_recent_commits(`path`: RustBuffer.ByValue,`skip`: Int,`limit`: Int,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_gitnotes_git2_fn_func_remove_paths(`path`: RustBuffer.ByValue,`paths`: RustBuffer.ByValue,`keepWorktree`: Byte,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
@@ -4452,13 +4452,14 @@ public object FfiConverterSequenceTypeRemoteInfo: FfiConverterRustBuffer<List<Re
         /**
          * Recent commit history.
          */
-    @Throws(BridgeException::class) fun `recentCommits`(`path`: kotlin.String, `limit`: kotlin.UInt): List<CommitInfo> {
+    @Throws(BridgeException::class) fun `recentCommits`(`path`: kotlin.String, `skip`: kotlin.UInt, `limit`: kotlin.UInt): List<CommitInfo> {
             return FfiConverterSequenceTypeCommitInfo.lift(
     uniffiRustCallWithError(BridgeException) { _status ->
     UniffiLib.uniffi_gitnotes_git2_fn_func_recent_commits(
     
         
         FfiConverterString.lower(`path`),
+        FfiConverterUInt.lower(`skip`),
         FfiConverterUInt.lower(`limit`),_status)
 }
     )
