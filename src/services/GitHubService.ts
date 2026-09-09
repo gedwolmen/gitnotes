@@ -353,7 +353,7 @@ class GitHubServiceClass {
       return null;
     }
     this.user = resolvedUser;
-    await AuthService.setToken(token);
+    await AuthService.connectHost({ provider: 'github', token });
     await AsyncStorage.setItem(USER_KEY, JSON.stringify(resolvedUser));
     return resolvedUser;
   }
