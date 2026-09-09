@@ -113,14 +113,6 @@ function CanvasCardImpl({
                   </Text>
                 </View>
               )}
-              {canvas.branch && (
-                <View style={styles.repoItem}>
-                  <Ionicons name="git-branch-outline" size={14} color={colors.primary} />
-                  <Text style={[styles.branchText, { color: colors.primary }]}>
-                    {canvas.branch}
-                  </Text>
-                </View>
-              )}
             </View>
           )}
         </View>

@@ -24,9 +24,9 @@ export function NotesActiveFilters({
 }: NotesActiveFiltersProps) {
   const { colors } = useTheme();
   const { t } = useTranslation();
-  const { selectedFormat, selectedBranch, selectedFolder } = filters;
+  const { selectedFormat, selectedFolder } = filters;
 
-  if (!selectedFormat && !selectedBranch && !selectedFolder) return null;
+  if (!selectedFormat && !selectedFolder) return null;
 
   const renderChip = (
     key: string,
@@ -56,9 +56,6 @@ export function NotesActiveFilters({
               NOTE_FORMAT_LABELS[selectedFormat as Exclude<NoteFormat, 'json'>],
               onClearFormat,
             )
-          : null}
-        {selectedBranch
-          ? renderChip('branch', 'git-branch-outline', selectedBranch, onClearBranch)
           : null}
         {selectedFolder ? renderChip('folder', 'folder-outline', selectedFolder, onClearFolder) : null}
         <TouchableOpacity testID="notes-active-filters.button.clear-all" style={[styles.chip, { borderColor: colors.border + '60' }]} onPress={onClearAll}>

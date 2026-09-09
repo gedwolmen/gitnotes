@@ -451,7 +451,6 @@ export function RepoTreeItem({ node, owner, repo, branch, provider, level, onFil
                       `Path: ${node.path}`,
                       !isDir ? `Size: ${formatBytes(node.size)}` : null,
                       node.sha ? `SHA: ${node.sha.slice(0, 10)}` : null,
-                      `Branch: ${branch || 'main'}`,
                     ].filter(Boolean).join('\n'),
                   );
                 },
