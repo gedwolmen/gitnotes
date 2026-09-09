@@ -1,15 +1,23 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useEntityList } from '../../hooks/useEntityList';
 import { Note, NoteColor, NOTE_COLOR_VALUES, NoteFormat } from '../../models/Note';
 import { SortMode } from '../../types/SortTypes';
 import { GitRepository } from '../../services/GitService';
+import { DocumentService } from '../../services/documents/DocumentService';
 import {
   INITIAL_NOTES_LIST_FILTERS,
   NotesListFilters,
   getActiveNotesFilterCount,
   noteMatchesListFilters,
 } from './notesShared';
+
+// Lazy singleton — avoids importing DocumentService at module load time
+let _docService: DocumentService | null = null;
+function getDocService(): DocumentService {
+  _docService = _docService ?? new DocumentService();
+  return _docService;
+}
 
 function compareNotes(a: Note, b: Note, mode: SortMode): number {
   const aPinned = a.isPinned ? 1 : 0;
@@ -57,9 +65,47 @@ export function useNotesListFilters({
     persistenceKey,
   });
 
+  const [ftsIds, setFtsIds] = useState<Set<string>>(new Set());
+  const searchQueryRef = useRef(searchQuery);
+  searchQueryRef.current = searchQuery;
+
+  useEffect(() => {
+    const q = searchQuery.trim();
+    if (!q) {
+      setFtsIds(new Set());
+      return;
+    }
+    const currentQuery = q;
+    const words = currentQuery.split(/\s+/);
+    const prefixQuery = words.map((w) => `${w}*`).join(' ');
+    getDocService()
+      .index.searchFts(prefixQuery)
+      .then((ids) => {
+        if (searchQueryRef.current.trim() === currentQuery) {
+          setFtsIds(new Set(ids));
+        }
+      })
+      .catch(() => {
+        if (searchQueryRef.current.trim() === currentQuery) {
+          setFtsIds(new Set());
+        }
+      });
+  }, [searchQuery, filteredNotes]);
+
   const filters = rawFilters as NotesListFilters;
-  const displayNotes = filteredData;
   const hasActiveSearch = searchQuery.trim().length > 0;
+
+  const displayNotes = useMemo(() => {
+    if (!hasActiveSearch) return filteredData;
+    const titleTagIds = new Set(filteredData.map((n) => n.id));
+    const ftsOnlyNotes = filteredNotes.filter(
+      (n) => ftsIds.has(n.id) && !titleTagIds.has(n.id),
+    );
+    const merged = [...filteredData, ...ftsOnlyNotes];
+    if (!compareNotes) return merged;
+    return [...merged].sort((a, b) => compareNotes(a, b, sortMode));
+  }, [filteredData, filteredNotes, ftsIds, hasActiveSearch, sortMode]);
+
   const searchMatchCount = hasActiveSearch ? displayNotes.length : 0;
   const activeFilterCount = getActiveNotesFilterCount(filters);
 
