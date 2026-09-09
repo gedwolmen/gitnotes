@@ -422,7 +422,7 @@ RustBuffer uniffi_gitnotes_git2_fn_func_push_repo_with_integrate(RustBuffer path
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_FN_FUNC_RECENT_COMMITS
 #define UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_FN_FUNC_RECENT_COMMITS
-RustBuffer uniffi_gitnotes_git2_fn_func_recent_commits(RustBuffer path, uint32_t limit, RustCallStatus *_Nonnull out_status
+RustBuffer uniffi_gitnotes_git2_fn_func_recent_commits(RustBuffer path, uint32_t skip, uint32_t limit, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_FN_FUNC_REMOVE_PATHS

@@ -250,9 +250,10 @@ pub fn commit_changes(
 
 /// Recent commit history.
 #[uniffi::export]
-pub fn recent_commits(path: String, limit: u32) -> Result<Vec<CommitInfo>, BridgeError> {
+pub fn recent_commits(path: String, skip: u32, limit: u32) -> Result<Vec<CommitInfo>, BridgeError> {
     Ok(engine::ops::recent_commits(
         std::path::Path::new(&path),
+        skip,
         limit,
     )?)
 }

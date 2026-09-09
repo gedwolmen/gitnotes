@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, RefreshControl, View } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -17,20 +17,25 @@ import { useTokens } from '@/contexts/ThemeContext';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
+const PAGE_SIZE = 50;
+
 export function CommitsSection({ repo, active, chromeTopInset = 0, refreshStatus }: SectionProps) {
   const navigation = useNavigation<NavigationProp>();
   const toast = useToast();
   const { colors } = useTokens();
-  const [commits, setCommits] = useState<CommitInfo[] | null>(null);
+  const [commits, setCommits] = useState<CommitInfo[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [pushing, setPushing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notCloned, setNotCloned] = useState(false);
+  const hasMore = useRef(true);
 
-  const load = useCallback(async () => {
+  const loadInitial = useCallback(async () => {
     setLoading(true);
     setError(null);
     setNotCloned(false);
+    hasMore.current = true;
     try {
       const cloned = await GitFsService.isCloned({ repoPath: repo.path });
       if (!cloned) {
@@ -38,13 +43,30 @@ export function CommitsSection({ repo, active, chromeTopInset = 0, refreshStatus
         setLoading(false);
         return;
       }
-      setCommits(await GitEngine.log(repo.localPath, 100));
+      const fetched = await GitEngine.log(repo.localPath, PAGE_SIZE, 0);
+      setCommits(fetched);
+      hasMore.current = fetched.length === PAGE_SIZE;
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : String(caught));
     } finally {
       setLoading(false);
     }
   }, [repo.localPath, repo.path]);
+
+  const loadMore = useCallback(async () => {
+    if (loadingMore || !hasMore.current) return;
+    setLoadingMore(true);
+    try {
+      const skip = commits.length;
+      const fetched = await GitEngine.log(repo.localPath, PAGE_SIZE, skip);
+      setCommits((prev) => [...prev, ...fetched]);
+      hasMore.current = fetched.length === PAGE_SIZE;
+    } catch {
+      // silent fail for load more — user can scroll again
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [commits.length, loadingMore, repo.localPath]);
 
   const handlePush = useCallback(async () => {
     if (loading || pushing) return;
@@ -75,7 +97,7 @@ export function CommitsSection({ repo, active, chromeTopInset = 0, refreshStatus
             </Toast>
           ),
         });
-        await load();
+        await loadInitial();
         await refreshStatus?.();
       } else {
         toast.show({
@@ -107,8 +129,8 @@ export function CommitsSection({ repo, active, chromeTopInset = 0, refreshStatus
 
   useFocusEffect(
     useCallback(() => {
-      if (active) void load();
-    }, [active, load]),
+      if (active) void loadInitial();
+    }, [active, loadInitial]),
   );
 
   const renderItem = useCallback(
@@ -147,7 +169,7 @@ export function CommitsSection({ repo, active, chromeTopInset = 0, refreshStatus
       <View className="items-center px-8 py-10" style={{ paddingTop: chromeTopInset + 24 }}>
         <Ionicons name="warning-outline" size={36} color={colors.error} />
         <Text className="mt-2 text-center text-sm" style={{ color: colors.error }}>{error}</Text>
-        <Button variant="outline" size="sm" className="mt-3" onPress={() => void load()}>
+        <Button variant="outline" size="sm" className="mt-3" onPress={() => void loadInitial()}>
           <ButtonText>Retry</ButtonText>
         </Button>
       </View>
@@ -168,17 +190,19 @@ export function CommitsSection({ repo, active, chromeTopInset = 0, refreshStatus
 
   return (
     <FlatList className="flex-1"
-      data={commits ?? []}
+      data={commits}
       keyExtractor={(item) => item.id}
       renderItem={renderItem}
-       contentContainerStyle={{ paddingTop: chromeTopInset, paddingBottom: 96, flexGrow: 1 }}
+      contentContainerStyle={{ paddingTop: chromeTopInset, paddingBottom: 96, flexGrow: 1 }}
+      onEndReached={loadMore}
+      onEndReachedThreshold={0.5}
       refreshControl={
-        <RefreshControl refreshing={loading} onRefresh={() => void load()} tintColor={colors.accent} />
+        <RefreshControl refreshing={loading} onRefresh={() => void loadInitial()} tintColor={colors.accent} />
       }
       ListHeaderComponent={
         <View className="flex-row items-center justify-between px-4 pb-2">
           <Text className="text-xs" style={{ color: colors.textSecondary }} testID="explore.commits.count">
-            {commits ? `${commits.length} commit(s)` : 'Reading history…'}
+            {loading ? 'Reading history…' : `${commits.length} commit${commits.length !== 1 ? 's' : ''}`}
           </Text>
           <View className="flex-row items-center gap-2">
             {loading || pushing ? (
@@ -196,6 +220,13 @@ export function CommitsSection({ repo, active, chromeTopInset = 0, refreshStatus
             )}
           </View>
         </View>
+      }
+      ListFooterComponent={
+        loadingMore ? (
+          <View className="items-center py-4">
+            <ActivityIndicator size="small" color={colors.accent} />
+          </View>
+        ) : null
       }
         ListEmptyComponent={
           !loading ? (
