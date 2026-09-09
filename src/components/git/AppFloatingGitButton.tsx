@@ -13,7 +13,7 @@ import { emitGitContentRefresh } from '@/hooks/useGitRefreshEvent';
 import FloatingGitButton from './FloatingGitButton';
 import type { ReleaseSegment } from './useFloatingGitButtonAffordances';
 import type { RootStackParamList } from '@/navigation/types';
-
+import { getFloatingGitNavigationTarget } from './floatingGitButtonNavigation';
 
 const HINT_SEEN_KEY = '@gitnotes:gitbutton_hint_seen';
 
@@ -22,7 +22,7 @@ const HINT_SEEN_KEY = '@gitnotes:gitbutton_hint_seen';
  *   - the aggregated per-repo state from `useAllReposStatus`
  *   - the smart-navigate tap: queues a pending action (target repo +
  *     section) and jumps to ExploreTab. ExploreScreen reads the pending
- *     action on focus, applies repo + section, then clears it.
+ *     action on mount/update, applies repo + section, then clears it.
  *
  * Hold-to-release performs git stage/commit/push across all repos.
  * Disabled (grayed out) when nothing is pending anywhere.
@@ -220,24 +220,9 @@ export default function AppFloatingGitButton() {
       navigation.navigate('ExploreConflict', { repoId: conflictRepoId });
       return;
     }
-    if (aggregatedState.totalAhead > 0) {
-      const aheadRepoId = Array.from(aggregatedState.perRepo.entries()).find(([, entry]) => entry.ahead > 0)?.[0]
-        ?? aggregatedState.latestChangedRepoId
-        ?? repos[0]?.id;
-      if (!aheadRepoId) return;
-      setPending({ repoId: aheadRepoId, section: 'commits' });
-      navigation.navigate('MainTabs', { screen: 'ExploreTab' });
-      return;
-    }
-    const targetRepoId = aggregatedState.latestChangedRepoId ?? repos[0]?.id ?? null;
-    const section =
-      aggregatedState.totalStaged > 0
-        ? 'staging'
-        : aggregatedState.totalUncommitted > 0
-          ? 'changes'
-          : aggregatedState.totalAhead > 0
-            ? 'commits'
-            : null;
+    const target = getFloatingGitNavigationTarget(aggregatedState);
+    const targetRepoId = target?.repoId ?? repos[0]?.id ?? null;
+    const section = target?.section ?? null;
     if (!section || !targetRepoId) return;
     setPending({ repoId: targetRepoId, section });
     navigation.navigate('MainTabs', { screen: 'ExploreTab' });
@@ -252,4 +237,3 @@ export default function AppFloatingGitButton() {
     />
   );
 }
-
