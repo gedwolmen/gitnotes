@@ -1,8 +1,8 @@
 /**
  * Stub implementations for deleted sync services.
  * These services are no-ops as the sync architecture has evolved —
- * except CloneSyncService.save, which performs the real worktree write +
- * staging that clone-mode saves depend on.
+ * except CloneSyncService.save, which performs the real worktree write that
+ * clone-mode saves depend on.
  */
 
 import * as FileSystem from 'expo-file-system/legacy';
@@ -183,7 +183,6 @@ export const CloneSyncService = {
       const dirPath = lastSlash === -1 ? repoDir : `${repoDir}/${relPath.slice(0, lastSlash)}`;
       await FileSystem.makeDirectoryAsync(dirPath, { intermediates: true });
       await FileSystem.writeAsStringAsync(fullPath, content ?? '');
-      await GitEngine.stage(repoDir, [relPath]);
       return { success: true };
     } catch (error) {
       return { success: false, error: error instanceof Error ? error.message : String(error) };

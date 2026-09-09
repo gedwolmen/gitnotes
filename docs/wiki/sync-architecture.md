@@ -19,16 +19,15 @@ GitNotēs supports two synchronization modes, controlled per-repository via the 
 
 Clone mode is designed for **offline-first** usage. Changes are committed locally and pushed asynchronously.
 
-### Commit-on-Save Flow
+### Save Flow
 
 ```
 User edits note
   → NoteEditorScreen saves
     → CloneSyncService.save({ intent: 'upsert', content, filePath, ... })
       → File written to working tree: <documentDir>/GitNotes/<owner>/<repo>/<path>.md
-        → GitEngine.stage(repoDir, [relPath])
-          → Local git commit created (author: GitNotēs, message: "Update <path>")
-            → CloneSyncService returns { success: true }
+        → CloneSyncService returns { success: true }
+          → User stages and commits from the Git workspace or floating Git button
 ```
 
 ### Push Triggers

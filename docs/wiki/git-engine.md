@@ -408,14 +408,12 @@ The TypeScript facade at `src/services/git/engine/GitEngine.ts` is the single im
 import * as GitEngine from './git/engine/GitEngine';
 
 await FileSystem.writeAsStringAsync(fullPath, content);
-await GitEngine.stage(repoDir, [relPath]);
-// Commit is triggered separately by the push trigger system
-// (ForegroundSyncService, ClonePushTriggers, BackgroundSyncService)
+// The user stages and commits from the Git workspace or floating Git button.
 ```
 
 Key integration points:
-- **`CloneSyncService.save()`** (`src/services/syncStubs.ts`) — writes the file, then calls `GitEngine.stage()`
-- **`CommitService`** or **`commitOps.ts`** — creates commits (stage is done by CloneSyncService; commit is triggered by push triggers)
+- **`CloneSyncService.save()`** (`src/services/cloneSyncServiceImpl.ts`) — writes the file without staging it
+- **`CommitService`** or **`commitOps.ts`** — stages and creates explicit commits
 - **`ConflictResolverScreen`** — calls `GitEngine.conflicts()`, `GitEngine.getConflictBlobs()`, `GitEngine.markConflictResolved()`
 - **`BackgroundSyncService`** / **`ForegroundSyncService`** — call `GitEngine.push()` and `GitEngine.pull()`
 

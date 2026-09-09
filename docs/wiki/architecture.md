@@ -148,14 +148,13 @@ User edits note
   → NoteEditorScreen.save()
     → noteStore.updateNote()
       → FileSystem.writeAsStringAsync(fullPath, content)
-        → GitEngine.stage(repoDir, [relPath])
-          → GitEngine.commit(repoDir, message, author, email)
+        → User stages and commits from the Git workspace or floating Git button
       → ForegroundSyncService / BackgroundSyncService triggers push
         → GitEngine.push(repoDir, 'origin', branch)
           → 409 Conflict → ConflictResolverScreen
 ```
 
-> **Note:** `CloneSyncService.save()` is a thin write + stage wrapper. The actual sync trigger (`ForegroundSyncService` watching store changes, or a direct call from the editor) initiates the push loop. See [Sync Architecture](./sync-architecture.md) for full push trigger details.
+> **Note:** `CloneSyncService.save()` writes the working-tree file without staging it. Users stage and commit from the Git workspace or floating Git button, then push through the normal clone-mode triggers. See [Sync Architecture](./sync-architecture.md) for full push trigger details.
 
 ### Note Load
 
