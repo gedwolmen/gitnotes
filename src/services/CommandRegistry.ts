@@ -104,3 +104,48 @@ registerCommand({
   category: 'Settings',
   action: () => {},
 });
+
+registerCommand({
+  id: 'nav.notes',
+  label: 'Go to Notes',
+  description: 'Navigate to notes list',
+  icon: 'document-text-outline',
+  category: 'Navigation',
+  action: () => {},
+});
+
+registerCommand({
+  id: 'nav.explore',
+  label: 'Go to Explore',
+  description: 'Navigate to explore screen',
+  icon: 'compass-outline',
+  category: 'Navigation',
+  action: () => {},
+});
+
+registerCommand({
+  id: 'nav.todos',
+  label: 'Go to Todos',
+  description: 'Navigate to todos list',
+  icon: 'checkbox-outline',
+  category: 'Navigation',
+  action: () => {},
+});
+
+registerCommand({
+  id: 'note.new.canvas',
+  label: 'New Canvas',
+  description: 'Create a new canvas',
+  icon: 'brush-outline',
+  category: 'Notes',
+  action: () => {},
+});
+
+registerCommand({
+  id: 'note.new.thoughtdump',
+  label: 'Thought Dump',
+  description: 'Quick capture a thought',
+  icon: 'flash-outline',
+  category: 'Notes',
+  action: () => {},
+});
