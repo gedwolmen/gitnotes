@@ -61,7 +61,7 @@ export function TemplateEditorModal({
   const tagLimitReached = draftTags.length >= TEMPLATE_MAX_TAGS;
 
   return (
-    <Modal visible={visible} onRequestClose={onClose} contentStyle={{ maxWidth: isTablet ? 720 : 480 }}>
+    <Modal visible={visible} onRequestClose={onClose} fullWidth contentStyle={{ width: '100%', maxWidth: isTablet ? 720 : 480 }}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} className="flex-1 pt-3 px-5 pb-3">
         <Text className="text-[22px] font-bold mb-[18px]" style={{ color: colors.text }}>{editingId ? t('templates.editTemplate') : t('templates.newTemplate')}</Text>
 

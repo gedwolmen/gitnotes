@@ -33,6 +33,7 @@ export function QuickAccessShelf({ items, onOpen, onLongPress }: Props) {
             key={`${item.kind}-${item.data.id}`}
             item={item}
             size="medium"
+            widthOverride={160}
             hidePinGlyph
             onPress={() => onOpen(item)}
             onLongPress={onLongPress ? () => onLongPress(item) : undefined}
