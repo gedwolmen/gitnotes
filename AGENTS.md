@@ -80,6 +80,7 @@ yarn eslint . --ext .ts,.tsx  # Linting
 
 ## Git Discipline
 
+- **Never commit or push directly on `main`.** All agent changes must be made on a dedicated branch and submitted through a pull request. This remains mandatory even for small fixes or when `main` is otherwise clean.
 - Atomic commits with descriptive messages (imperative mood).
 - No `node_modules/`, `.DS_Store`, `.env`, or build artifacts.
 - Branch per feature, rebase before merging.
