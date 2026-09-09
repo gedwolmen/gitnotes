@@ -18,7 +18,7 @@
  */
 
 import { gitOperationRegistry, type GitOpKind } from '@/stores/gitOperationStore';
-import { GitSyncGate } from './GitSyncGate';
+import { GitSyncGate, type PreflightState } from './GitSyncGate';
 import { emitGitContentRefresh } from '@/hooks/useGitRefreshEvent';
 import { invalidateCache } from './branchResolver';
 import * as GitEngine from './engine/GitEngine';
@@ -122,37 +122,47 @@ class GitBranchCoordinatorClass {
     });
 
     let releaseCycle: (() => void) | null = null;
+    let preflight: PreflightState | null = null;
 
-    return GitSyncGate.acquireCycle('manual')
-      .then((release) => {
-        releaseCycle = release;
+    return (async () => {
+      try {
+        releaseCycle = await GitSyncGate.acquireCycle('manual');
+
+        preflight = await GitSyncGate.capturePreflight(repoId, localPath);
+
         this.armWatchdog();
-        return GitEngine.statuses(localPath);
-      })
-      .then((statuses) => {
+
+        const statuses = await GitEngine.statuses(localPath);
         this.validateWorkingTree(statuses);
-        return GitEngine.checkoutBranch(localPath, branchName, remoteName);
-      })
-      .then(() => {
+
+        await GitEngine.checkoutBranch(localPath, branchName, remoteName);
+
+        const postflightOk = await GitSyncGate.verifyPostflight(preflight!, opId);
+        if (!postflightOk) {
+          gitOperationRegistry.fail(opId, 'Branch state changed during checkout (stale)');
+          this.setState('failed');
+          throw new Error('Checkout aborted: branch state changed during operation');
+        }
+
         this.clearWatchdog();
         gitOperationRegistry.succeed(opId);
         invalidateCache(repoId);
         emitGitContentRefresh();
         this.setState('idle');
-      })
-      .catch((error) => {
+      } catch (error) {
         this.clearWatchdog();
         gitOperationRegistry.fail(opId, error instanceof Error ? error.message : String(error));
         this.setState('failed');
         throw error;
-      })
-      .finally(() => {
+      } finally {
+        if (preflight) GitSyncGate.clearPreflight(repoId);
         if (releaseCycle) {
           releaseCycle();
         }
         this.currentRepoPath = null;
         this.currentBranchName = null;
-      });
+      }
+    })();
   }
 
   /**
