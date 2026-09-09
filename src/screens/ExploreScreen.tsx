@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AppState,
   AppStateStatus,
+  Dimensions,
   FlatList,
   Pressable,
   ScrollView,
@@ -341,6 +342,12 @@ export default function ExploreScreen() {
               value={section}
               onChange={(id) => setSection(id as ExploreSection)}
               testID="explore.tabs"
+              renderLabel={(tab) => {
+                if (tab.shortLabel && Dimensions.get('window').width < 400) {
+                  return tab.shortLabel;
+                }
+                return tab.label;
+              }}
             />
             </View>
         </BlurView>

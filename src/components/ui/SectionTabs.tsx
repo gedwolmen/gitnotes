@@ -6,6 +6,7 @@ import type { SectionTabColor } from '../explore/exploreShared';
 export interface SectionTab {
   id: string;
   label: string;
+  shortLabel?: string;
   color?: SectionTabColor;
 }
 
@@ -14,6 +15,7 @@ interface SectionTabsProps {
   value: string;
   onChange: (id: string) => void;
   testID?: string;
+  renderLabel?: (tab: SectionTab, isActive: boolean) => React.ReactNode;
 }
 
 const COLOR_MAP: Record<SectionTabColor, keyof ReturnType<typeof useTokens>['colors']> = {
@@ -23,7 +25,7 @@ const COLOR_MAP: Record<SectionTabColor, keyof ReturnType<typeof useTokens>['col
   accent: 'accent',
 };
 
-export function SectionTabs({ tabs, value, onChange, testID }: SectionTabsProps) {
+export function SectionTabs({ tabs, value, onChange, testID, renderLabel }: SectionTabsProps) {
   const { colors } = useTokens();
 
   return (
@@ -56,7 +58,7 @@ export function SectionTabs({ tabs, value, onChange, testID }: SectionTabsProps)
                 color: isActive ? activeColor : colors.textSecondary,
               }}
             >
-              {tab.label}
+              {renderLabel ? renderLabel(tab, isActive) : tab.label}
             </Text>
           </Pressable>
         );
