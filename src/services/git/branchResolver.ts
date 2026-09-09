@@ -27,25 +27,21 @@ async function resolveActiveProvider(): Promise<'github' | 'gitlab' | null> {
 }
 
 /**
- * Best-effort resolution of the branch to use for a repo. Order:
- *   1. `hint` (caller-provided, usually `repo.branch` / `note.branch`)
- *   2. Local clone HEAD (clone-mode repos)
- *   3. GitHub API `default_branch`
- *   4. Hard fallback: 'main'
- *
- * Fixes #543: hardcoded `branch || 'main'` literals broke clone-mode
- * delete + write + pull on repos whose default branch is not `main`.
+ * Resolve the branch for a repo operation. Order:
+ *   1. Local clone HEAD (clone-mode repos) — verified against actual HEAD
+ *   2. GitHub API `default_branch`
+ *   3. Hard fallback: 'main'
  *
  * @param repoPath - The repository path
- * @param hint - Optional branch hint (e.g., from repo config)
+ * @param _hint - Deprecated and ignored. Internal operations bind to HEAD directly.
  * @param repoId - Optional repoId for cache key (preferred over repoPath)
  */
 export async function resolveBranch(
   repoPath: string,
-  hint?: string | null,
+  _hint?: string | null,
   repoId?: string,
 ): Promise<string> {
-  if (hint) return hint;
+  // Internal branch identity is bound to HEAD; hint is ignored.
 
   const cacheKey = repoId ?? repoPath;
   const cached = sessionCache.get(cacheKey);

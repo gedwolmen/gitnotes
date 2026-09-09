@@ -44,7 +44,8 @@ export async function syncCanvasToGitHub(params: {
     return { success: false, error: `Invalid repo path: ${repoPath}` };
   }
 
-  const targetBranch = await resolveBranch(repoPath, branch);
+  // Updates preserve stored branch; creates use HEAD.
+  const targetBranch = filePath && branch ? branch : await resolveBranch(repoPath);
 
   let targetPath = filePath;
   if (!targetPath) {
@@ -92,7 +93,7 @@ export async function deleteCanvasFromGitHub(params: {
     return { success: false, error: `Invalid repo path: ${repoPath}` };
   }
 
-  const targetBranch = await resolveBranch(repoPath, branch);
+  const targetBranch = branch ?? (await resolveBranch(repoPath));
   const saveResult = await CloneSyncService.save({
     repoPath,
     branch: targetBranch,
