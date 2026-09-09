@@ -3,9 +3,11 @@ export type WikiLink = {
   displayText: string;
   startIndex: number;
   endIndex: number;
+  blockAnchor?: string;
 };
 
 const WIKI_LINK_REGEX = /\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g;
+const BLOCK_ANCHOR_REGEX = /\[\[([^#|^]+)#\^([^\]|]+)(?:\|([^\]]+))?\]\]/g;
 
 function isEscaped(text: string, startIndex: number): boolean {
   let backslashCount = 0;
@@ -50,6 +52,29 @@ export function parseWikiLinks(text: string): WikiLink[] {
         }
 
         match = WIKI_LINK_REGEX.exec(line);
+      }
+
+      BLOCK_ANCHOR_REGEX.lastIndex = 0;
+
+      let blockMatch: RegExpExecArray | null = BLOCK_ANCHOR_REGEX.exec(line);
+      while (blockMatch !== null) {
+        const startIndex = lineStart + blockMatch.index;
+
+        if (!isEscaped(text, startIndex)) {
+          const target = blockMatch[1].trim();
+          const blockAnchor = blockMatch[2].trim();
+          const displayText = blockMatch[3]?.trim() ?? target;
+
+          links.push({
+            target,
+            displayText,
+            startIndex,
+            endIndex: startIndex + blockMatch[0].length,
+            blockAnchor,
+          });
+        }
+
+        blockMatch = BLOCK_ANCHOR_REGEX.exec(line);
       }
     }
 

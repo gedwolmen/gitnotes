@@ -28,6 +28,7 @@ export interface Todo {
   branch?: string;
   filePath?: string;
   accountId?: string;
+  status?: 'todo' | 'in-progress' | 'done';
 }
 
 export interface TodoCreateInput {
@@ -44,6 +45,7 @@ export interface TodoCreateInput {
   branch?: string;
   filePath?: string;
   accountId?: string;
+  status?: 'todo' | 'in-progress' | 'done';
 }
 
 export interface TodoUpdateInput {
@@ -62,6 +64,7 @@ export interface TodoUpdateInput {
   branch?: string;
   filePath?: string;
   accountId?: string;
+  status?: 'todo' | 'in-progress' | 'done';
 }
 
 function generateId(): string {
@@ -107,6 +110,7 @@ export function applyTodoUpdate(existing: Todo, input: Partial<TodoUpdateInput>)
     branch: 'branch' in input ? input.branch : existing.branch,
     filePath: 'filePath' in input ? input.filePath : existing.filePath,
     accountId: 'accountId' in input ? input.accountId : existing.accountId,
+    status: 'status' in input ? input.status : existing.status,
     updatedAt: Date.now(),
   };
 }
