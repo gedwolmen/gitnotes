@@ -21,6 +21,7 @@ import { gitOperationRegistry, type GitOpKind } from '@/stores/gitOperationStore
 import { GitSyncGate, type PreflightState } from './GitSyncGate';
 import { emitGitContentRefresh } from '@/hooks/useGitRefreshEvent';
 import { invalidateCache } from './branchResolver';
+import { setActiveBranchAfterCheckout } from './activeBranchStore';
 import * as GitEngine from './engine/GitEngine';
 import type { FileStatus } from './engine/GitEngine';
 
@@ -135,7 +136,28 @@ class GitBranchCoordinatorClass {
         const statuses = await GitEngine.statuses(localPath);
         this.validateWorkingTree(statuses);
 
-        await GitEngine.checkoutBranch(localPath, branchName, remoteName);
+        let checkoutError: Error | null = null;
+        try {
+          await GitEngine.checkoutBranch(localPath, branchName, remoteName);
+        } catch (error) {
+          // If checkout fails because the remote tracking ref is missing,
+          // fetch from the remote and retry once.
+          const message = error instanceof Error ? error.message : String(error);
+          if (/ref.*not(found|exist)|couldn't find|not found/i.test(message)) {
+            try {
+              await GitEngine.fetch(localPath, remoteName, repoId);
+              await GitEngine.checkoutBranch(localPath, branchName, remoteName);
+              checkoutError = null;
+            } catch (retryError) {
+              checkoutError = retryError instanceof Error ? retryError : new Error(String(retryError));
+            }
+          } else {
+            checkoutError = error instanceof Error ? error : new Error(message);
+          }
+        }
+        if (checkoutError) {
+          throw checkoutError;
+        }
 
         const postflightOk = await GitSyncGate.verifyPostflight(preflight!, opId);
         if (!postflightOk) {
@@ -147,6 +169,7 @@ class GitBranchCoordinatorClass {
         this.clearWatchdog();
         gitOperationRegistry.succeed(opId);
         invalidateCache(repoId);
+        await setActiveBranchAfterCheckout(repoId, localPath, branchName);
         emitGitContentRefresh();
         this.setState('idle');
       } catch (error) {

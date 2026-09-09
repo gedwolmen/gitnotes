@@ -538,7 +538,6 @@ export default function TodoListScreen() {
         showTimePicker={showTimePicker}
         showReminderPicker={showReminderPicker}
         todoRepo={todoRepo}
-        todoBranch={todoBranch}
         isDark={isDark}
         onClose={closeModals}
         onChangeText={setTodoText}
@@ -565,7 +564,6 @@ export default function TodoListScreen() {
           setShowReminderPicker(false);
         }}
         onRepoChange={setTodoRepo}
-        onBranchChange={setTodoBranch}
         onSubmit={editingTodo ? handleUpdateTodo : handleAddTodo}
       />
 

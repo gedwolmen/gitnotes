@@ -88,7 +88,7 @@ export function BranchesSection({ repo, active, onChanged, chromeTopInset = 0, b
       setBusy(`checkout:${name}`);
       try {
         const coordinator = GitBranchCoordinator;
-        await coordinator.checkout(repo.localPath, name, 'origin');
+        await coordinator.checkout(repo.id, repo.localPath, name);
         onChanged();
         setVersion((value) => value + 1);
       } catch (caught) {
@@ -97,7 +97,7 @@ export function BranchesSection({ repo, active, onChanged, chromeTopInset = 0, b
         setBusy(null);
       }
     },
-    [repo.localPath, onChanged],
+    [repo.id, repo.localPath, onChanged],
   );
 
   const remove = useCallback(
@@ -250,11 +250,22 @@ export function BranchesSection({ repo, active, onChanged, chromeTopInset = 0, b
                 <ButtonText>Rename</ButtonText>
               </Button>
             )}
+            {item.isRemote && !branches?.some((b) => !b.isRemote && b.name === item.name) && (
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={busy !== null}
+                onPress={() => void checkout(item.name)}
+                testID={`explore.branch.checkout-locally.${item.name}`}
+              >
+                <ButtonText>Checkout locally</ButtonText>
+              </Button>
+            )}
           </View>
         </View>
       );
     },
-    [busy, checkout, remove, renaming, renameValue, saveRename],
+    [branches, busy, checkout, renaming, renameValue, saveRename],
   );
 
   const renderItem = useCallback(

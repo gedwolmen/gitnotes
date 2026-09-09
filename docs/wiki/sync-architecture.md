@@ -61,6 +61,12 @@ interface QueueItem {
 
 **Branch-aware drain:** `dequeue(repoId, branch)` returns only items matching both `repoId` AND `branch`. On checkout, all non-active-branch items are paused via `pauseAllExcept(activeRepoId, activeBranch)`. This prevents cross-branch sync drift.
 
+**Queue isolation:** When `GitBranchCoordinator.checkout()` succeeds, it calls `pauseAllExcept(activeRepoId, activeBranch)` to isolate the queue to the newly checked-out branch. Only items matching both the active `repoId` and `activeBranch` remain in `pending` status; all others are marked `paused`. Drained items are verified against local HEAD before processing.
+
+**Preserved internal branch payloads:** Every `QueueItem` stores `branch` as a required field. This branch identity is preserved across pause/resume cycles and is never stripped or defaulted. On `resumeForBranch`, items are only resumed if local HEAD still matches the expected branch.
+
+**Stale-state reconciliation:** If local HEAD has changed since an item was queued (e.g., user switched branches), the item is marked `paused` rather than processed, preventing mutations from being applied to the wrong branch.
+
 ```
 CloneSyncService.save (offline)
   → NoteSyncQueueService.enqueue({ repoId, repoPath, branch, ... })
@@ -68,7 +74,7 @@ CloneSyncService.save (offline)
 
 Network restored (NetInfo online-transition)
   → NoteSyncQueueService.drain(repoId, activeBranch)
-    → Only items matching active branch are returned
+    → Only items matching active branch are returned (and HEAD verified)
       → Push via tryPushNow
 ```
 

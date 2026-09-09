@@ -234,7 +234,7 @@ describe('activeBranchStore', () => {
       });
     });
 
-    it('uses null when no local HEAD and no remote default', async () => {
+    it('uses main as fallback when no local HEAD and no remote default', async () => {
       mockGetCurrentBranch.mockResolvedValue(null);
       mockAsyncStorageSetItem.mockResolvedValue(undefined);
 
@@ -243,7 +243,7 @@ describe('activeBranchStore', () => {
 
       expect(result).toMatchObject({
         repoId: 'repo-1',
-        activeBranch: null,
+        activeBranch: 'main',
         source: 'default',
         status: 'idle',
       });
@@ -322,6 +322,159 @@ describe('activeBranchStore', () => {
       const result = await getAllActiveBranches();
 
       expect(result).toEqual([]);
+    });
+  });
+
+  describe('existing-branch preservation', () => {
+    it('preserves existing branch state on re-initialization when HEAD matches', async () => {
+      const existingState: ActiveBranchState = {
+        repoId: 'repo-1',
+        repoPath: 'owner/repo',
+        activeBranch: 'feature-branch',
+        source: 'head',
+        status: 'idle',
+      };
+      mockAsyncStorageGetItem.mockResolvedValue(JSON.stringify(existingState));
+      mockGetCurrentBranch.mockResolvedValue('feature-branch');
+
+      const result = await getActiveBranch('repo-1');
+
+      expect(result).toMatchObject({
+        activeBranch: 'feature-branch',
+        source: 'head',
+        status: 'idle',
+      });
+    });
+
+    it('does not overwrite existing state when reconcile returns same values', async () => {
+      const existingState: ActiveBranchState = {
+        repoId: 'repo-1',
+        repoPath: 'owner/repo',
+        activeBranch: 'main',
+        source: 'head',
+        status: 'idle',
+      };
+      mockAsyncStorageGetItem.mockResolvedValue(JSON.stringify(existingState));
+      mockGetCurrentBranch.mockResolvedValue('main');
+
+      await getActiveBranch('repo-1');
+
+      expect(mockAsyncStorageSetItem.mock.calls.length).toBe(0);
+    });
+
+    it('handles multiple repos with different active branches independently', async () => {
+      const state1: ActiveBranchState = {
+        repoId: 'repo-1',
+        repoPath: 'owner/repo1',
+        activeBranch: 'main',
+        source: 'head',
+        status: 'idle',
+      };
+      const state2: ActiveBranchState = {
+        repoId: 'repo-2',
+        repoPath: 'owner/repo2',
+        activeBranch: 'develop',
+        source: 'head',
+        status: 'idle',
+      };
+
+      mockAsyncStorageGetItem.mockResolvedValueOnce(JSON.stringify(state1));
+      mockGetCurrentBranch.mockResolvedValueOnce('main');
+
+      const result1 = await getActiveBranch('repo-1');
+      expect(result1?.activeBranch).toBe('main');
+
+      mockAsyncStorageGetItem.mockResolvedValueOnce(JSON.stringify(state2));
+      mockGetCurrentBranch.mockResolvedValueOnce('develop');
+
+      const result2 = await getActiveBranch('repo-2');
+      expect(result2?.activeBranch).toBe('develop');
+    });
+  });
+
+  describe('memory cache consistency', () => {
+    it('returns cached state without re-reading from storage on second call', async () => {
+      const persistedState: ActiveBranchState = {
+        repoId: 'repo-1',
+        repoPath: 'owner/repo',
+        activeBranch: 'main',
+        source: 'head',
+        status: 'idle',
+      };
+      mockAsyncStorageGetItem.mockResolvedValue(JSON.stringify(persistedState));
+      mockGetCurrentBranch.mockResolvedValue('main');
+
+      await getActiveBranch('repo-1');
+      const result = await getActiveBranch('repo-1');
+
+      expect(result).toMatchObject({
+        activeBranch: 'main',
+        source: 'head',
+        status: 'idle',
+      });
+      expect(mockAsyncStorageGetItem).toHaveBeenCalledTimes(1);
+    });
+
+    it('updates cache when reconciliation detects stale state', async () => {
+      const persistedState: ActiveBranchState = {
+        repoId: 'repo-1',
+        repoPath: 'owner/repo',
+        activeBranch: 'old-branch',
+        source: 'persisted',
+        status: 'idle',
+      };
+      mockAsyncStorageGetItem.mockResolvedValue(JSON.stringify(persistedState));
+      mockGetCurrentBranch.mockResolvedValue('new-branch');
+
+      const result = await getActiveBranch('repo-1');
+
+      expect(result).toMatchObject({
+        activeBranch: 'new-branch',
+        source: 'head',
+        status: 'stale',
+      });
+    });
+  });
+
+  describe('add/remove initialization', () => {
+    it('initializes for a new repo without existing state', async () => {
+      mockAsyncStorageGetItem.mockResolvedValue(null);
+      mockGetCurrentBranch.mockResolvedValue('main');
+      mockAsyncStorageSetItem.mockResolvedValue(undefined);
+
+      const repos = [
+        { id: 'new-repo', path: 'owner/newrepo', name: 'newrepo', branch: 'main' },
+      ];
+
+      await reconcileAllRepos(repos);
+
+      expect(mockAsyncStorageSetItem).toHaveBeenCalled();
+      const savedState = JSON.parse(mockAsyncStorageSetItem.mock.calls[0][1]);
+      expect(savedState.repoId).toBe('new-repo');
+      expect(savedState.activeBranch).toBe('main');
+    });
+
+    it('clears memory cache on removeForRepo', async () => {
+      const existingState: ActiveBranchState = {
+        repoId: 'repo-1',
+        repoPath: 'owner/repo',
+        activeBranch: 'main',
+        source: 'head',
+        status: 'idle',
+      };
+      mockAsyncStorageGetItem.mockResolvedValue(JSON.stringify(existingState));
+      mockGetCurrentBranch.mockResolvedValue('main');
+      mockAsyncStorageRemoveItem.mockResolvedValue(undefined);
+
+      await getActiveBranch('repo-1');
+
+      await removeForRepo('repo-1');
+
+      mockAsyncStorageGetItem.mockResolvedValue(null);
+      mockGetCurrentBranch.mockResolvedValue(null);
+
+      const result = await getActiveBranch('repo-1');
+      expect(result).toBeNull();
     });
   });
 });

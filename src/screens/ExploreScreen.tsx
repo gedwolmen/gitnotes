@@ -188,7 +188,12 @@ export default function ExploreScreen() {
 
   const onChanged = useCallback(() => {
     void refreshStatus();
-  }, [refreshStatus]);
+    if (repo?.id) {
+      void getActiveBranch(repo.id).then((state) => {
+        if (state?.activeBranch) setActiveBranch(state.activeBranch);
+      });
+    }
+  }, [repo?.id, refreshStatus]);
 
   /**
    * The floating git button is rendered at the app level. When the user

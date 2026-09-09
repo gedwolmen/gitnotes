@@ -41,10 +41,13 @@
 
 GitNotēs uses a **centralized branch model** for clone-mode repositories:
 
-- **One active checked-out branch per clone.** The Git tab owns branch state; only `GitBranchCoordinator.checkout()` transitions HEAD. All other services read branch state from `activeBranchStore`.
-- **Git-tab ownership.** The Explore tab (Git UI) is the sole authority for branch operations. Note editing never triggers implicit branch switches.
+- **Git → Branches ownership.** The Explore tab (Git UI) is the sole authority for branch operations. No external UI (note editors, sync services, or other tabs) may trigger or control branch switches. Only `GitBranchCoordinator.checkout()` transitions HEAD.
+- **One active checked-out branch per clone.** All other services read branch state from `activeBranchStore`.
+- **No external branch UI.** Branch selection exists only in the Explore screen. Note editors and sync services have no branch controls.
+- **Remote checkout behavior.** When checking out a remote tracking branch (e.g., `origin/feature`), `GitBranchCoordinator.checkout()` first fetches the remote ref if the local checkout fails with "ref not found", then retries. This enables seamless remote-to-local branch checkout.
+- **Retained internal branch identity.** Queue items preserve full `branch` identity in their payload. On branch switch, `pauseAllExcept(activeRepoId, activeBranch)` pauses all non-active-branch items, preventing cross-branch sync drift.
 - **Operation state/locking.** `GitBranchCoordinator` maintains a state machine (`idle | checkout-running | mutation-running | failed`). Mutations (stage, commit, discard) are rejected while `checkout-running`; checkout is rejected when files are staged/modified/conflicted.
-- **Queue pause semantics.** `NoteSyncQueueService` tracks `{ repoId, repoPath, branch }` on every queue item. On branch switch, all non-active-branch items are paused; only the active branch's pending items drain. This prevents cross-branch sync drift.
+- **Queue pause semantics.** `NoteSyncQueueService` tracks `{ repoId, repoPath, branch }` on every queue item. On branch switch, all non-active-branch items are paused; only the active branch's pending items drain.
 
 ### Sync & Recovery
 
