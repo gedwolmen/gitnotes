@@ -244,6 +244,19 @@ async function __setActiveBranch(
 }
 
 /**
+ * Called by GitBranchCoordinator after a successful checkout to update the store
+ * with the newly checked-out branch. This ensures the active branch badge and
+ * all subscribers see the correct branch immediately without waiting for reconciliation.
+ */
+export async function setActiveBranchAfterCheckout(
+  repoId: string,
+  repoPath: string,
+  branchName: string,
+): Promise<ActiveBranchState> {
+  return __setActiveBranch(repoId, repoPath, branchName, 'head');
+}
+
+/**
  * Initialize branch state for a newly added repository.
  * Called when a repo is added via repoStore.
  *

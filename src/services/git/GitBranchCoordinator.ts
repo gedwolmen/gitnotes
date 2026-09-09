@@ -21,6 +21,7 @@ import { gitOperationRegistry, type GitOpKind } from '@/stores/gitOperationStore
 import { GitSyncGate, type PreflightState } from './GitSyncGate';
 import { emitGitContentRefresh } from '@/hooks/useGitRefreshEvent';
 import { invalidateCache } from './branchResolver';
+import { setActiveBranchAfterCheckout } from './activeBranchStore';
 import * as GitEngine from './engine/GitEngine';
 import type { FileStatus } from './engine/GitEngine';
 
@@ -147,6 +148,7 @@ class GitBranchCoordinatorClass {
         this.clearWatchdog();
         gitOperationRegistry.succeed(opId);
         invalidateCache(repoId);
+        await setActiveBranchAfterCheckout(repoId, localPath, branchName);
         emitGitContentRefresh();
         this.setState('idle');
       } catch (error) {
