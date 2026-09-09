@@ -26,6 +26,14 @@ All notable fixes and feature changes to GitNotēs are documented here.
 
 **PR:** TBD
 
+### fix(explore): stage selected diff lines
+
+**What:** The staged-diff action passed obsolete hunk coordinates to the native Git engine, so tapping `Stage selected` completed without staging the selected lines.
+
+**fix(explore):** Pass the selected diff line indices required by the native `stageFileLines` contract.
+
+**PR:** TBD
+
 ## 2026-09-08
 
 ### fix(paywall): restore-granted cache bypass + silent failures
