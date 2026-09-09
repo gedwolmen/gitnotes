@@ -8,6 +8,16 @@ All notable fixes and feature changes to GitNotēs are documented here.
 >
 > **History**: prior fixes (pre-2026-08) lived in single-PR wiki pages. Those pages were retired in [#1047](https://github.com/gedwolmen/gitnotes/pull/1047); their full diagnostic content is preserved in git history via `git log -p -- docs/wiki/<file>.md`.
 
+## 2026-09-09
+
+### fix(explore): render staged diff action label
+
+**What:** The staged-diff action button rendered a bare string alongside its loading indicator, causing the React Native text-node warning and leaving the button label blank.
+
+**fix(explore):** Wrap the `Stage selected` label in `ButtonText` so it renders as a native text component.
+
+**PR:** TBD
+
 ## 2026-09-08
 
 ### fix(paywall): restore-granted cache bypass + silent failures
