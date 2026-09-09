@@ -21,6 +21,14 @@ export default function TagInput({
   const [showSuggestions, setShowSuggestions] = useState(false);
   const { colors } = useTheme();
 
+  const tagChipBorderStyle = React.useMemo(
+    () => ({
+      borderWidth: 1,
+      borderColor: colors.border,
+    }),
+    [colors.border],
+  );
+
   const handleAddTag = useCallback(
     (tag: string) => {
       const trimmedTag = tag.trim().toLowerCase();
@@ -67,7 +75,7 @@ export default function TagInput({
               active
               onLongPress={() => handleRemoveTag(tag)}
               trailing={<Ionicons name="close-circle" size={16} color={colors.primary} />}
-              style={styles.tagChip}
+              style={[styles.tagChip, tagChipBorderStyle]}
             />
           ))}
         </ScrollView>
