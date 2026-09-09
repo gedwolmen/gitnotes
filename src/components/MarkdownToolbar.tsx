@@ -1,6 +1,7 @@
 import React from 'react';
 import { ScrollView, StyleSheet, TouchableOpacity, Text, View } from 'react-native';
 
+import { useTheme } from '../contexts/ThemeContext';
 import type { FormatAction } from '../utils/markdownFormatting';
 import { getToolbarButtons } from '../utils/formatToolbarPresets';
 import type { NoteFormat } from '../models/Note';
@@ -14,6 +15,7 @@ type Props = {
 };
 
 export function MarkdownToolbar({ onFormat, format }: Props) {
+  const { colors } = useTheme();
   const buttons = getToolbarButtons(format);
 
   return (
@@ -29,11 +31,11 @@ export function MarkdownToolbar({ onFormat, format }: Props) {
             key={label}
             testID={btnTestID}
             onPress={() => onFormat(action)}
-            style={styles.button}
+            style={[styles.button, { backgroundColor: colors.surfaceSecondary }]}
             accessibilityLabel={label}
             accessibilityRole="button"
           >
-            <Text style={styles.buttonText}>{label}</Text>
+            <Text style={[styles.buttonText, { color: colors.text }]}>{label}</Text>
           </TouchableOpacity>
         ))}
       </ScrollView>
