@@ -2,8 +2,9 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useResponsive } from '../../hooks/useResponsive';
 import type { RecentItem } from '../../utils/recentItems';
-import { BentoTile } from './BentoTile';
+import { BentoTile, getBentoMediumTileWidth } from './BentoTile';
 
 interface Props {
   items: RecentItem[];
@@ -15,6 +16,8 @@ const EDGE_INSET = 20;
 
 export function QuickAccessShelf({ items, onOpen, onLongPress }: Props) {
   const { colors } = useTheme();
+  const { screenWidth, columnCount } = useResponsive('bento');
+  const tileWidth = getBentoMediumTileWidth(screenWidth, columnCount);
   if (items.length === 0) return null;
 
   return (
@@ -33,7 +36,7 @@ export function QuickAccessShelf({ items, onOpen, onLongPress }: Props) {
             key={`${item.kind}-${item.data.id}`}
             item={item}
             size="medium"
-            widthOverride={160}
+            widthOverride={tileWidth}
             hidePinGlyph
             onPress={() => onOpen(item)}
             onLongPress={onLongPress ? () => onLongPress(item) : undefined}

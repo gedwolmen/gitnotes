@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useTheme } from '../../contexts/ThemeContext';
-import { BentoTile } from './BentoTile';
+import { BentoTile, getBentoMediumTileWidth } from './BentoTile';
 import type { RecentItem } from '../../utils/recentItems';
 import { useResponsive } from '../../hooks/useResponsive';
 
@@ -13,7 +13,8 @@ interface Props {
 
 export function BentoRecent({ items, onOpen, onLongPress }: Props) {
   const { colors } = useTheme();
-  const { columnCount } = useResponsive('bento');
+  const { screenWidth, columnCount } = useResponsive('bento');
+  const tileWidth = getBentoMediumTileWidth(screenWidth, columnCount);
 
   if (items.length === 0) return null;
 
@@ -35,6 +36,7 @@ export function BentoRecent({ items, onOpen, onLongPress }: Props) {
                   <BentoTile
                     item={item}
                     size="medium"
+                    widthOverride={tileWidth}
                     onPress={() => onOpen(item)}
                     onLongPress={onLongPress ? () => onLongPress(item) : undefined}
                     testIDSlot={`recent-${flatIdx}`}
