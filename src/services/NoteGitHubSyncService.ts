@@ -324,11 +324,11 @@ export async function deleteNoteFromGitHub(params: {
   accountId?: string;
   provider?: GitHostProvider;
   /**
-   * Clone-mode only. When false, the delete commit is created locally
-   * but the push to origin is deferred. The drain in
-   * `NoteSyncQueueService` uses this to coalesce delete+upsert pushes
-   * into one round-trip per `(repo, branch)` group (issue #565 phases
-   * B.1 + A). Ignored on the Contents-API path.
+   * Clone-mode only. When false, the local deletion is left unstaged and
+   * the push to origin is deferred. The drain in `NoteSyncQueueService`
+   * uses this to coalesce delete+upsert pushes into one round-trip per
+   * `(repo, branch)` group (issue #565 phases B.1 + A). Ignored on the
+   * Contents-API path.
    */
   push?: boolean;
 }): Promise<NoteGitHubSyncResult> {

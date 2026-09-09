@@ -17,7 +17,7 @@ GitNotēs supports two synchronization modes, controlled per-repository via the 
 
 ## Clone Mode (Default)
 
-Clone mode is designed for **offline-first** usage. Changes are committed locally and pushed asynchronously.
+Clone mode is designed for **offline-first** usage. Changes are written locally, then staged and committed by the user before being pushed asynchronously.
 
 ### Save Flow
 
@@ -29,6 +29,8 @@ User edits note
         → CloneSyncService returns { success: true }
           → User stages and commits from the Git workspace or floating Git button
 ```
+
+Delete operations remove the working-tree file without staging the deletion, so the user can review, stage, and commit it from the Git workspace.
 
 ### Push Triggers
 

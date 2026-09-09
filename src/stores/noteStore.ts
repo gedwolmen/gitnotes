@@ -329,22 +329,18 @@ export const useNoteStore = create<NoteState & NoteActions>()((set, get) => ({
             });
           const mode = await SyncEngineService.getMode(repoPath);
           if (mode === 'clone') {
-            // Clone mode: real local delete commit via CommitService (same
-            // primitive as create/rename); push happens via the clone push
-            // triggers. The local commit keeps the next pull from
-            // resurrecting the file (#1030).
             const opId = beginDeleteOp();
             try {
-              const commitResult = await CommitService.commit({
-                repo: repoPath,
+              const saveResult = await CloneSyncService.save({
+                repoPath,
                 branch: note.branch ?? 'main',
                 filePath,
                 message: `Delete note: ${note.title ?? filePath}`,
-                delete: true,
+                intent: 'delete',
               });
-              if (!commitResult.success) {
-                gitOperationRegistry.fail(opId, commitResult.error ?? 'Failed to delete note');
-                set({ error: commitResult.error ?? 'Failed to delete note' });
+              if (!saveResult.success) {
+                gitOperationRegistry.fail(opId, saveResult.error ?? 'Failed to delete note');
+                set({ error: saveResult.error ?? 'Failed to delete note' });
                 return false;
               }
             } catch (commitError) {
