@@ -6,15 +6,19 @@ type SystemPromptContext = {
   memoryBlock?: string;
   githubToolsEnabled?: boolean;
   githubAccountLogin?: string;
+  toolsEnabled?: boolean;
 };
+
+const BASE_PROMPT_NO_TOOLS =
+  'You are GitNotes AI, an assistant. You can answer questions, have conversations, and help with general tasks. Always be helpful, concise, and accurate.';
 
 const BASE_PROMPT =
   'You are GitNotes AI, an assistant that helps users manage their notes and todos. You can create, edit, search, and delete notes and todos using the tools available to you. Always be helpful, concise, and accurate.';
 
 export function buildSystemPrompt(context: SystemPromptContext): string {
-  const sections = [BASE_PROMPT];
+  const sections = [context.toolsEnabled !== false ? BASE_PROMPT : BASE_PROMPT_NO_TOOLS];
 
-  if (context.actionMode === 'confirm') {
+  if (context.toolsEnabled !== false && context.actionMode === 'confirm') {
     sections.push(
       'IMPORTANT: Before making any changes (create, edit, or delete), describe what you plan to do and wait for user confirmation.'
     );
@@ -49,12 +53,13 @@ Use these tools when the user asks about their repos, issues, PRs, or reviews. A
     );
   }
 
-  sections.push(
-    `Current state: The user has ${context.noteCount} notes and ${context.todoCount} todos.`
-  );
+  if (context.toolsEnabled !== false) {
+    sections.push(
+      `Current state: The user has ${context.noteCount} notes and ${context.todoCount} todos.`
+    );
 
-  sections.push(
-    `=== Reminder Tools ===
+    sections.push(
+      `=== Reminder Tools ===
 You have access to reminder tools:
 - create_reminder: Set a reminder to revisit a note, folder, repo, or tagged notes at a specific time (HH:MM, 24-hour). Supports daily, weekly, or one-time schedules.
 - list_reminders: View all reminders with their schedules and entity labels.
@@ -62,7 +67,8 @@ You have access to reminder tools:
 
 PROACTIVE SUGGESTIONS: After creating study, review, or quiz content (notes with tags like 'study', 'review', 'quiz', 'flashcards', or 'questioner'), proactively suggest setting a reminder. Say something like: "I created a quiz on [topic]. Would you like me to set a weekly reminder to review it?" — NEVER auto-create without user confirmation.
 === End Reminder Tools ===`
-  );
+    );
+  }
 
   return sections.join('\n\n');
 }

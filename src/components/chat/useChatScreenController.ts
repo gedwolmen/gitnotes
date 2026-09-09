@@ -353,15 +353,16 @@ export function useChatScreenController(threadId: string) {
       const aggregatedContexts = dedupeContexts([...runtimeThread.messages.flatMap((message) => message.attachedContexts ?? []), ...contexts]);
       const contextString = aggregatedContexts.length ? await buildContextString(aggregatedContexts) : undefined;
       const history = runtimeThread.messages.filter((message) => message.id !== assistantMessageId).map(formatHistoryMessage);
-      const basePrompt = buildSystemPrompt({ attachedContexts: contextString, noteCount, todoCount, actionMode: aiState.actionMode, githubToolsEnabled, githubAccountLogin });
+      const toolsEnabled = aiState.aiPersonalizationEnabled;
+      const basePrompt = buildSystemPrompt({ attachedContexts: contextString, noteCount, todoCount, actionMode: aiState.actionMode, githubToolsEnabled, githubAccountLogin, toolsEnabled });
       const memoryBlock = await buildMemoryBlockForQuery(trimmedText, model, basePrompt.length);
       const prompt = memoryBlock
-        ? buildSystemPrompt({ attachedContexts: contextString, noteCount, todoCount, actionMode: aiState.actionMode, memoryBlock, githubToolsEnabled, githubAccountLogin })
+        ? buildSystemPrompt({ attachedContexts: contextString, noteCount, todoCount, actionMode: aiState.actionMode, memoryBlock, githubToolsEnabled, githubAccountLogin, toolsEnabled })
         : basePrompt;
       const modelInstance = await AIService.initializeModel(model, provider as AIProviderConfig | undefined);
       const requestMessages: Parameters<typeof AIService.streamChatResponse>[1] = [{ role: 'system', content: prompt }, ...history];
 
-      for await (const chunk of AIService.streamChatResponse(modelInstance, requestMessages, buildChatToolsMap(), abortController.signal)) {
+      for await (const chunk of AIService.streamChatResponse(modelInstance, requestMessages, toolsEnabled ? buildChatToolsMap() : undefined, abortController.signal)) {
         if (abortController.signal.aborted) break;
         const toolEvent = parseToolEvent(chunk);
         if (!toolEvent) {
