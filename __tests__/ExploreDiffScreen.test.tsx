@@ -8,10 +8,11 @@ declare const require: (moduleName: string) => {
 const { readFileSync } = require('fs');
 
 describe('ExploreDiffScreen stage action', () => {
-  it('keeps the stage action label inside a Text component', () => {
+  it('uses Button label styling for the primary stage action', () => {
     const source = readFileSync(`${__dirname}/../src/screens/ExploreDiffScreen.tsx`, 'utf8');
 
-    expect(source).toContain('<ButtonText>Stage selected</ButtonText>');
-    expect(source).not.toMatch(/\n\s+Stage selected\n/);
+    expect(source).toContain("label={staging ? undefined : 'Stage selected'}");
+    expect(source).toContain('leadingIcon={staging ? <ActivityIndicator size="small" color="#ffffff" /> : undefined}');
+    expect(source).not.toContain('<ButtonText>Stage selected</ButtonText>');
   });
 });
