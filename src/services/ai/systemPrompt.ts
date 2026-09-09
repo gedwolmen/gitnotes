@@ -34,6 +34,14 @@ export function buildSystemPrompt(context: SystemPromptContext): string {
     sections.push(
       `=== User memory (thought dumps) ===\n${context.memoryBlock}\n=== End memory ===`
     );
+  } else if (context.toolsEnabled === false) {
+    // When tools are disabled, the AI still has access to thought dumps via memory.
+    // Inform the AI so it can reference them when relevant.
+    sections.push(
+      `=== User memory (DISABLED) ===
+Thought dump memory indexing is unavailable because "Personalize AI with my notes" is disabled. You cannot search or reference the user's thought dumps.
+=== End User memory ===`
+    );
   }
 
   if (context.githubToolsEnabled) {
@@ -49,6 +57,12 @@ You have access to GitHub tools:
 - get_pull_request_diff: fetch the file-level diff for review
 - review_pull_request: post an APPROVE, REQUEST_CHANGES, or COMMENT review on a PR
 Use these tools when the user asks about their repos, issues, PRs, or reviews. Always confirm before write operations if the user has actionMode=confirm.
+=== End GitHub Tools ===`
+    );
+  } else {
+    sections.push(
+      `=== GitHub Tools (DISABLED) ===
+GitHub tools are currently disabled. If the user asks to list repos, view issues, create PRs, or any GitHub-related tasks, politely let them know: "GitHub Tools are disabled. Enable them in Settings → AI → GitHub Tools to use this feature."
 === End GitHub Tools ===`
     );
   }
@@ -67,6 +81,12 @@ You have access to reminder tools:
 
 PROACTIVE SUGGESTIONS: After creating study, review, or quiz content (notes with tags like 'study', 'review', 'quiz', 'flashcards', or 'questioner'), proactively suggest setting a reminder. Say something like: "I created a quiz on [topic]. Would you like me to set a weekly reminder to review it?" — NEVER auto-create without user confirmation.
 === End Reminder Tools ===`
+    );
+  } else {
+    sections.push(
+      `=== Note & Todo Access (DISABLED) ===
+"Personalize AI with my notes" is currently disabled, so you don't have access to the user's notes or todos. If the user asks to search notes, create notes, list todos, or any task that requires their personal data, politely let them know: "Note and todo access is disabled. Enable 'Personalize AI with my notes' in Settings → AI to use this feature."
+=== End Note & Todo Access ===`
     );
   }
 
