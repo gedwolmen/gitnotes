@@ -156,12 +156,6 @@ export async function deleteTodoFromGitHub(params: {
 
   const mode = await SyncEngineService.getMode(repoPath);
   if (mode === 'clone' && (await GitFsService.isCloned({ repoPath }))) {
-    // Clone-mode delete goes through the shared clone writer (#514 pattern):
-    // CloneSyncService.save's delete intent removes the worktree file and
-    // stages the removal (`git rm` semantics), so the Changes tab lists it
-    // as a staged "deleted" entry for the user to commit. Idempotent — a
-    // file the clone never tracked leaves nothing to stage. No credentials
-    // needed; the remote copy is purged when the staged deletion is pushed.
     const targetBranch = await resolveBranch(repoPath, branch);
     const saveResult = await CloneSyncService.save({
       repoPath,
