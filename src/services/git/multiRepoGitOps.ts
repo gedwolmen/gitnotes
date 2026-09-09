@@ -97,9 +97,9 @@ export async function pushAll(
             gitOperationRegistry.fail(registryOpId, `Push conflicts: ${(result.conflicts ?? []).map((c) => c.path).join(', ')}`);
             return { repoId: repo.id, repoPath: repo.path, repoName: repo.name, ok: false, actedCount: 0, error: `Push conflicts: ${(result.conflicts ?? []).map((c) => c.path).join(', ')}` };
           }
-          const postflightOk = await GitSyncGate.verifyPostflight(preflight!, registryOpId);
-          if (!postflightOk) {
-            return { repoId: repo.id, repoPath: repo.path, repoName: repo.name, ok: false, actedCount: 0, error: 'Branch state changed during push (stale)' };
+          const postflightResult = await GitSyncGate.verifyPostflight(preflight!, registryOpId);
+          if (!postflightResult.ok) {
+            return { repoId: repo.id, repoPath: repo.path, repoName: repo.name, ok: false, actedCount: 0, error: `Branch state changed during push (${postflightResult.reason})` };
           }
           gitOperationRegistry.succeed(registryOpId);
           return { repoId: repo.id, repoPath: repo.path, repoName: repo.name, ok: result.pushed > 0, actedCount: result.pushed, error: result.pushed > 0 ? undefined : result.message };
