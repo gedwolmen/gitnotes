@@ -359,6 +359,7 @@ export default function CanvasListScreen() {
       </Modal>
       <ScreenHeader
         title={t('canvases.title')}
+        onBack={() => navigation.goBack()}
         actions={
           <>
             <IconButton
