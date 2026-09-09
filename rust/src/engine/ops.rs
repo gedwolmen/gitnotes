@@ -410,13 +410,11 @@ pub fn recent_commits(path: &Path, skip: u32, limit: u32) -> Result<Vec<CommitIn
             Err(e) if e.code() == git2::ErrorCode::UnbornBranch => return Ok(Vec::new()),
             Err(e) => return Err(EngineError::Git(e)),
         }
-        if skip > 0 {
-            let _ = revwalk.skip(skip as usize);
-        }
-        let mut out = Vec::new();
-        for oid in revwalk.take(limit.max(1) as usize) {
-            out.push(commit_to_info(&repo.find_commit(oid?)?)?);
-        }
+        let out: Vec<CommitInfo> = revwalk
+            .skip(skip as usize)
+            .take(limit.max(1) as usize)
+            .map(|oid| commit_to_info(&repo.find_commit(oid?)?))
+            .collect::<std::result::Result<Vec<_>, EngineError>>()?;
         Ok(out)
     })
 }

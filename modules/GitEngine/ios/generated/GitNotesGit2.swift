@@ -4343,7 +4343,7 @@ private let initializationResult: InitializationResult = {
     if (uniffi_gitnotes_git2_checksum_func_push_repo_with_integrate() != 54095) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_gitnotes_git2_checksum_func_recent_commits() != 41752) {
+    if (uniffi_gitnotes_git2_checksum_func_recent_commits() != 15673) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_gitnotes_git2_checksum_func_remove_paths() != 44845) {
