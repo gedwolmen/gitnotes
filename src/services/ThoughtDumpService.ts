@@ -5,8 +5,6 @@ import { parseRepoPath } from '../utils/gitPathParser';
 import { SyncEngineService } from './cloneSyncServiceImpl';
 import { resolveBranch } from './git/branchResolver';
 import { CommitService } from './git/CommitService';
-import { getGitHostService } from './git/gitHostFactory';
-import { FEATURE_USE_MULTI_HOST_WRITE } from './featureFlags';
 import type { GitHostProvider } from './git/GitHost';
 
 const THOUGHTS_DIR = 'thoughts/';
@@ -156,31 +154,16 @@ export class ThoughtDumpService {
           if (parsed) dumps.push(parsed);
         }
       } else {
-        if (FEATURE_USE_MULTI_HOST_WRITE) {
-          const host = getGitHostService(provider);
-          const tree = await host.getTreeRecursive(repoInfo.owner, repoInfo.repo, branch);
-          const thoughtBlobs = tree.filter(
-            (item) => item.type === 'blob' && item.path.startsWith(THOUGHTS_DIR) && item.path.endsWith('.md'),
-          );
+        const tree = await GitHubService.getTreeRecursiveOrThrow(repoInfo.owner, repoInfo.repo, branch);
+        const thoughtBlobs = tree.filter(
+          (item) => item.type === 'blob' && item.path.startsWith(THOUGHTS_DIR) && item.path.endsWith('.md'),
+        );
 
-          for (const blob of thoughtBlobs) {
-            const content = await host.getFileText(repoInfo.owner, repoInfo.repo, blob.path, branch);
-            if (!content) continue;
-            const parsed = parseThoughtDump(content, blob.path);
-            if (parsed) dumps.push(parsed);
-          }
-        } else {
-          const tree = await GitHubService.getTreeRecursiveOrThrow(repoInfo.owner, repoInfo.repo, branch);
-          const thoughtBlobs = tree.filter(
-            (item) => item.type === 'blob' && item.path.startsWith(THOUGHTS_DIR) && item.path.endsWith('.md'),
-          );
-
-          for (const blob of thoughtBlobs) {
-            const content = await GitHubService.getFileContent(repoInfo.owner, repoInfo.repo, blob.path, branch);
-            if (!content) continue;
-            const parsed = parseThoughtDump(content, blob.path);
-            if (parsed) dumps.push(parsed);
-          }
+        for (const blob of thoughtBlobs) {
+          const content = await GitHubService.getFileContent(repoInfo.owner, repoInfo.repo, blob.path, branch);
+          if (!content) continue;
+          const parsed = parseThoughtDump(content, blob.path);
+          if (parsed) dumps.push(parsed);
         }
       }
     } catch (error) {
