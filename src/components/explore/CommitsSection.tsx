@@ -204,10 +204,7 @@ export function CommitsSection({ repo, active, chromeTopInset = 0, refreshStatus
         <RefreshControl refreshing={loading} onRefresh={() => void loadInitial()} tintColor={colors.accent} />
       }
       ListHeaderComponent={
-        <View className="flex-row items-center justify-between px-4 pb-2">
-          <Text className="text-xs" style={{ color: colors.textSecondary }} testID="explore.commits.count">
-            {loading ? 'Reading history…' : `${commits.length} commit${commits.length !== 1 ? 's' : ''}`}
-          </Text>
+        <View className="flex-row items-center justify-end px-4 pb-2">
           <View className="flex-row items-center gap-2">
             {loading || pushing ? (
               <ActivityIndicator size="small" color={colors.accent} />
