@@ -28,7 +28,7 @@ import { useEntityFilter } from '../hooks/useEntityFilter';
 import { useResponsive } from '../hooks/useResponsive';
 import { useTranslation } from 'react-i18next';
 import { useProGate } from '../hooks/useProGate';
-import CanvasThumbnail from '../components/CanvasThumbnail';
+import CanvasCard from '../components/CanvasCard';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -41,71 +41,27 @@ const CANVAS_PRESET_DIMS: Record<(typeof CANVAS_PRESET_KEYS)[number], { w: numbe
   'canvases.presets.a4': { w: 794, h: 1123, desc: '794 × 1123' },
 };
 
-interface CanvasRowProps {
-  item: Canvas;
+interface CanvasCardContainerProps {
+  canvas: Canvas;
   onOpen: (id: string) => void;
   onDelete: (canvas: Canvas) => void;
 }
 
-function CanvasRow({ item, onOpen, onDelete }: CanvasRowProps) {
-  const { t } = useTranslation();
-  const { colors } = useTheme();
-  const elementCount = item.scene?.elements?.length ?? 0;
-  const date = new Date(item.updatedAt);
-  const dateStr = date.toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+function CanvasCardContainer({ canvas, onOpen, onDelete }: CanvasCardContainerProps) {
+  const handlePress = useCallback(() => {
+    onOpen(canvas.id);
+  }, [canvas.id, onOpen]);
+
+  const handleLongPress = useCallback(() => {
+    onDelete(canvas);
+  }, [canvas, onDelete]);
 
   return (
-    <TouchableOpacity
-      testID="canvas-list.button.open"
-      className="flex-row items-center p-3.5 rounded-md border mb-2.5"
-      style={{ backgroundColor: colors.surface, borderColor: colors.border }}
-      onPress={() => onOpen(item.id)}
-      activeOpacity={0.7}
-    >
-      <View className="mr-3 rounded overflow-hidden" style={{ width: 60, height: 60 }}>
-        <CanvasThumbnail scene={item.scene} width={60} height={60} />
-      </View>
-      <View className="flex-1">
-        <View className="flex-row items-center gap-2 mb-1">
-          <Ionicons name="easel-outline" size={18} color={colors.primary} />
-          <Text className="text-base font-semibold flex-1" style={{ color: colors.text }} numberOfLines={1}>
-            {item.title || t('canvases.untitled')}
-          </Text>
-        </View>
-        <Text className="text-xs mb-1" style={{ color: colors.textSecondary }}>
-          {elementCount} element{elementCount !== 1 ? 's' : ''} · {dateStr}
-        </Text>
-        {item.repo && (
-          <View className="flex-row items-center gap-1 mt-1">
-            <Ionicons name="git-branch-outline" size={12} color={colors.primary} />
-            <Text className="text-xs font-medium" style={{ color: colors.primary }} numberOfLines={1}>
-              {item.repo.split('/').pop()}{item.branch ? ` · ${item.branch}` : ''}
-            </Text>
-          </View>
-        )}
-        {item.tags.length > 0 && (
-          <View className="flex-row gap-1.5 flex-wrap">
-            {item.tags.slice(0, 3).map((tag) => (
-              <View key={tag} className="px-2 py-0.5 rounded-sm" style={{ backgroundColor: colors.primary + '18' }}>
-                <Text className="text-xs font-medium" style={{ color: colors.primary }}>{tag}</Text>
-              </View>
-            ))}
-          </View>
-        )}
-      </View>
-      <TouchableOpacity
-        testID="canvas-list.button.delete"
-        className="p-3"
-        onPress={() => onDelete(item)}
-      >
-        <Ionicons name="trash-outline" size={20} color={colors.textSecondary} />
-      </TouchableOpacity>
-    </TouchableOpacity>
+    <CanvasCard
+      canvas={canvas}
+      onPress={handlePress}
+      onLongPress={handleLongPress}
+    />
   );
 }
 
@@ -189,7 +145,7 @@ export default function CanvasListScreen() {
 
   const renderCanvas = useCallback(
     ({ item }: { item: Canvas }) => (
-      <CanvasRow item={item} onOpen={handleOpen} onDelete={handleDelete} />
+      <CanvasCardContainer canvas={item} onOpen={handleOpen} onDelete={handleDelete} />
     ),
     [handleOpen, handleDelete],
   );
