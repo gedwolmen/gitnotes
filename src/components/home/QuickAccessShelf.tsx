@@ -11,7 +11,6 @@ interface Props {
   onLongPress?: (item: RecentItem) => void;
 }
 
-const CARD_WIDTH = 176;
 const EDGE_INSET = 20;
 
 export function QuickAccessShelf({ items, onOpen, onLongPress }: Props) {
@@ -34,7 +33,6 @@ export function QuickAccessShelf({ items, onOpen, onLongPress }: Props) {
             key={`${item.kind}-${item.data.id}`}
             item={item}
             size="medium"
-            widthOverride={CARD_WIDTH}
             hidePinGlyph
             onPress={() => onOpen(item)}
             onLongPress={onLongPress ? () => onLongPress(item) : undefined}
