@@ -16,7 +16,7 @@ All notable fixes and feature changes to GitNotēs are documented here.
 
 **fix(ios):** Add an Expo config plugin that disables Swift explicit modules only for the generated `ExpoSQLite` CocoaPod target during prebuild.
 
-**PR:** TBD
+**PR:** #1490
 
 ### fix(explore): render staged diff action label
 
