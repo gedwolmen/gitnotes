@@ -731,7 +731,7 @@ export function SettingsContent(props: SettingsContentProps) {
         >
           <Text style={[styles.settingLabel, { color: colors.text }]}>{t('settings.templatesRepository')}</Text>
           <Text style={[styles.settingValue, { color: colors.textSecondary, fontSize: 12, marginTop: 2 }]} numberOfLines={1}>
-            {templatesRepoPref ? `${templatesRepoPref.repoPath}@${templatesRepoPref.branch}` : t('settings.notSet')}
+            {templatesRepoPref ? templatesRepoPref.repoPath : t('settings.notSet')}
           </Text>
         </GroupRow>
 

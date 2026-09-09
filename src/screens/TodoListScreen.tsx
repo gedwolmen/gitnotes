@@ -80,7 +80,6 @@ export default function TodoListScreen() {
     if (todoRepo) return;
     void LastSelectionPreferenceService.get('todo').then((sel) => {
       if (!todoRepo && sel.repo) setTodoRepo(sel.repo);
-      if (!todoBranch && sel.branch) setTodoBranch(sel.branch);
     });
   }, [showAddModal, todoRepo, todoBranch]);
 

@@ -8,7 +8,6 @@ export type SelectionEntityType = 'note' | 'todo';
 
 export interface LastSelectionShape {
   repo?: string;
-  branch?: string;
   folder?: string;
 }
 
@@ -24,7 +23,6 @@ export class LastSelectionPreferenceService {
       const parsed = JSON.parse(raw);
       return {
         repo: typeof parsed.repo === 'string' ? parsed.repo : undefined,
-        branch: typeof parsed.branch === 'string' ? parsed.branch : undefined,
         folder: typeof parsed.folder === 'string' ? parsed.folder : undefined,
       };
     } catch {

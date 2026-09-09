@@ -15,6 +15,8 @@ import { AuthService } from './AuthService';
 import { yieldToMain } from '../utils/yieldToMain';
 import type { GitHostProvider } from './git/GitHost';
 import type { CloneProgressCallback } from './RepoImportService';
+import { getActiveBranch } from './git/activeBranchStore';
+import { useRepoStore } from '../stores/repoStore';
 
 // Paths of todo files already reported as unparseable, per repo. Without this
 // cache the same malformed remote files re-warn on every pull (#1161); a file
@@ -827,7 +829,10 @@ export async function pullTemplatesFromConfiguredRepo(): Promise<number> {
   if (!pref) return 0;
   const info = parseRepoPath(pref.repoPath);
   if (!info) return 0;
-  return pullTemplatesFromRepo(info.owner, info.repo, pref.branch);
+  const repoId = useRepoStore.getState().repositories.find((r) => r.path === pref.repoPath)?.id;
+  const activeBranchState = repoId ? await getActiveBranch(repoId) : null;
+  const branch = activeBranchState?.activeBranch ?? 'main';
+  return pullTemplatesFromRepo(info.owner, info.repo, branch);
 }
 
 export interface PullResult {

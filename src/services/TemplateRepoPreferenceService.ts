@@ -4,7 +4,6 @@ const KEY = '@gitnotes:templates_repo';
 
 export interface TemplateRepoPreference {
   repoPath: string; // canonical "owner/repo" — same shape as GitRepository.path
-  branch: string;
 }
 
 export class TemplateRepoPreferenceService {
@@ -13,7 +12,7 @@ export class TemplateRepoPreferenceService {
     if (!raw) return null;
     try {
       const parsed = JSON.parse(raw) as TemplateRepoPreference;
-      if (!parsed?.repoPath || !parsed?.branch) return null;
+      if (!parsed?.repoPath) return null;
       return parsed;
     } catch (error) {
       console.warn('[TemplateRepoPreferenceService] Failed to parse preference:', error);
@@ -22,7 +21,7 @@ export class TemplateRepoPreferenceService {
   }
 
   static async set(pref: TemplateRepoPreference): Promise<void> {
-    await AsyncStorage.setItem(KEY, JSON.stringify(pref));
+    await AsyncStorage.setItem(KEY, JSON.stringify({ repoPath: pref.repoPath }));
   }
 
   static async clear(): Promise<void> {
