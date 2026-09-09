@@ -237,10 +237,12 @@ export default function GitContextPicker({
                     <View style={[styles.selectorValue, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                       {activeBranchStatus === 'loading' ? (
                         <Text style={[styles.placeholderText, { color: colors.textSecondary }]}>Loading…</Text>
-                      ) : activeBranchStatus === 'error' || activeBranchStatus === 'stale' || !activeBranch ? (
-                        <Text style={[styles.placeholderText, { color: colors.error }]}>
-                          {activeBranchStatus === 'stale' ? `${activeBranch} (stale)` : 'No active branch'}
-                        </Text>
+                      ) : activeBranchStatus === 'error' ? (
+                        <Text style={[styles.placeholderText, { color: colors.error }]}>No active branch</Text>
+                      ) : activeBranchStatus === 'stale' ? (
+                        <Text style={[styles.placeholderText, { color: colors.warning }]}>{activeBranch} (stale)</Text>
+                      ) : !activeBranch ? (
+                        <Text style={[styles.valueText, { color: colors.text }]}>main</Text>
                       ) : (
                         <Text style={[styles.valueText, { color: colors.text }]}>{activeBranch}</Text>
                       )}

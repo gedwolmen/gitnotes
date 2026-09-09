@@ -88,7 +88,7 @@ export function BranchesSection({ repo, active, onChanged, chromeTopInset = 0, b
       setBusy(`checkout:${name}`);
       try {
         const coordinator = GitBranchCoordinator;
-        await coordinator.checkout(repo.localPath, name, 'origin');
+        await coordinator.checkout(repo.id, repo.localPath, name);
         onChanged();
         setVersion((value) => value + 1);
       } catch (caught) {
