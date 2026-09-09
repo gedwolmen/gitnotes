@@ -9,6 +9,8 @@
  */
 
 import { openDatabaseAsync, type SQLiteDatabase } from 'expo-sqlite';
+import { File, Directory, Paths } from 'expo-file-system';
+import { parseFrontmatter } from '@/utils/frontmatterParser';
 import type {
   BacklinkRow,
   DocumentListOptions,
@@ -20,6 +22,7 @@ import type {
 
 const DB_NAME = 'gitnotes.db';
 const MAX_LIMIT = 500;
+const SCHEMA_VERSION = 1;
 
 const SCHEMA = `
   PRAGMA journal_mode = WAL;
@@ -247,6 +250,13 @@ export function getDocumentDb(): Promise<SQLiteDatabase> {
       await db.execAsync(
         `CREATE VIRTUAL TABLE IF NOT EXISTS documents_fts USING fts5(title, body, tags, content=documents, content_rowid=rowid)`,
       );
+      const [{ 'user_version': version }] = await db.getAllAsync<{ 'user_version': number }>(
+        `PRAGMA user_version`,
+      );
+      if (version < SCHEMA_VERSION) {
+        migrateBodyColumn(db).catch((err) => console.error('[DocumentIndex] body column migration failed:', err));
+        await db.execAsync(`PRAGMA user_version = ${SCHEMA_VERSION}`);
+      }
       return db;
     });
     // Reset the cached promise so a transient open failure can be retried.
@@ -255,6 +265,32 @@ export function getDocumentDb(): Promise<SQLiteDatabase> {
     });
   }
   return dbPromise;
+}
+
+async function migrateBodyColumn(db: SQLiteDatabase): Promise<void> {
+  const docs = await db.getAllAsync<{ rowid: number; id: string; path: string; title: string; tags: string }>(
+    `SELECT rowid, id, path, title, tags FROM documents WHERE deleted = 0`,
+  );
+  if (docs.length === 0) return;
+
+  const documentsDir = new Directory(Paths.document, 'documents');
+  await Promise.all(
+    docs.map(async (doc) => {
+      try {
+        const file = new File(documentsDir, doc.path);
+        if (!file.exists) return;
+        const raw = await file.text();
+        const body = parseFrontmatter(raw).body ?? '';
+        await db.runAsync(
+          `INSERT INTO documents_fts(rowid, title, body, tags) VALUES (?, ?, ?, ?)
+           ON CONFLICT(rowid) DO UPDATE SET title=excluded.title, body=excluded.body, tags=excluded.tags`,
+          [doc.rowid, doc.title, body, doc.tags],
+        );
+      } catch (err) {
+        console.error(`[DocumentIndex] migration: failed to index document ${doc.id}:`, err);
+      }
+    }),
+  );
 }
 
 export class DocumentIndex {
