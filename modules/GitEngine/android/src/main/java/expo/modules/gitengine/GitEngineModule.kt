@@ -196,7 +196,7 @@ class GitEngineModule : Module() {
     }
 
     AsyncFunction("recentCommits") Coroutine { path: String, limit: Int ->
-      engineOp { recentCommits(fsPath(path), limit.toUInt()).map(::commitDict) }
+      engineOp { recentCommits(fsPath(path), 0u, limit.toUInt()).map(::commitDict) }
     }
 
     AsyncFunction("commitDiff") Coroutine { path: String, commitId: String ->
