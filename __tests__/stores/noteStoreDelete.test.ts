@@ -1,6 +1,6 @@
 import type { Note } from '@/models/Note';
 import { StorageService } from '@/services/StorageService';
-import { CloneSyncService, SyncEngineService } from '@/services/cloneSyncServiceImpl';
+import { CloneSyncService } from '@/services/cloneSyncServiceImpl';
 import { CommitService } from '@/services/git/CommitService';
 import { useNoteStore } from '@/stores/noteStore';
 
@@ -12,7 +12,6 @@ jest.mock('@/services/StorageService', () => ({
 
 jest.mock('@/services/cloneSyncServiceImpl', () => ({
   CloneSyncService: { save: jest.fn() },
-  SyncEngineService: { getMode: jest.fn() },
   NoteSyncQueueService: {
     onMutationSucceeded: jest.fn(),
     onDroppedMutation: jest.fn(),
@@ -49,12 +48,11 @@ jest.mock('@/stores/gitOperationStore', () => ({
 describe('noteStore delete flows', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    (SyncEngineService.getMode as jest.Mock).mockResolvedValue('clone');
     (CloneSyncService.save as jest.Mock).mockResolvedValue({ success: true });
     (StorageService.deleteNote as jest.Mock).mockResolvedValue(true);
   });
 
-  it('deletes a clone-mode note without creating a commit', async () => {
+  it('deletes a note without creating a commit', async () => {
     const note: Note = {
       id: 'note-1',
       title: 'Example',
