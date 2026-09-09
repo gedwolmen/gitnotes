@@ -9,6 +9,7 @@ import { useEffect, useRef, useReducer } from 'react';
 type GitRefreshListener = () => void;
 
 const listeners = new Set<GitRefreshListener>();
+const contentListeners = new Set<GitRefreshListener>();
 
 export function emitGitRefresh(): void {
   listeners.forEach((listener) => listener());
@@ -17,6 +18,15 @@ export function emitGitRefresh(): void {
 export function subscribeGitRefresh(listener: GitRefreshListener): () => void {
   listeners.add(listener);
   return () => listeners.delete(listener);
+}
+
+export function emitGitContentRefresh(): void {
+  contentListeners.forEach((listener) => listener());
+}
+
+export function subscribeGitContentRefresh(listener: GitRefreshListener): () => void {
+  contentListeners.add(listener);
+  return () => contentListeners.delete(listener);
 }
 
 /**
@@ -30,6 +40,21 @@ export function useGitRefreshSignal(): number {
 
   useEffect(() => {
     const unsubscribe = subscribeGitRefresh(() => {
+      countRef.current += 1;
+      forceUpdate();
+    });
+    return unsubscribe;
+  }, []);
+
+  return countRef.current;
+}
+
+export function useGitContentRefreshSignal(): number {
+  const countRef = useRef(0);
+  const [, forceUpdate] = useReducer((x) => x + 1, 0);
+
+  useEffect(() => {
+    const unsubscribe = subscribeGitContentRefresh(() => {
       countRef.current += 1;
       forceUpdate();
     });
