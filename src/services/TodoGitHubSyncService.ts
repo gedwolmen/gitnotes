@@ -2,7 +2,7 @@ import { GitHubService } from './GitHubService';
 import { Todo } from '../models/Todo';
 import { parseRepoPath } from '../utils/gitPathParser';
 import { AuthService } from './AuthService';
-import { CloneSyncService, SyncEngineService } from './cloneSyncServiceImpl';
+import { CloneSyncService } from './cloneSyncServiceImpl';
 import { resolveDefaultFolder, resolveDefaultRepo } from './git/defaultsPolicy';
 import { GitFsService } from './git/GitFsService';
 import { resolveBranch } from './git/resolveBranch';
@@ -60,7 +60,6 @@ export async function syncTodoToGitHub(params: {
   }
 
   const targetBranch = await resolveBranch(repoPath, branch);
-  const opts = tokenOverride ? { tokenOverride } : undefined;
 
   let targetPath = filePath;
   if (!targetPath) {
@@ -80,20 +79,14 @@ export async function syncTodoToGitHub(params: {
   // always carried filePath, which made every first-create commit say
   // "Update todo:" (#626). Falling back to caller's filePath only on lookup
   // failure preserves current behavior on transient errors.
-  const mode = await SyncEngineService.getMode(repoPath);
   let fileExists: boolean | null;
   try {
-    if (mode === 'clone') {
-      const cloned = await GitFsService.isCloned({ repoPath });
-      if (cloned) {
-        const existing = await GitFsService.readFile({ repoPath, ref: targetBranch, filepath: targetPath });
-        fileExists = existing !== null;
-      } else {
-        fileExists = false;
-      }
+    const cloned = await GitFsService.isCloned({ repoPath });
+    if (cloned) {
+      const existing = await GitFsService.readFile({ repoPath, ref: targetBranch, filepath: targetPath });
+      fileExists = existing !== null;
     } else {
-      const sha = await GitHubService.getFileShaOrNull(repoInfo.owner, repoInfo.repo, targetPath, targetBranch, opts);
-      fileExists = sha !== null;
+      fileExists = false;
     }
   } catch (error) {
     console.warn('[TodoGitHubSyncService] fileExists check failed:', error);
@@ -102,42 +95,18 @@ export async function syncTodoToGitHub(params: {
   const useUpdateVerb = fileExists ?? !!filePath;
   const message = useUpdateVerb ? `Update todo: ${text}` : `Create todo: ${text}`;
 
-  if (mode === 'clone') {
-    const saveResult = await CloneSyncService.save({
-      repoPath,
-      branch: targetBranch,
-      filePath: targetPath,
-      content,
-      message,
-      intent: 'upsert',
-    });
-    if (saveResult.success) {
-      return { success: true, filePath: targetPath };
-    }
-    return { success: false, error: saveResult.error };
+  const saveResult = await CloneSyncService.save({
+    repoPath,
+    branch: targetBranch,
+    filePath: targetPath,
+    content,
+    message,
+    intent: 'upsert',
+  });
+  if (saveResult.success) {
+    return { success: true, filePath: targetPath };
   }
-
-  try {
-    const result = await GitHubService.updateFile(
-      repoInfo.owner,
-      repoInfo.repo,
-      targetPath,
-      content,
-      message,
-      targetBranch,
-      opts,
-    );
-
-    if (result) {
-      return { success: true, filePath: targetPath };
-    }
-    return { success: false, error: 'GitHub API returned no result' };
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
-  }
+  return { success: false, error: saveResult.error };
 }
 
 export async function deleteTodoFromGitHub(params: {
@@ -147,71 +116,23 @@ export async function deleteTodoFromGitHub(params: {
   text?: string;
   accountId?: string;
 }): Promise<TodoGitHubSyncResult> {
-  const { repo: repoPath, branch, filePath, text, accountId } = params;
+  const { repo: repoPath, branch, filePath, text } = params;
 
   const repoInfo = parseRepoPath(repoPath);
   if (!repoInfo) {
     return { success: false, error: `Invalid repo path: ${repoPath}` };
   }
 
-  const mode = await SyncEngineService.getMode(repoPath);
-  if (mode === 'clone' && (await GitFsService.isCloned({ repoPath }))) {
-    const targetBranch = await resolveBranch(repoPath, branch);
-    const saveResult = await CloneSyncService.save({
-      repoPath,
-      branch: targetBranch,
-      filePath,
-      message: `Delete todo: ${text || filePath}`,
-      intent: 'delete',
-    });
-    if (saveResult.success) {
-      return { success: true, filePath };
-    }
-    return { success: false, error: saveResult.error };
-  }
-
-  // API-mode repos — and clone repos with no local clone on this device —
-  // purge the file through the Contents API instead.
-  const tokenOverride = await resolveToken(accountId);
-
-  if (!tokenOverride && !GitHubService.isAuthenticated()) {
-    return { success: false, error: 'GitHub not authenticated' };
-  }
-
   const targetBranch = await resolveBranch(repoPath, branch);
-  const opts = tokenOverride ? { tokenOverride } : undefined;
-
-  try {
-    // not-found = remote already gone, treat as success so the local
-    // row deletes cleanly. error = couldn't reach GitHub, hold the row
-    // (#567 fix A) so the next pull doesn't re-import the upstream copy.
-    const lookup = await GitHubService.getFileSha(repoInfo.owner, repoInfo.repo, filePath, targetBranch, opts);
-    if (lookup.kind === 'not-found') {
-      return { success: true, filePath };
-    }
-    if (lookup.kind === 'error') {
-      return { success: false, error: lookup.message };
-    }
-
-    const result = await GitHubService.deleteFile(
-      repoInfo.owner,
-      repoInfo.repo,
-      filePath,
-      `Delete todo: ${text || filePath}`,
-      lookup.sha,
-      targetBranch,
-      opts,
-    );
-
-    if (result) {
-      return { success: true, filePath };
-    }
-    return { success: false, error: 'GitHub API returned no result' };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
-    if (/404/.test(message)) {
-      return { success: true, filePath };
-    }
-    return { success: false, error: message };
+  const saveResult = await CloneSyncService.save({
+    repoPath,
+    branch: targetBranch,
+    filePath,
+    message: `Delete todo: ${text || filePath}`,
+    intent: 'delete',
+  });
+  if (saveResult.success) {
+    return { success: true, filePath };
   }
+  return { success: false, error: saveResult.error };
 }
