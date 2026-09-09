@@ -13,8 +13,6 @@ import { SyncEngineService, NoteSyncQueueService } from './cloneSyncServiceImpl'
 import { GitFsService } from './git/GitFsService';
 import { resolveBranch } from './git/branchResolver';
 import { AuthService } from './AuthService';
-import { getGitHostService } from './git/gitHostFactory';
-import { FEATURE_USE_MULTI_HOST_WRITE } from './featureFlags';
 import { yieldToMain } from '../utils/yieldToMain';
 import type { GitHostProvider } from './git/GitHost';
 import type { CloneProgressCallback } from './RepoImportService';
@@ -151,17 +149,6 @@ async function getRepoReader(
       mode,
       listTree: () => GitHubService.getTreeRecursiveOrThrow(owner, repo, branch),
       readFile: (path: string) => GitHubService.getFileContent(owner, repo, path, branch),
-    };
-  }
-  if (FEATURE_USE_MULTI_HOST_WRITE) {
-    const host = getGitHostService(provider);
-    return {
-      mode,
-      listTree: async () => {
-        const entries = await host.getTreeRecursive(owner, repo, branch);
-        return entries.map((e) => ({ path: e.path, type: e.type, sha: e.sha, size: e.size }));
-      },
-      readFile: (path: string) => host.getFileText(owner, repo, path, branch),
     };
   }
   return {
@@ -817,43 +804,22 @@ async function pullTemplatesFromRepo(
     let blobs: { type: string; path: string }[];
     let fetched: ({ path: string; content: string } | null)[];
 
-    if (FEATURE_USE_MULTI_HOST_WRITE) {
-      const host = getGitHostService(provider);
-      const entries = await host.getTreeRecursive(owner, repo, branch);
-      tree = entries;
-      blobs = tree.filter((item) => {
-        if (item.type !== 'blob') return false;
-        if (!item.path.startsWith('templates/')) return false;
-        const ext = item.path.split('.').pop()?.toLowerCase();
-        return TEMPLATE_EXTS.includes(ext as (typeof TEMPLATE_EXTS)[number]);
-      });
+    tree = await GitHubService.getTreeRecursiveOrThrow(owner, repo, branch);
+    blobs = tree.filter((item) => {
+      if (item.type !== 'blob') return false;
+      if (!item.path.startsWith('templates/')) return false;
+      const ext = item.path.split('.').pop()?.toLowerCase();
+      return TEMPLATE_EXTS.includes(ext as (typeof TEMPLATE_EXTS)[number]);
+    });
 
-      fetched = await fetchInBatches(
-        blobs,
-        async (b) => {
-          const content = await host.getFileText(owner, repo, b.path, branch);
-          return content === null ? null : { path: b.path, content };
-        },
-        FILE_FETCH_CONCURRENCY,
-      );
-    } else {
-      tree = await GitHubService.getTreeRecursiveOrThrow(owner, repo, branch);
-      blobs = tree.filter((item) => {
-        if (item.type !== 'blob') return false;
-        if (!item.path.startsWith('templates/')) return false;
-        const ext = item.path.split('.').pop()?.toLowerCase();
-        return TEMPLATE_EXTS.includes(ext as (typeof TEMPLATE_EXTS)[number]);
-      });
-
-      fetched = await fetchInBatches(
-        blobs,
-        async (b) => {
-          const content = await GitHubService.getFileContent(owner, repo, b.path, branch);
-          return content === null ? null : { path: b.path, content };
-        },
-        FILE_FETCH_CONCURRENCY,
-      );
-    }
+    fetched = await fetchInBatches(
+      blobs,
+      async (b) => {
+        const content = await GitHubService.getFileContent(owner, repo, b.path, branch);
+        return content === null ? null : { path: b.path, content };
+      },
+      FILE_FETCH_CONCURRENCY,
+    );
 
     const remote: NoteTemplate[] = [];
     let processed = 0;
