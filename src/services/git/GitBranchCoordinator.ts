@@ -140,14 +140,11 @@ class GitBranchCoordinatorClass {
         try {
           await GitEngine.checkoutBranch(localPath, branchName, remoteName);
         } catch (error) {
-          // If checkout fails because the remote tracking ref is missing,
-          // fetch from the remote and retry once.
           const message = error instanceof Error ? error.message : String(error);
           if (/ref.*not(found|exist)|couldn't find|not found/i.test(message)) {
             try {
               await GitEngine.fetch(localPath, remoteName, repoId);
               await GitEngine.checkoutBranch(localPath, branchName, remoteName);
-              checkoutError = null;
             } catch (retryError) {
               checkoutError = retryError instanceof Error ? retryError : new Error(String(retryError));
             }
@@ -159,9 +156,24 @@ class GitBranchCoordinatorClass {
           throw checkoutError;
         }
 
-        const postflightOk = await GitSyncGate.verifyPostflight(preflight!, opId);
-        if (!postflightOk) {
-          gitOperationRegistry.fail(opId, 'Branch state changed during checkout (stale)');
+        const postflightResult = await GitSyncGate.verifyPostflight(preflight!, opId);
+
+        if (!postflightResult.ok && postflightResult.reason === 'head-changed') {
+          preflight = await GitSyncGate.capturePreflight(repoId, localPath);
+          try {
+            await GitEngine.checkoutBranch(localPath, branchName, remoteName);
+          } catch (retryError) {
+            checkoutError = retryError instanceof Error ? retryError : new Error(String(retryError));
+            throw checkoutError;
+          }
+          const retryResult = await GitSyncGate.verifyPostflight(preflight!, opId);
+          if (!retryResult.ok) {
+            gitOperationRegistry.fail(opId, `Postflight failed after retry: ${retryResult.reason}`);
+            this.setState('failed');
+            throw new Error('Checkout aborted: branch state changed during operation');
+          }
+        } else if (!postflightResult.ok) {
+          gitOperationRegistry.fail(opId, `Postflight: ${postflightResult.reason}`);
           this.setState('failed');
           throw new Error('Checkout aborted: branch state changed during operation');
         }

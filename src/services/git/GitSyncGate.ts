@@ -55,6 +55,10 @@ export interface PreflightState {
   headOid: string;
 }
 
+export type PostflightResult =
+  | { ok: true }
+  | { ok: false; reason: 'branch-changed' | 'head-changed' | 'error' };
+
 class GitSyncGateClass {
   private cycleHeld = false;
   private cycleToken = 0;
@@ -156,19 +160,28 @@ class GitSyncGateClass {
     }
   }
 
-  async verifyPostflight(preflight: PreflightState, registryOpId?: string): Promise<boolean> {
+  async verifyPostflight(preflight: PreflightState, registryOpId?: string): Promise<PostflightResult> {
     try {
       const repoInfo = await GitEngine.repoInfo(preflight.repoPath);
       const currentOid = await GitFsService.getCommitOid({ repoPath: preflight.repoPath, ref: `refs/heads/${repoInfo.currentBranch}` });
-      if (repoInfo.currentBranch !== preflight.activeBranch || currentOid !== preflight.headOid) {
+      if (repoInfo.currentBranch !== preflight.activeBranch) {
         if (registryOpId) {
-          gitOperationRegistry.fail(registryOpId, 'Branch state changed during operation (stale)');
+          gitOperationRegistry.fail(registryOpId, 'Branch changed during operation (stale)');
         }
-        return false;
+        return { ok: false, reason: 'branch-changed' };
       }
-      return true;
+      if (currentOid !== preflight.headOid) {
+        if (registryOpId) {
+          gitOperationRegistry.fail(registryOpId, 'HEAD changed during operation (stale)');
+        }
+        return { ok: false, reason: 'head-changed' };
+      }
+      return { ok: true };
     } catch {
-      return false;
+      if (registryOpId) {
+        gitOperationRegistry.fail(registryOpId, 'Postflight verification error');
+      }
+      return { ok: false, reason: 'error' };
     }
   }
 
