@@ -78,6 +78,7 @@
       "expo-font",
       "expo-web-browser",
       "./plugins/withGitQuicWorkaround",
+      "./plugins/withExpoSqliteXcode26",
       [
         "expo-notifications",
         {
