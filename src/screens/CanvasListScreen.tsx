@@ -9,6 +9,7 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
+  StyleSheet,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -25,10 +26,11 @@ import { SafeAreaView } from '../components/ui/SafeAreaView';
 import { EntityFilterModal } from '../components/EntityFilterModal';
 import { ActiveFilterStrip } from '../components/ActiveFilterStrip';
 import { useEntityFilter } from '../hooks/useEntityFilter';
-import { useResponsive } from '../hooks/useResponsive';
 import { useTranslation } from 'react-i18next';
 import { useProGate } from '../hooks/useProGate';
 import CanvasCard from '../components/CanvasCard';
+
+type CanvasViewMode = 'list' | 'grid';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -76,12 +78,13 @@ export default function CanvasListScreen() {
   const { repositories } = useRepos();
   const filter = useEntityFilter<Canvas>(canvases);
   const displayCanvases = useMemo(() => filter.applyFilters(filteredCanvases), [filter, filteredCanvases]);
-  const { columnCount } = useResponsive('list');
   const [showSizePicker, setShowSizePicker] = useState(false);
   const [showFilterModal, setShowFilterModal] = useState(false);
+  const [showViewModePicker, setShowViewModePicker] = useState(false);
   const [customW, setCustomW] = useState('800');
   const [customH, setCustomH] = useState('600');
   const [canvasTitle, setCanvasTitle] = useState('');
+  const [viewMode, setViewMode] = useState<CanvasViewMode>('list');
 
   useFocusEffect(
     useCallback(() => {
@@ -143,6 +146,11 @@ export default function CanvasListScreen() {
     [deleteCanvas, t],
   );
 
+  const handleViewModeChange = useCallback((mode: CanvasViewMode) => {
+    setViewMode(mode);
+    setShowViewModePicker(false);
+  }, []);
+
   const renderCanvas = useCallback(
     ({ item }: { item: Canvas }) => (
       <CanvasCardContainer canvas={item} onOpen={handleOpen} onDelete={handleDelete} />
@@ -174,10 +182,10 @@ export default function CanvasListScreen() {
         data={displayCanvases}
         keyExtractor={(item) => item.id}
         renderItem={renderCanvas}
-        numColumns={columnCount}
-        key={`canvases-${columnCount}`}
+        numColumns={viewMode === 'grid' ? 2 : 1}
+        key={`canvases-${viewMode}`}
         contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: tabBarHeight + 24 }}
-        columnWrapperStyle={columnCount > 1 ? { gap: 8 } : undefined}
+        columnWrapperStyle={viewMode === 'grid' ? { gap: 12 } : undefined}
         ListEmptyComponent={
           <View className="items-center justify-center pt-15 px-6">
             <Ionicons name="easel-outline" size={48} color={colors.textSecondary} />
@@ -196,6 +204,58 @@ export default function CanvasListScreen() {
           </View>
         }
       />
+
+      <Modal
+        visible={showViewModePicker}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowViewModePicker(false)}
+      >
+        <TouchableOpacity
+          style={styles.viewModeBackdrop}
+          activeOpacity={1}
+          onPress={() => setShowViewModePicker(false)}
+        >
+          <View style={[styles.viewModeSheet, { backgroundColor: colors.surface }]}>
+            <View style={[styles.viewModeHandle, { backgroundColor: colors.border + '40' }]} />
+            <Text style={[styles.viewModeTitle, { color: colors.textSecondary }]}>View Mode</Text>
+            <View style={styles.viewModeOptions}>
+              <TouchableOpacity
+                testID="canvas-view-mode.button.change-list"
+                style={[styles.viewModeOption, viewMode === 'list' && { backgroundColor: colors.primary + '15' }]}
+                onPress={() => handleViewModeChange('list')}
+                activeOpacity={0.7}
+              >
+                <Ionicons
+                  name="list"
+                  size={22}
+                  color={viewMode === 'list' ? colors.primary : colors.textSecondary}
+                />
+                <Text style={[styles.viewModeLabel, { color: viewMode === 'list' ? colors.primary : colors.text }]}>
+                  List
+                </Text>
+                {viewMode === 'list' && <Ionicons name="checkmark" size={18} color={colors.primary} />}
+              </TouchableOpacity>
+              <TouchableOpacity
+                testID="canvas-view-mode.button.change-grid"
+                style={[styles.viewModeOption, viewMode === 'grid' && { backgroundColor: colors.primary + '15' }]}
+                onPress={() => handleViewModeChange('grid')}
+                activeOpacity={0.7}
+              >
+                <Ionicons
+                  name="grid"
+                  size={22}
+                  color={viewMode === 'grid' ? colors.primary : colors.textSecondary}
+                />
+                <Text style={[styles.viewModeLabel, { color: viewMode === 'grid' ? colors.primary : colors.text }]}>
+                  Grid
+                </Text>
+                {viewMode === 'grid' && <Ionicons name="checkmark" size={18} color={colors.primary} />}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       <Modal
         visible={showSizePicker}
@@ -303,6 +363,18 @@ export default function CanvasListScreen() {
           <>
             <IconButton
               size="sm"
+              testID="canvas-list.icon-button.view-mode"
+              onPress={() => setShowViewModePicker(true)}
+              accessibilityLabel={t('common.viewMode')}
+            >
+              <Ionicons
+                name={viewMode === 'list' ? 'list' : 'grid'}
+                size={18}
+                color={colors.textSecondary}
+              />
+            </IconButton>
+            <IconButton
+              size="sm"
               testID="canvas-list.icon-button.filters"
               active={filter.activeCount > 0}
               onPress={() => setShowFilterModal(true)}
@@ -323,4 +395,48 @@ export default function CanvasListScreen() {
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  viewModeBackdrop: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.4)',
+  },
+  viewModeSheet: {
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    paddingBottom: 32,
+  },
+  viewModeHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginTop: 10,
+    marginBottom: 8,
+  },
+  viewModeTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  viewModeOptions: {
+    paddingHorizontal: 12,
+  },
+  viewModeOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 10,
+    gap: 12,
+  },
+  viewModeLabel: {
+    fontSize: 16,
+    flex: 1,
+  },
+});
 
