@@ -31,7 +31,7 @@ export const EXPLORE_SECTIONS = [
   { id: 'conflicts', label: 'Conflicts' },
   { id: 'pulls', label: 'Pull Requests' },
   { id: 'issues', label: 'Issues' },
-  { id: 'info', label: 'Repo Info' },
+  { id: 'info', label: 'Repository', shortLabel: 'Repo' },
 ] as const;
 
 export type ExploreSection = (typeof EXPLORE_SECTIONS)[number]['id'];
