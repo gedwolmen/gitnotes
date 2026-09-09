@@ -345,6 +345,19 @@ export default function HomeScreen() {
           </Pressable>
         </View>
 
+        <Pressable
+          testID="home.button.open-calendar"
+          onPress={() => navigation.navigate('Calendar', {})}
+          style={({ pressed }) => [
+            { height: 56, borderRadius: 16, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.surface, borderWidth: 0.5, borderColor: colors.border, opacity: pressed ? 0.92 : 1, transform: [{ scale: pressed ? 0.985 : 1 }] },
+          ]}
+        >
+          <View className="w-10 h-10 rounded-full items-center justify-center" style={{ backgroundColor: colors.primary + '1F' }}>
+            <Ionicons name="calendar-outline" size={22} color={colors.primary} />
+          </View>
+          <Text className="text-base font-semibold" style={{ color: colors.text }}>Open Calendar</Text>
+        </Pressable>
+
         <View className="flex-row items-stretch gap-3 overflow-hidden">
           <Pressable
             testID="home.button.open-templates"
