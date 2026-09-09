@@ -26,6 +26,7 @@ import {
   findJournalEntry,
   buildJournalEditorParams,
   journalNoteTitle,
+  parseJournalDateFromTitle,
 } from '../services/JournalService';
 import { HapticService } from '../utils/haptics';
 
@@ -207,6 +208,62 @@ export default function CalendarScreen() {
           scrollEnabled={false}
           contentContainerStyle={{ gap: 0 }}
         />
+
+
+        <View style={{ marginTop: 16 }}>
+          <Text
+            style={{
+              fontSize: 14,
+              fontWeight: '600',
+              color: colors.textSecondary,
+              marginBottom: 8,
+            }}
+          >
+            {journalEntries.length === 0
+              ? 'No entries this month'
+              : `${journalEntries.length} ${journalEntries.length === 1 ? 'entry' : 'entries'} this month`}
+          </Text>
+          <FlatList
+            data={journalEntries}
+            keyExtractor={(item) => item.id}
+            scrollEnabled={false}
+            renderItem={({ item }) => {
+              const entryDate = parseJournalDateFromTitle(item.title);
+              const dayLabel = entryDate ? format(entryDate, 'EEE, MMM d') : '';
+              const preview =
+                item.content.split('\n')[0]?.slice(0, 60) ||
+                item.content.slice(0, 60);
+              return (
+                <TouchableOpacity
+                  onPress={() => navigation.navigate('NoteEditor', { noteId: item.id })}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    paddingVertical: 10,
+                    paddingHorizontal: 4,
+                    borderBottomWidth: 1,
+                    borderBottomColor: colors.border,
+                  }}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 14, fontWeight: '500', color: colors.text }}>
+                      {dayLabel}
+                    </Text>
+                    {preview ? (
+                      <Text
+                        style={{ fontSize: 12, color: colors.textSecondary, marginTop: 2 }}
+                        numberOfLines={1}
+                      >
+                        {preview}
+                      </Text>
+                    ) : null}
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
+                </TouchableOpacity>
+              );
+            }}
+          />
+        </View>
       </View>
     </SafeAreaView>
   );
