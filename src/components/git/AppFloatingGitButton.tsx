@@ -9,6 +9,7 @@ import { stageAllPending, commitAll, pushAll } from '@/services/git/multiRepoGit
 import type { Author } from '@/services/git/engine/GitEngine';
 import { useAccounts } from '@/contexts/AccountsContext';
 import { githubActivity } from '@/stores/githubActivityStore';
+import { emitGitContentRefresh } from '@/hooks/useGitRefreshEvent';
 import FloatingGitButton from './FloatingGitButton';
 import type { ReleaseSegment } from './useFloatingGitButtonAffordances';
 import type { RootStackParamList } from '@/navigation/types';
@@ -109,6 +110,7 @@ export default function AppFloatingGitButton() {
           ),
         });
         void aggregatedState.refresh();
+        emitGitContentRefresh();
         return;
       }
 
@@ -127,6 +129,7 @@ export default function AppFloatingGitButton() {
           ),
         });
         void aggregatedState.refresh();
+        emitGitContentRefresh();
         return;
       }
 
@@ -170,6 +173,7 @@ export default function AppFloatingGitButton() {
         }
       }
       void aggregatedState.refresh();
+      emitGitContentRefresh();
     },
     [repos, author, toast, aggregatedState, navigation],
   );
@@ -248,5 +252,4 @@ export default function AppFloatingGitButton() {
     />
   );
 }
-
 
