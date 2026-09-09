@@ -253,10 +253,9 @@ export default function ExploreDiffScreen() {
               disabled={selected.size === 0 || staging}
               onPress={() => void stageSelectedLines()}
               testID="explore-diff.stage-selected"
-            >
-              {staging ? <ActivityIndicator size="small" color="#ffffff" /> : null}
-              <ButtonText>Stage selected</ButtonText>
-            </Button>
+              label={staging ? undefined : 'Stage selected'}
+              leadingIcon={staging ? <ActivityIndicator size="small" color="#ffffff" /> : undefined}
+            />
           </View>
         </View>
       )}
