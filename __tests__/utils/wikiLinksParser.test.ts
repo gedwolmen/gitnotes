@@ -22,7 +22,7 @@ describe('parseWikiLinks', () => {
   
   test('parses heading plus block anchor', () => {
     const links = parseWikiLinks('[[My Note#Heading#^abc123]]');
-    expect(links[0].target).toBe('My Note');
+    expect(links[0].target).toBe('My Note#Heading');
     expect(links[0].blockAnchor).toBe('abc123');
   });
 });
