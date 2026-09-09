@@ -18,6 +18,14 @@ All notable fixes and feature changes to GitNotēs are documented here.
 
 **PR:** TBD
 
+### fix(explore): preserve staged diff action label contrast
+
+**What:** The staged-diff button label was rendered through `ButtonText`, which uses the theme text color instead of the primary button's light label color. In light themes, the label had insufficient contrast against the blue button.
+
+**fix(explore):** Use the shared `Button` label API and leading-icon loading state so primary action text receives the correct contrast styling.
+
+**PR:** TBD
+
 ## 2026-09-08
 
 ### fix(paywall): restore-granted cache bypass + silent failures
