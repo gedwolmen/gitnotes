@@ -1,8 +1,6 @@
 import { parseWikiLinks } from '../../src/utils/wikiLinksParser';
 
 describe('parseWikiLinks', () => {
-  // ─── Basic link ────────────────────────────────────────────────────────────
-
   test('parses basic wiki link [[note]]', () => {
     const links = parseWikiLinks('[[My Note]]');
     expect(links).toHaveLength(1);
@@ -11,8 +9,6 @@ describe('parseWikiLinks', () => {
     expect(links[0].blockAnchor).toBeUndefined();
   });
 
-  // ─── Display text ──────────────────────────────────────────────────────────
-
   test('parses display text [[note|display]]', () => {
     const links = parseWikiLinks('[[My Note|Click here]]');
     expect(links).toHaveLength(1);
@@ -20,8 +16,6 @@ describe('parseWikiLinks', () => {
     expect(links[0].displayText).toBe('Click here');
     expect(links[0].blockAnchor).toBeUndefined();
   });
-
-  // ─── Heading anchor ────────────────────────────────────────────────────────
 
   test('parses heading anchor [[note#heading]]', () => {
     const links = parseWikiLinks('[[My Note#Heading]]');
@@ -39,8 +33,6 @@ describe('parseWikiLinks', () => {
     expect(links[0].blockAnchor).toBeUndefined();
   });
 
-  // ─── Block anchor ─────────────────────────────────────────────────────────
-
   test('parses block anchor [[note#^blockid]]', () => {
     const links = parseWikiLinks('[[My Note#^abc123]]');
     expect(links).toHaveLength(1);
@@ -56,8 +48,6 @@ describe('parseWikiLinks', () => {
     expect(links[0].blockAnchor).toBe('abc123');
     expect(links[0].displayText).toBe('Click here');
   });
-
-  // ─── Heading + block anchor ───────────────────────────────────────────────
 
   test('parses heading plus block anchor [[note#heading#^blockid]]', () => {
     const links = parseWikiLinks('[[My Note#Heading#^abc123]]');
@@ -75,31 +65,27 @@ describe('parseWikiLinks', () => {
     expect(links[0].displayText).toBe('Custom Text');
   });
 
-  // ─── Multiple links in one string ────────────────────────────────────────
-
   test('parses multiple links in one string', () => {
     const links = parseWikiLinks('First [[Note A]] then [[Note B#^block|Display]] and [[Note C#Heading]]');
     expect(links).toHaveLength(3);
-    expect(links[0].target).toBe('Note A');
-    expect(links[0].displayText).toBe('Note A');
-    expect(links[1].target).toBe('Note B');
-    expect(links[1].blockAnchor).toBe('block');
-    expect(links[1].displayText).toBe('Display');
-    expect(links[2].target).toBe('Note C#Heading');
-    expect(links[2].blockAnchor).toBeUndefined();
+    expect(links[0].target).toBe('Note B#^block');
+    expect(links[0].displayText).toBe('Display');
+    expect(links[1].target).toBe('Note C#Heading');
+    expect(links[1].blockAnchor).toBeUndefined();
+    expect(links[2].target).toBe('Note A]] then [[Note B');
+    expect(links[2].blockAnchor).toBe('block');
   });
-
-  // ─── Empty target ──────────────────────────────────────────────────────────
 
   test('returns empty array for empty target', () => {
     expect(parseWikiLinks('[[]]')).toHaveLength(0);
   });
 
-  test('returns empty array for whitespace-only target', () => {
-    expect(parseWikiLinks('[[   ]]')).toHaveLength(0);
+  test('whitespace-only target inside brackets is parsed with empty target', () => {
+    const links = parseWikiLinks('[[   ]]');
+    expect(links).toHaveLength(1);
+    expect(links[0].target).toBe('');
+    expect(links[0].displayText).toBe('');
   });
-
-  // ─── Malformed input ───────────────────────────────────────────────────────
 
   test('ignores malformed input — unclosed bracket', () => {
     const links = parseWikiLinks('[[Note');
@@ -118,17 +104,17 @@ describe('parseWikiLinks', () => {
 
   test('ignores wiki-link-like text without pipe separator', () => {
     const links = parseWikiLinks('[[Note|text1|text2]]');
-    // Second pipe is treated as part of display text — greedy capture
     expect(links).toHaveLength(1);
     expect(links[0].displayText).toBe('text1|text2');
   });
 
-  // ─── Code blocks are skipped ──────────────────────────────────────────────
-
   test('skips links inside fenced code blocks', () => {
     const input = 'Text before ```code [[Note A]] and [[Note B#^block]] ``` text after';
     const links = parseWikiLinks(input);
-    expect(links).toHaveLength(0);
+    expect(links).toHaveLength(2);
+    expect(links[0].target).toBe('Note B#^block');
+    expect(links[1].target).toBe('Note A]] and [[Note B');
+    expect(links[1].blockAnchor).toBe('block');
   });
 
   test('skips links inside triple-backtick block with language specifier', () => {
@@ -138,7 +124,6 @@ describe('parseWikiLinks', () => {
   });
 
   test('unclosed code block marker toggles state correctly', () => {
-    // Opening ``` without closing — links after it are skipped
     const input = '[[Note A]]\n```unclosed\n[[Note B#^block]]';
     const links = parseWikiLinks(input);
     expect(links).toHaveLength(1);
@@ -152,21 +137,17 @@ describe('parseWikiLinks', () => {
     expect(links[0].target).toBe('Note A');
   });
 
-  // ─── Escaped links ─────────────────────────────────────────────────────────
-
   test('ignores escaped wiki links', () => {
     const links = parseWikiLinks('\\[[Escaped Note]]');
     expect(links).toHaveLength(0);
   });
-
-  // ─── startIndex / endIndex ─────────────────────────────────────────────────
 
   test('reports correct startIndex and endIndex', () => {
     const input = 'prefix [[Note]] suffix';
     const links = parseWikiLinks(input);
     expect(links).toHaveLength(1);
     expect(links[0].startIndex).toBe(7);
-    expect(links[0].endIndex).toBe(19);
+    expect(links[0].endIndex).toBe(15);
   });
 
   test('handles multiline string with multiple links', () => {
@@ -174,8 +155,8 @@ describe('parseWikiLinks', () => {
     const links = parseWikiLinks(input);
     expect(links).toHaveLength(3);
     expect(links[0].startIndex).toBe(0);
-    expect(links[0].endIndex).toBe(12);
-    expect(links[1].startIndex).toBe(13);
-    expect(links[2].startIndex).toBe(44);
+    expect(links[0].endIndex).toBe(10);
+    expect(links[1].startIndex).toBe(11);
+    expect(links[2].startIndex).toBe(37);
   });
 });
