@@ -1,9 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { GitHubService } from '../../services/GitHubService';
 import { AuthService } from '../../services/AuthService';
-import { SyncEngineService } from '../../services/cloneSyncServiceImpl';
 import { LocalGitWriter } from '../../services/git/LocalGitWriter';
-import { batchDeleteFiles } from '../../services/git/BatchGitOperations';
 import { getGitHostService } from '../../services/git/gitHostFactory';
 import type { GitHostProvider } from '../../services/git/GitHost';
 
@@ -108,7 +106,7 @@ function errorMessage(error: unknown): string {
 
 /**
  * Recursively collects every leaf file path under `dirPath`. Used by the
- * mode-aware folder delete to batch one API commit (or one clone push).
+ * folder delete to delete each file via the clone.
  */
 export async function collectLeafFilePaths(
   owner: string,
@@ -175,10 +173,8 @@ async function deleteDirectoryClone(
 }
 
 /**
- * Mode-aware folder delete. API mode batches every collected path into ONE
- * `batchDeleteFiles` commit (>= 2 paths; a single-path folder falls back to
- * per-file deletes). Clone mode commits locally with push deferred to the
- * stage/push engine.
+ * Folder delete: commits a delete for each leaf file via the local clone.
+ * Pushes are owned by the stage/push engine.
  */
 export async function deleteDirectoryModeAware(
   owner: string,
@@ -189,26 +185,7 @@ export async function deleteDirectoryModeAware(
   const paths = await collectLeafFilePaths(owner, repo, branch, dirPath);
   if (paths.length === 0) return { deleted: [], failed: [] };
 
-  const mode = await SyncEngineService.getMode(`${owner}/${repo}`);
-  if (mode === 'clone') {
-    return deleteDirectoryClone(owner, repo, branch, paths);
-  }
-
-  if (paths.length >= 2) {
-    try {
-      const result = await batchDeleteFiles({
-        owner,
-        repo,
-        branch: branch || 'main',
-        paths,
-        message: `Delete folder: ${dirPath}`,
-      });
-      return { deleted: result.deleted, failed: result.failed };
-    } catch (error) {
-      console.warn('[repoTreeShared] batch delete failed, falling back to per-file:', error);
-    }
-  }
-  return deleteDirectory(owner, repo, branch, dirPath);
+  return deleteDirectoryClone(owner, repo, branch, paths);
 }
 
 export async function moveDirectory(
