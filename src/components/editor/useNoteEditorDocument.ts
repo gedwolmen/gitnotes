@@ -429,7 +429,7 @@ export function useNoteEditorDocument({
           if (!syncResult.success) {
             Alert.alert(
               'Save Failed',
-              'Your note was saved locally but could not be synced. Please try again.',
+              'Your note could not be saved. Please try again.',
               [{ text: 'OK' }],
             );
           }
