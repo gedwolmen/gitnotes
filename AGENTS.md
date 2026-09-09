@@ -88,17 +88,11 @@ yarn eslint . --ext .ts,.tsx  # Linting
 
 ## Sync Architecture (Git Services) — source of truth
 
-Every repo has a sync mode (`SyncEngineService.getMode`, `src/services/SyncEngineService.ts`, default `'clone'`, per-repo override map `@gitnotes:sync_engine_modes`). The two modes behave differently ON PURPOSE; do not "fix" one into the other:
+GitNotēs uses **clone mode** exclusively: local git commits with write-through push.
 
-- **Clone mode — commit-on-save + write-through push:**
-  User changes are **committed locally** (local git commit via `CloneSyncService.save`) and pushed **immediately when online** (8s budget via `tryPushNow`). If offline, changes queue in `ClonePendingQueue` and push when connectivity returns. If a conflict is detected (409/non-fast-forward), the user is blocked on `ConflictResolverScreen` with editor-first UX — no separate push step needed.
+- User changes are **committed locally** (local git commit via `CloneSyncService.save`) and pushed **immediately when online** (8s budget via `tryPushNow`). If offline, changes queue in `ClonePendingQueue` and push when connectivity returns. If a conflict is detected (409/non-fast-forward), the user is blocked on `ConflictResolverScreen` with editor-first UX — no separate push step needed.
   Push is triggered by: foreground-active (AppState → active), online-transition (NetInfo), 3-minute idle timer (`ClonePushTriggers`), and OS background task (up to 50 files).
   - Issues #925, #926, #927, #938 resolved.
-
-- **API mode — everything live (write-through):**
-  - Changes **push to GitHub immediately on save/complete** — no commit-and-wait, no idle-timer dependency.
-  - After a successful push, **pull** to keep local state consistent.
-  - While a push or pull is in flight, **the user must not be able to make changes** (spinner / blocked UI) — no concurrent edits racing the sync operation.
 
 ## Wiki documentation
 
