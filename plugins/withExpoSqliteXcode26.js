@@ -52,16 +52,24 @@ function withExpoSqliteXcode26(config) {
     'ios',
     async (config) => {
       const podfilePath = path.join(config.modRequest.platformProjectRoot, 'Podfile');
-      const podfile = await fs.promises.readFile(podfilePath, 'utf8');
+      let podfile = await fs.promises.readFile(podfilePath, 'utf8');
 
-      const clangSetting = "build_settings['CLANG_ENABLE_EXPLICIT_MODULES'] = 'NO'";
-      const swiftSetting = "build_settings['SWIFT_ENABLE_EXPLICIT_MODULES'] = 'NO'";
+      const clangSetting =
+        "build_configuration.build_settings['CLANG_ENABLE_EXPLICIT_MODULES'] = 'NO'";
+      const swiftSetting =
+        "build_configuration.build_settings['SWIFT_ENABLE_EXPLICIT_MODULES'] = 'NO'";
+      const legacySwiftSetting = "build_settings['SWIFT_ENABLE_EXPLICIT_MODULES'] = 'NO'";
       const marker = '    react_native_post_install(\n';
       if (!podfile.includes(marker)) {
         throw new Error('expo-sqlite-xcode26: could not locate the Podfile post_install hook');
       }
 
+      if (podfile.includes(legacySwiftSetting)) {
+        podfile = podfile.replace(legacySwiftSetting, swiftSetting);
+      }
+
       if (podfile.includes(SWIFTUI_PRIVATE_AUTOLINK_FLAGS)) {
+        await fs.promises.writeFile(podfilePath, podfile);
         return config;
       }
 

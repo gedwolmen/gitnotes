@@ -34,17 +34,17 @@ SWIFT_GEN_DIR="$MODULE_DIR/ios/generated"
 KOTLIN_GEN_DIR="$MODULE_DIR/android/src/main/java"
 
 PROFILE="${RUST_PROFILE:-debug}"
-PROFILE_FLAGS=()
-if [ "$PROFILE" = "release" ]; then
-  PROFILE_FLAGS=(--release)
-fi
 
 log() { echo "[build-rust] $*"; }
 
 cargo_build() {
   local target="$1"
   log "cargo build --target $target ($PROFILE)"
-  (cd "$RUST_DIR" && cargo build --target "$target" "${PROFILE_FLAGS[@]}")
+  if [ "$PROFILE" = "release" ]; then
+    (cd "$RUST_DIR" && cargo build --target "$target" --release)
+  else
+    (cd "$RUST_DIR" && cargo build --target "$target")
+  fi
 }
 
 copy_ios_lib() {
@@ -86,7 +86,11 @@ build_android() {
     local target="${entry%%:*}"
     local abi="${entry##*:}"
     log "cargo ndk build --target $target ($PROFILE)"
-    (cd "$RUST_DIR" && cargo ndk --target "$target" --platform 24 build "${PROFILE_FLAGS[@]}")
+    if [ "$PROFILE" = "release" ]; then
+      (cd "$RUST_DIR" && cargo ndk --target "$target" --platform 24 build --release)
+    else
+      (cd "$RUST_DIR" && cargo ndk --target "$target" --platform 24 build)
+    fi
     mkdir -p "$JNI_DIR/$abi"
     cp "$RUST_DIR/target/$target/$PROFILE/libgitnotes_git2.so" "$JNI_DIR/$abi/"
     log "copied $target -> $JNI_DIR/$abi/libgitnotes_git2.so"
@@ -97,7 +101,11 @@ generate_bindings() {
   local host
   host="$(rustc -vV | grep '^host:' | cut -d' ' -f2)"
   log "building host cdylib for bindgen ($host)"
-  (cd "$RUST_DIR" && cargo build "${PROFILE_FLAGS[@]}")
+  if [ "$PROFILE" = "release" ]; then
+    (cd "$RUST_DIR" && cargo build --release)
+  else
+    (cd "$RUST_DIR" && cargo build)
+  fi
 
   local dylib="$RUST_DIR/target/$PROFILE/libgitnotes_git2.dylib"
 
@@ -140,7 +148,6 @@ build_for_xcode() {
   local config="${CONFIGURATION:-Debug}"
   if [ "$config" = "Release" ]; then
     PROFILE="release"
-    PROFILE_FLAGS=(--release)
   fi
 
   local target
