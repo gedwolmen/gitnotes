@@ -15,7 +15,7 @@
 | [Hooks](./hooks.md) | Every custom hook catalogued with purpose |
 | [Models](./models.md) | Every TypeScript model interface with key fields |
 | [Contexts](./contexts.md) | Every React context with provider hierarchy |
-| [Sync Architecture](./sync-architecture.md) | Clone mode vs API mode deep-dive |
+| [Sync Architecture](./sync-architecture.md) | Clone sync deep-dive |
 | [Git Engine](./git-engine.md) | Rust native Git module architecture and build process |
 | [Paywall & Pro Tier](./paywall.md) | RevenueCat, StoreKit 2, entitlements, feature gates |
 | [Note File Format](./note-file-format.md) | How notes are stored on disk — frontmatter, file format, DocumentIndex, wiki-links |

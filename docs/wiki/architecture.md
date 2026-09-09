@@ -219,12 +219,7 @@ Three tab bar variants:
 
 ## Sync Architecture
 
-GitNotēs has **two sync modes** per repository:
-
-**Clone mode** (default): Local commits, async push.
-**API mode**: Immediate push on save.
-
-See [Sync Architecture](./sync-architecture.md) for full details.
+GitNotēs uses **clone mode**: local git working tree with commit-on-save and write-through push. See [Sync Architecture](./sync-architecture.md) for full details.
 
 ---
 
@@ -271,6 +266,6 @@ Translation files in `src/i18n/`. i18next framework. User preference stored in A
 - [Hooks](./hooks.md) — Every custom hook
 - [Models](./models.md) — Every TypeScript interface
 - [Contexts](./contexts.md) — React context provider hierarchy
-- [Sync Architecture](./sync-architecture.md) — Clone vs API mode
+- [Sync Architecture](./sync-architecture.md) — Clone sync deep-dive
 - [Git Engine](./git-engine.md) — Rust native module
 - [Paywall & Pro Tier](./paywall.md) — RevenueCat and entitlements
