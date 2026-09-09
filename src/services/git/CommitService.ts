@@ -97,7 +97,7 @@ export interface CommitResult {
  *   orchestrating the index directly: git.remove(old) → write(new) →
  *   git.add(new) → git.commit.
  *
- * API-mode repos are rejected: this service only handles clone-mode commits.
+ * This service handles clone-mode commits.
  */
 export class CommitService {
   /**

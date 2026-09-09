@@ -356,7 +356,7 @@ const inflightClones = new Map<string, Promise<void>>();
  * library collects the whole packfile into one Buffer before indexing
  * (the `gitHttp` streaming patch removed only the app-side second copy), so
  * very large repos can OOM Hermes. The picker / clone toggle treats this as
- * a recommendation to switch to API mode instead of clone mode.
+ * a recommendation to use a smaller clone or shallow clone.
  */
 export class CloneOutOfMemoryError extends Error {
   constructor(message: string) {
@@ -404,7 +404,7 @@ export class GitFsService {
         const isCorruption = /Packfile trailer mismatch|Could not find object|not foundobject|NotFoundError|internal error caused this command to fail/i.test(msg);
         if (looksLikeOutOfMemory(cloneError)) {
           throw new CloneOutOfMemoryError(
-            `Out of memory while cloning ${opts.repoPath}. The repo is too large for clone mode on this device — switch to API mode.`,
+            `Out of memory while cloning ${opts.repoPath}. The repo is too large for this device — try a shallow clone or free up storage.`,
           );
         }
         if (!isCorruption || attempt === MAX_CLONE_RETRIES) {
@@ -688,7 +688,7 @@ export class GitFsService {
   /**
    * Read a single file from the clone's checked-out worktree. Returns null
    * when missing so callers keep their existing `null === missing` shape.
-   * `ref` is accepted for transport parity with API mode; the worktree always
+   * `ref` is accepted for transport parity; the worktree always
    * reflects the checked-out branch state.
    */
   static async readFile(opts: ReadOpts): Promise<string | null> {
