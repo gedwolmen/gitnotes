@@ -10,6 +10,14 @@ All notable fixes and feature changes to GitNotēs are documented here.
 
 ## 2026-09-09
 
+### fix(ios): disable explicit modules for ExpoSQLite on Xcode 26
+
+**What:** iOS builds with Xcode 26 failed in `expo-sqlite` because Swift could not resolve the vendored `exsqlite3_*` symbols.
+
+**fix(ios):** Add an Expo config plugin that disables Swift explicit modules only for the generated `ExpoSQLite` CocoaPod target during prebuild.
+
+**PR:** TBD
+
 ### fix(explore): render staged diff action label
 
 **What:** The staged-diff action button rendered a bare string alongside its loading indicator, causing the React Native text-node warning and leaving the button label blank.
