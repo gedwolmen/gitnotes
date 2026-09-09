@@ -189,6 +189,10 @@ The canonical route param types are in `src/navigation/types.ts`:
 
 **Wrapped by:** `CheckoutSafetyProvider` — gates mutation operations while checkout is running.
 
+**Git → Branches ownership:** The Explore tab (Git UI) is the sole authority for branch operations. The Git tab owns all branch state — no external UI (note editors, sync services, or other tabs) may trigger or control branch switches. Note editing never triggers implicit branch switches.
+
+**Branch UI:** Only the Explore screen exposes branch selection. No branch selector exists in the note editor or elsewhere. When checking out a remote branch, GitBranchCoordinator fetches the remote ref first and retries checkout locally.
+
 **Sections:**
 - `FilesSection` — repo file tree
 - `ChangesSection` — unstaged/staged changes in working tree

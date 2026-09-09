@@ -86,6 +86,15 @@ yarn eslint . --ext .ts,.tsx  # Linting
 - Worktrees are required — see the "Worktrees (ALWAYS)" section above. The old note that said "create git worktrees inside `.worktrees/`" was too soft; the requirement is unconditional.
 - `lint-staged` runs on pre-commit (ESLint + Prettier).
 
+## Git Tab Branch Ownership
+
+**Git → Branches.** The Explore tab (Git UI) is the sole authority for branch operations. No external UI (note editors, sync services, or other tabs) may trigger or control branch switches.
+
+- **No external branch UI.** Branch selection exists only in the Explore screen. Do not add branch selectors to note editors, settings screens, or other non-Git UI surfaces.
+- **Remote checkout via GitBranchCoordinator.** When checking out a remote tracking branch, `GitBranchCoordinator.checkout()` fetches the remote ref first if the local checkout fails with "ref not found", then retries. Do not implement separate fetch-and-retry logic elsewhere.
+- **Queue isolation on checkout.** When `GitBranchCoordinator.checkout()` succeeds, it calls `pauseAllExcept(activeRepoId, activeBranch)` to isolate the sync queue. Do not bypass this by calling `NoteSyncQueueService` directly for branch operations.
+- **Retained internal branch identity.** Every `QueueItem` stores `branch` as a required field. Do not allow mutations that strip or default this field.
+
 ## Sync Architecture (Git Services) — source of truth
 
 GitNotēs uses **clone mode** exclusively: local git commits with write-through push.
