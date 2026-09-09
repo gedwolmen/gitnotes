@@ -34,6 +34,14 @@ export function buildSystemPrompt(context: SystemPromptContext): string {
     sections.push(
       `=== User memory (thought dumps) ===\n${context.memoryBlock}\n=== End memory ===`
     );
+  } else if (context.toolsEnabled === false) {
+    // When tools are disabled, the AI still has access to thought dumps via memory.
+    // Inform the AI so it can reference them when relevant.
+    sections.push(
+      `=== User memory (DISABLED) ===
+Thought dump memory indexing is unavailable because "Personalize AI with my notes" is disabled. You cannot search or reference the user's thought dumps.
+=== End User memory ===`
+    );
   }
 
   if (context.githubToolsEnabled) {
