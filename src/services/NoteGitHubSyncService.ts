@@ -3,7 +3,7 @@ import { NoteColor, NoteFormat } from '../models/Note';
 import * as FileSystem from 'expo-file-system/legacy';
 import { parseRepoPath } from '../utils/gitPathParser';
 import { AuthService } from './AuthService';
-import { SyncEngineService, CloneSyncService } from './cloneSyncServiceImpl';
+import { CloneSyncService } from './cloneSyncServiceImpl';
 import { GitFsService } from './git/GitFsService';
 import { resolveBranch } from './git/resolveBranch';
 import { getGitHostService } from './git/gitHostFactory';
@@ -346,22 +346,16 @@ export async function deleteNoteFromGitHub(params: {
 
   const targetBranch = await resolveBranch(repoPath, branch);
 
-  const mode = await SyncEngineService.getMode(repoPath);
-  if (mode === 'clone') {
-    const saveResult = await CloneSyncService.save({
-      repoPath,
-      branch: targetBranch,
-      filePath,
-      message: `Delete note: ${title || filePath}`,
-      intent: 'delete',
-    });
-    return saveResult.success
-      ? { success: true, filePath }
-      : { success: false, error: saveResult.error };
-  }
-
-  // API mode removed — SyncEngineService.getMode() always returns 'clone'
-  throw new Error('API mode is no longer supported. Please re-clone the repository in clone mode.');
+  const saveResult = await CloneSyncService.save({
+    repoPath,
+    branch: targetBranch,
+    filePath,
+    message: `Delete note: ${title || filePath}`,
+    intent: 'delete',
+  });
+  return saveResult.success
+    ? { success: true, filePath }
+    : { success: false, error: saveResult.error };
 }
 
 export async function syncNoteToGitHub(params: {
@@ -430,7 +424,6 @@ export async function syncNoteToGitHub(params: {
   // also a strong "this is an update" signal. Fall back to caller intent
   // on lookup failure so a transient error doesn't flip a real update into
   // a "Create".
-  const mode = await SyncEngineService.getMode(repoPath);
   let fileExists: boolean | null;
   try {
     const cloned = await GitFsService.isCloned({ repoPath });
@@ -453,25 +446,16 @@ export async function syncNoteToGitHub(params: {
   const useUpdateVerb = fileExists ?? !!(knownSha || filePath);
   const message = useUpdateVerb ? `Update note: ${title}` : `Create note: ${title}`;
 
-  // Clone-mode write path (#514). We deliberately use the same `targetPath`
-  // and `finalContent` as the API path, so the on-disk markdown is byte-
-  // identical to what the Contents API would publish — that means a user can
-  // flip modes without their next pull seeing churn.
-  if (mode === 'clone') {
-    const saveResult = await CloneSyncService.save({
-      repoPath,
-      branch: targetBranch,
-      filePath: targetPath,
-      content: finalContent,
-      message,
-      intent: 'upsert',
-    });
-    if (saveResult.success) {
-      return { success: true, filePath: targetPath, finalContent };
-    }
-    return { success: false, error: saveResult.error };
+  const saveResult = await CloneSyncService.save({
+    repoPath,
+    branch: targetBranch,
+    filePath: targetPath,
+    content: finalContent,
+    message,
+    intent: 'upsert',
+  });
+  if (saveResult.success) {
+    return { success: true, filePath: targetPath, finalContent };
   }
-
-  // API mode removed — SyncEngineService.getMode() always returns 'clone'
-  throw new Error('API mode is no longer supported. Please re-clone the repository in clone mode.');
+  return { success: false, error: saveResult.error };
 }
