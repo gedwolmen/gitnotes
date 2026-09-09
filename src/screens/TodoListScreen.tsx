@@ -35,6 +35,8 @@ import { useGitOperationStore } from '../stores/gitOperationStore';
 import { GitSyncGate } from '../services/git/GitSyncGate';
 import { useTranslation } from 'react-i18next';
 import { LastSelectionPreferenceService } from '../services/LastSelectionPreferenceService';
+import { useProGate } from '../hooks/useProGate';
+import KanbanBoard from '../components/todos/KanbanBoard';
 
 const FILTER_COMPLETED_PERSISTENCE_KEY = '@gitnotes:filters:todo-completed';
 
@@ -74,6 +76,8 @@ export default function TodoListScreen() {
   const [todoBranch, setTodoBranch] = useState<string | undefined>(undefined);
   const [showFilterModal, setShowFilterModal] = useState(false);
   const isDeletingRef = useRef(false);
+  const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
+  const { isPro, openPaywall } = useProGate();
 
   useEffect(() => {
     if (!showAddModal) return;
@@ -495,36 +499,40 @@ export default function TodoListScreen() {
         repositories={repositories}
       />
 
-      <FlatList
-        data={filteredTodos}
-        renderItem={renderTodoItem}
-        keyExtractor={(item) => item.id}
-        numColumns={columnCount}
-        key={`todos-${columnCount}`}
-        extraData={filteredTodos}
-        removeClippedSubviews={false}
-        contentContainerStyle={{
-          padding: 16,
-          paddingTop: headerBlurHeight + 8,
-          paddingBottom: tabBarHeight + 16,
-          flexGrow: 1,
-        }}
-        columnWrapperStyle={columnCount > 1 ? { gap: 8 } : undefined}
-        ListEmptyComponent={<TodosEmptyState isFiltered={hasActiveFilters} />}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          gitOperationActive ? undefined : (
-            <RefreshControl
-              testID="todo-list.swipe.pull-refresh"
-              refreshing={isRefreshing}
-              onRefresh={handlePullToRefresh}
-              enabled={!gateBusy}
-              tintColor={colors.primary}
-              colors={[colors.primary]}
-            />
-          )
-        }
-      />
+      {viewMode === 'kanban' ? (
+        <KanbanBoard onSelect={openEditModal} />
+      ) : (
+        <FlatList
+          data={filteredTodos}
+          renderItem={renderTodoItem}
+          keyExtractor={(item) => item.id}
+          numColumns={columnCount}
+          key={`todos-${columnCount}`}
+          extraData={filteredTodos}
+          removeClippedSubviews={false}
+          contentContainerStyle={{
+            padding: 16,
+            paddingTop: headerBlurHeight + 8,
+            paddingBottom: tabBarHeight + 16,
+            flexGrow: 1,
+          }}
+          columnWrapperStyle={columnCount > 1 ? { gap: 8 } : undefined}
+          ListEmptyComponent={<TodosEmptyState isFiltered={hasActiveFilters} />}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            gitOperationActive ? undefined : (
+              <RefreshControl
+                testID="todo-list.swipe.pull-refresh"
+                refreshing={isRefreshing}
+                onRefresh={handlePullToRefresh}
+                enabled={!gateBusy}
+                tintColor={colors.primary}
+                colors={[colors.primary]}
+              />
+            )
+          }
+        />
+      )}
 
       <TodoEditorModal
         visible={showAddModal || editingTodo !== null}
@@ -608,6 +616,25 @@ export default function TodoListScreen() {
                 name={filterCompleted ? 'eye-off' : 'eye'}
                 size={18}
                 color={filterCompleted ? colors.accent : colors.textSecondary}
+              />
+            </IconButton>
+            <IconButton
+              size="sm"
+              testID="todo-list.icon-button.kanban"
+              active={viewMode === 'kanban'}
+              onPress={() => {
+                if (isPro) {
+                  setViewMode(viewMode === 'kanban' ? 'list' : 'kanban');
+                } else {
+                  openPaywall();
+                }
+              }}
+              accessibilityLabel={t('todos.kanbanView')}
+            >
+              <Ionicons
+                name="grid"
+                size={18}
+                color={viewMode === 'kanban' ? colors.accent : colors.textSecondary}
               />
             </IconButton>
             <IconButton
