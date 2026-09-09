@@ -9,7 +9,7 @@ import { useAIHubStore } from '../stores/aiHubStore';
 import { useAIStore } from '../stores/aiStore';
 import * as ChatStorageService from '../services/ChatStorageService';
 import { githubActivity } from '../stores/githubActivityStore';
-import { CommitService } from '../services/git/CommitService';
+import { CloneSyncService } from '../services/cloneSyncServiceImpl';
 import { resolveBranch } from '../services/git/resolveBranch';
 import { useTokens } from '../contexts/ThemeContext';
 import { RootStackParamList } from '../navigation/types';
@@ -239,16 +239,16 @@ export default function ChatThreadListScreen() {
               const repoPath = `${chatRepoOwner}/${chatRepoName}`;
               const branch = await resolveBranch(repoPath, chatRepoBranch);
               for (const threadId of ids) {
-                const commitResult = await CommitService.commit({
-                  repo: repoPath,
+                const saveResult = await CloneSyncService.save({
+                  repoPath,
                   branch,
                   filePath: `chat/${threadId}.json`,
                   message: `Delete chat thread: ${threadId}`,
-                  delete: true,
+                  intent: 'delete',
                 });
-                if (!commitResult.success) {
+                if (!saveResult.success) {
                   setSelectedIds(new Set());
-                  Alert.alert(t('chat.deleteFailed'), commitResult.error ?? t('chat.couldNotDeleteMany'));
+                  Alert.alert(t('chat.deleteFailed'), saveResult.error ?? t('chat.couldNotDeleteMany'));
                   HapticService.error();
                   return;
                 }
