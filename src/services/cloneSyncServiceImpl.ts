@@ -23,21 +23,6 @@ function toRepoRelativePath(filePath: string): string {
   return filePath.replace(/^\/+/, '');
 }
 
-// SyncEngineService stubs
-export type SyncEngineMode = 'clone';
-
-export const SyncEngineService = {
-  async getMode(_repoPath: string): Promise<SyncEngineMode> {
-    return 'clone';
-  },
-  async setMode(_repoPath: string, _mode: SyncEngineMode): Promise<void> {
-    // noop
-  },
-  async clear(_repoPath: string): Promise<void> {
-    // noop
-  },
-};
-
 // NoteSyncQueueService stubs
 export interface NoteDeleteParams {
   repo: string;

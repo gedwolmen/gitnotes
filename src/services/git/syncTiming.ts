@@ -5,7 +5,7 @@
  * request and every FS operation passes through a single choke point where
  * timing is recorded.  `enableSyncTiming()` installs both wrappers and
  * `disableSyncTiming()` removes them.  `flushSyncTiming()` returns collected
- * entries and clears the buffer.  `attachMode()` labels subsequent entries.
+ * entries and clears the buffer.
  *
  * The FS factory is patched through the module namespace (`import * as fsMod`)
  * because ES module bindings are read-only; the runtime mutation must happen on
@@ -20,8 +20,6 @@ import { gitHttp } from './gitHttp';
 import * as gitFsModule from './gitFs';
 import { makeGitFs } from './gitFs';
 
-export type SyncMode = 'api' | 'clone';
-
 export interface SyncTimingEntry {
   kind: 'http' | 'fs';
   op: string;
@@ -31,11 +29,9 @@ export interface SyncTimingEntry {
   bytes?: number;
   durationMs: number;
   at: number;
-  mode: SyncMode;
 }
 
 let enabled = false;
-let currentMode: SyncMode = 'clone';
 const entries: SyncTimingEntry[] = [];
 let httpWrapped = false;
 let fsWrapped = false;
@@ -56,7 +52,6 @@ function wrapFsMethod(name: string, fn: AnyAsyncFn): AnyAsyncFn {
       filepath: args[0] !== undefined ? String(args[0]) : undefined,
       durationMs: performance.now() - t0,
       at: Date.now(),
-      mode: currentMode,
     });
     return result;
   };
@@ -78,7 +73,6 @@ function buildInstrumentedFs(root: string): PromiseFsClient {
 export function enableSyncTiming(): void {
   if (enabled) return;
   enabled = true;
-  currentMode = 'clone';
 
   if (!httpWrapped) {
     _origHttpRequest = gitHttp.request.bind(gitHttp);
@@ -93,7 +87,6 @@ export function enableSyncTiming(): void {
         url: req.url,
         durationMs: performance.now() - t0,
         at: Date.now(),
-        mode: currentMode,
       });
       return res;
     };
@@ -126,10 +119,6 @@ export function flushSyncTiming(): SyncTimingEntry[] {
   const out = entries.slice();
   entries.length = 0;
   return out;
-}
-
-export function attachMode(label: SyncMode): void {
-  currentMode = label;
 }
 
 export function isSyncTimingEnabled(): boolean {
