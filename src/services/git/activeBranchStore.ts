@@ -281,7 +281,7 @@ export async function initializeForRepo(repo: GitRepository): Promise<ActiveBran
     activeBranch = remoteDefault;
     source = 'default';
   } else {
-    activeBranch = null;
+    activeBranch = 'main';
     source = 'default';
   }
 

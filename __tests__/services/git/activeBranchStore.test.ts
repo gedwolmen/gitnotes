@@ -234,7 +234,7 @@ describe('activeBranchStore', () => {
       });
     });
 
-    it('uses null when no local HEAD and no remote default', async () => {
+    it('uses main as fallback when no local HEAD and no remote default', async () => {
       mockGetCurrentBranch.mockResolvedValue(null);
       mockAsyncStorageSetItem.mockResolvedValue(undefined);
 
@@ -243,7 +243,7 @@ describe('activeBranchStore', () => {
 
       expect(result).toMatchObject({
         repoId: 'repo-1',
-        activeBranch: null,
+        activeBranch: 'main',
         source: 'default',
         status: 'idle',
       });
