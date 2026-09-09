@@ -36,10 +36,10 @@ import { useGitContentRefreshSignal } from '@/hooks/useGitRefreshEvent';
 import type { GitRepository } from '@/services/GitService';
 import type { RepoLike } from '@/components/explore/exploreShared';
 import type { RootStackParamList } from '@/navigation/types';
-
 import {
   EXPLORE_SECTIONS,
   type ExploreSection,
+  type SectionProps,
 } from '@/components/explore/exploreShared';
 import { FilesSection } from '@/components/explore/FilesSection';
 import { ChangesSection } from '@/components/explore/ChangesSection';
@@ -52,6 +52,8 @@ import { RepoInfoSection } from '@/components/explore/RepoInfoSection';
 import { IssuesSection } from '@/components/explore/IssuesSection';
 import { PullRequestsSection } from '@/components/explore/PullRequestsSection';
 import { useTheme, useTokens } from '@/contexts/ThemeContext';
+import { CheckoutSafetyProvider } from '@/contexts/CheckoutSafetyContext';
+import { getActiveBranch } from '@/services/git/activeBranchStore';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -79,6 +81,10 @@ export default function ExploreScreen() {
   const [showRepoPicker, setShowRepoPicker] = useState(false);
 
   const [chromeTotalHeight, setChromeTotalHeight] = useState(insets.top + 60);
+
+  // Centralized branch state
+  const [activeBranch, setActiveBranch] = useState<string | null>(null);
+  const [branchInvalidationKey] = useState(0);
 
   const repo = useMemo(() => {
     const lookupId = selectedRepoId ?? repos[0]?.id ?? null;
@@ -124,6 +130,20 @@ export default function ExploreScreen() {
       void refreshStatus();
     }, [isLoading, loadRepos, refreshStatus]),
   );
+
+  // Sync activeBranch from status when it loads so the store is populated
+  useEffect(() => {
+    if (!repo?.id || !status?.currentBranch) return;
+    setActiveBranch(status.currentBranch);
+  }, [repo?.id, status?.currentBranch]);
+
+  // Load branch from activeBranchStore on mount / repo change
+  useEffect(() => {
+    if (!repo?.id) return;
+    void getActiveBranch(repo.id).then((state) => {
+      if (state?.activeBranch) setActiveBranch(state.activeBranch);
+    });
+  }, [repo?.id]);
 
   // Auto-push idle timer: if unpushed commits exist and last push was >3 min ago, push silently in background.
   const lastPushTimeRef = useRef<number>(Date.now());
@@ -218,31 +238,40 @@ export default function ExploreScreen() {
   }
 
   const renderSection = () => {
+    const sectionKey = `${repo?.id ?? ''}:${gitContentRefresh}:${branchInvalidationKey}`;
     const repoTyped = repo as RepoLike;
-    const props = { repo: repoTyped, status, onChanged, chromeTopInset: chromeTotalHeight + 8, onNavigate: setSection, refreshStatus };
+    const props: SectionProps = {
+      repo: repoTyped,
+      status,
+      onChanged,
+      chromeTopInset: chromeTotalHeight + 8,
+      onNavigate: setSection,
+      refreshStatus,
+      branchInvalidationKey,
+    };
     switch (section) {
       case 'files':
-        return <FilesSection key={`${repo.id}:${gitContentRefresh}`} {...props} active />;
+        return <FilesSection key={sectionKey} {...props} active />;
       case 'changes':
-        return <ChangesSection key={`${repo.id}:${gitContentRefresh}`} {...props} active />;
+        return <ChangesSection key={sectionKey} {...props} active />;
       case 'staging':
-        return <StagingSection key={`${repo.id}:${gitContentRefresh}`} {...props} active />;
+        return <StagingSection key={sectionKey} {...props} active />;
       case 'commits':
-        return <CommitsSection key={`${repo.id}:${gitContentRefresh}`} {...props} active />;
+        return <CommitsSection key={sectionKey} {...props} active />;
       case 'branches':
-        return <BranchesSection key={`${repo.id}:${gitContentRefresh}`} {...props} active />;
+        return <BranchesSection key={sectionKey} {...props} active />;
       case 'remotes':
-        return <RemotesSection key={`${repo.id}:${gitContentRefresh}`} {...props} active />;
+        return <RemotesSection key={sectionKey} {...props} active />;
       case 'conflicts':
-        return <ConflictsSection key={`${repo.id}:${gitContentRefresh}`} {...props} active />;
+        return <ConflictsSection key={sectionKey} {...props} active />;
       case 'pulls':
-        return <PullRequestsSection key={`${repo.id}:${gitContentRefresh}`} repo={repoTyped} status={status} active={section === 'pulls'} onChanged={onChanged} chromeTopInset={chromeTotalHeight + 8} />;
+        return <PullRequestsSection key={sectionKey} repo={repoTyped} status={status} active={section === 'pulls'} onChanged={onChanged} chromeTopInset={chromeTotalHeight + 8} />;
       case 'issues':
-        return <IssuesSection key={`${repo.id}:${gitContentRefresh}`} repo={repoTyped} status={status} active={section === 'issues'} onChanged={onChanged} chromeTopInset={chromeTotalHeight + 8} />;
+        return <IssuesSection key={sectionKey} repo={repoTyped} status={status} active={section === 'issues'} onChanged={onChanged} chromeTopInset={chromeTotalHeight + 8} />;
       case 'info':
         return (
           <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 24 }}>
-            <RepoInfoSection key={`${repo.id}:${gitContentRefresh}`} {...props} active />
+            <RepoInfoSection key={sectionKey} {...props} active />
           </ScrollView>
         );
       default:
@@ -252,6 +281,7 @@ export default function ExploreScreen() {
 
   return (
     <SafeAreaView edges={[]} className="flex-1" style={{ flex: 1, backgroundColor: colors.background }} testID="explore.root">
+      <CheckoutSafetyProvider>
       <View className="flex-1" style={{ flex: 1 }} testID={`explore.section.${section}`}>
         {renderSection()}
       </View>
@@ -315,10 +345,10 @@ export default function ExploreScreen() {
                   </Text>
                 </View>
               )}
-              {status?.currentBranch && (
+              {activeBranch && (
                 <View className="rounded px-2 py-0.5" style={{ backgroundColor: `${colors.success}26` }} testID="explore.header.branch">
                   <Text className="text-[11px] font-semibold" style={{ color: colors.success }}>
-                    {status.currentBranch}
+                    {activeBranch}
                   </Text>
                 </View>
               )}
@@ -495,6 +525,7 @@ export default function ExploreScreen() {
           />
         </View>
       </Modal>
+      </CheckoutSafetyProvider>
     </SafeAreaView>
   );
 }

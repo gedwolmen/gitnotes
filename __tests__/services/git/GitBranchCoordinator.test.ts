@@ -47,6 +47,7 @@ jest.mock('expo-modules-core', () => ({
 // Import types after mocks are set up
 import * as GitEngine from '@/services/git/engine/GitEngine';
 import { GitSyncGate } from '@/services/git/GitSyncGate';
+import { GitBranchCoordinator } from '@/services/git/GitBranchCoordinator';
 
 const GitEngineMock = GitEngine as jest.Mocked<typeof GitEngine>;
 const GitSyncGateMock = GitSyncGate as jest.Mocked<typeof GitSyncGate>;
@@ -61,6 +62,7 @@ describe('GitBranchCoordinator', () => {
     MOCK_RELEASE_CYCLE.mockReturnValue(undefined);
     GitSyncGateMock.acquireCycle.mockResolvedValue(MOCK_RELEASE_CYCLE);
     GitSyncGateMock.isCycleHeld.mockReturnValue(false);
+    GitBranchCoordinator.__resetForTests();
   });
 
   describe('state machine states', () => {

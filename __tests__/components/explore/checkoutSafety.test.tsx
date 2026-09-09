@@ -13,7 +13,9 @@
  */
 
 import React from 'react';
-import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { render, fireEvent, waitFor, act } from '@testing-library/react-native';
+
+jest.mock('expo-file-system', () => ({}));
 
 import { BranchesSection } from '@/components/explore/BranchesSection';
 import { ChangesSection } from '@/components/explore/ChangesSection';

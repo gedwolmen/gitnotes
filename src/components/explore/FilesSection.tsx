@@ -32,7 +32,7 @@ interface FilesData {
   statuses: Record<string, FileStatus>;
 }
 
-export function FilesSection({ repo, active, chromeTopInset = 0 }: SectionProps) {
+export function FilesSection({ repo, active, chromeTopInset = 0, branchInvalidationKey = 0 }: SectionProps) {
   const navigation = useNavigation<NavigationProp>();
   const { colors } = useTokens();
   const [data, setData] = useState<FilesData | null>(null);
@@ -86,9 +86,13 @@ export function FilesSection({ repo, active, chromeTopInset = 0 }: SectionProps)
     }
   }, [repo.localPath, repo.path, repo.branch]);
 
+  const branchAwareLoad = useCallback(async () => {
+    await load();
+  }, [load, branchInvalidationKey]);
+
   useEffect(() => {
-    if (active) void load();
-  }, [active, load]);
+    if (active) void branchAwareLoad();
+  }, [active, branchAwareLoad]);
 
   const rows = useMemo(
     () => (data ? buildFileTreeRows(data.files, expanded) : []),

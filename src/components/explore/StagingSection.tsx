@@ -28,7 +28,7 @@ interface StagingData {
   diffs: Record<string, FileDiff>;
 }
 
-export function StagingSection({ repo, active, onChanged, chromeTopInset = 0, onNavigate }: SectionProps) {
+export function StagingSection({ repo, active, onChanged, chromeTopInset = 0, onNavigate, branchInvalidationKey = 0 }: SectionProps) {
   const navigation = useNavigation<NavigationProp>();
   const { colors } = useTokens();
   const [data, setData] = useState<StagingData | null>(null);
@@ -76,14 +76,18 @@ export function StagingSection({ repo, active, onChanged, chromeTopInset = 0, on
     }
   }, [repo.localPath, repo.path]);
 
+  const branchAwareLoad = useCallback(async () => {
+    await load();
+  }, [load, branchInvalidationKey]);
+
   useEffect(() => {
-    if (active) void load();
-  }, [active, load, version]);
+    if (active) void branchAwareLoad();
+  }, [active, branchAwareLoad, version]);
 
   useFocusEffect(
     useCallback(() => {
-      if (active) void load();
-    }, [active, load]),
+      if (active) void branchAwareLoad();
+    }, [active, branchAwareLoad]),
   );
 
   const unstage = useCallback(
