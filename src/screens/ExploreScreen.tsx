@@ -71,6 +71,7 @@ export default function ExploreScreen() {
   const loadRepos = useRepoStore((state) => state.loadRepos);
   const aggregatedState = useAllReposStatus();
   const gitContentRefresh = useGitContentRefreshSignal();
+  const pendingGitButtonAction = useGitButtonActionStore((state) => state.pending);
 
   const [section, setSection] = useState<ExploreSection>('files');
   const [selectedRepoId, setSelectedRepoId] = useState<string | null>(null);
@@ -171,27 +172,20 @@ export default function ExploreScreen() {
   /**
    * The floating git button is rendered at the app level. When the user
    * taps it from any screen, the app-level wrapper sets a pending action
-   * (target repo + section) and navigates here. On focus we apply it:
+   * (target repo + section) and navigates here. On mount or update we apply it:
    *   - swap the active repo if it changed
    *   - jump the section tab to whatever surfaces the repo's current state
    *     (changes / staging / commits / conflicts / files)
-   * Then clear the pending action so a normal re-focus doesn't re-apply it.
+   * Then clear the pending action so a normal re-render doesn't re-apply it.
    */
   useEffect(() => {
-    let prevPending = useGitButtonActionStore.getState().pending;
-    const unsubscribe = useGitButtonActionStore.subscribe((state) => {
-      const pending = state.pending;
-      if (pending === prevPending) return;
-      prevPending = pending;
-      if (!pending) return;
-      if (pending.repoId !== repo?.id) {
-        setSelectedRepoId(pending.repoId);
-      }
-      setSection(pending.section);
-      useGitButtonActionStore.getState().clear();
-    });
-    return unsubscribe;
-  }, [repo?.id]);
+    if (!pendingGitButtonAction) return;
+    if (pendingGitButtonAction.repoId !== repo?.id) {
+      setSelectedRepoId(pendingGitButtonAction.repoId);
+    }
+    setSection(pendingGitButtonAction.section);
+    useGitButtonActionStore.getState().clear();
+  }, [pendingGitButtonAction, repo?.id]);
 
   if (!repo) {
     return (
