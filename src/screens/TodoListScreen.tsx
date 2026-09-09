@@ -470,20 +470,16 @@ export default function TodoListScreen() {
     if (filter.state.selectedRepo) {
       chips.push({ id: 'repo', label: filter.state.selectedRepo.name, type: 'folder' });
     }
-    if (filter.state.selectedBranch) {
-      chips.push({ id: 'branch', label: filter.state.selectedBranch, type: 'folder' });
-    }
     if (filter.state.selectedFolder) {
       chips.push({ id: 'folder', label: filter.state.selectedFolder, type: 'folder' });
     }
     return chips;
-  }, [filterCompleted, filter.state, filter.state.selectedTags, filter.state.selectedRepo, filter.state.selectedBranch, filter.state.selectedFolder, t]);
+  }, [filterCompleted, filter.state, filter.state.selectedTags, filter.state.selectedRepo, filter.state.selectedFolder, t]);
 
   const handleRemoveTodoFilterChip = useCallback(
     (id: string) => {
       if (id === 'status-active') setFilterCompleted(false);
       else if (id === 'repo') filter.setSelectedRepo(null);
-      else if (id === 'branch') filter.setSelectedBranch(null);
       else if (id === 'folder') filter.setSelectedFolder(null);
       else if (id.startsWith('tag-')) filter.toggleTag(id.slice(4));
     },

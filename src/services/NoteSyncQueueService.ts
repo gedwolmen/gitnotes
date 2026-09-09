@@ -1,12 +1,14 @@
 /**
- * Re-export of the NoteSyncQueueService stub (see ./cloneSyncServiceImpl).
- * The original queue service was removed; this module keeps the import path
- * alive for clone-mode mutation queueing call sites.
+ * Re-export of the NoteSyncQueueService from the git subdirectory.
+ * The real implementation is in ./git/NoteSyncQueueService.ts.
  */
 export {
   NoteSyncQueueService,
-  type DroppedMutationEvent,
   type MutationSucceededEvent,
-  type NoteDeleteParams,
-  type QueuedMutation,
-} from './cloneSyncServiceImpl';
+  type DroppedMutationEvent,
+  type QueueItem,
+  type MutationStatus,
+  type EntityType,
+} from './git/NoteSyncQueueService';
+
+export type { QueuedMutation, NoteDeleteParams } from './cloneSyncServiceImpl';

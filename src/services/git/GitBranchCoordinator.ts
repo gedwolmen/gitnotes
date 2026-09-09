@@ -20,6 +20,7 @@
 import { gitOperationRegistry, type GitOpKind } from '@/stores/gitOperationStore';
 import { GitSyncGate } from './GitSyncGate';
 import { emitGitContentRefresh } from '@/hooks/useGitRefreshEvent';
+import { invalidateCache } from './branchResolver';
 import * as GitEngine from './engine/GitEngine';
 import type { FileStatus } from './engine/GitEngine';
 
@@ -51,6 +52,19 @@ class GitBranchCoordinatorClass {
 
   private checkoutReject: ((err: string) => void) | null = null;
 
+  private static instance: GitBranchCoordinatorClass | null = null;
+
+  static getInstance(): GitBranchCoordinatorClass {
+    if (!GitBranchCoordinatorClass.instance) {
+      GitBranchCoordinatorClass.instance = new GitBranchCoordinatorClass();
+    }
+    return GitBranchCoordinatorClass.instance;
+  }
+
+  getInstance(): GitBranchCoordinatorClass {
+    return this;
+  }
+
   getState(): CoordinatorState {
     return this.state;
   }
@@ -76,11 +90,12 @@ class GitBranchCoordinatorClass {
   /**
    * Checkout a branch with full safety checks.
    *
+   * @param repoId - The repository ID (for cache invalidation)
    * @param localPath - The local repository path
    * @param branchName - The branch to checkout
    * @param remoteName - The remote name (defaults to 'origin')
    */
-  checkout(localPath: string, branchName: string, remoteName = 'origin'): Promise<void> {
+  checkout(repoId: string, localPath: string, branchName: string, remoteName = 'origin'): Promise<void> {
     const STALE_MUTATION_THRESHOLD_MS = 100;
     if (this.state === 'checkout-running' || this.state === 'failed') {
       this.__resetForTests();
@@ -121,7 +136,7 @@ class GitBranchCoordinatorClass {
       .then(() => {
         this.clearWatchdog();
         gitOperationRegistry.succeed(opId);
-        void this.updateActiveBranchState(localPath, branchName);
+        invalidateCache(repoId);
         emitGitContentRefresh();
         this.setState('idle');
       })
@@ -235,16 +250,6 @@ class GitBranchCoordinatorClass {
 
     this.setState('failed');
   }
-
-  /**
-   * Update active branch state after successful checkout.
-   * Best-effort update - the active branch store reconciles on next read.
-   */
-  private async updateActiveBranchState(_localPath: string, _branchName: string): Promise<void> {
-    // Active branch state is reconciled by activeBranchStore.getActiveBranch()
-    // which checks local HEAD against persisted state on every read.
-    // Checkout already succeeded, so the next read will see the correct branch.
-  }
 }
 
-export const GitBranchCoordinator = new GitBranchCoordinatorClass();
+export const GitBranchCoordinator = GitBranchCoordinatorClass.getInstance();

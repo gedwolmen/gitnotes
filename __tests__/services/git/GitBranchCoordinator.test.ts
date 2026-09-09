@@ -53,6 +53,7 @@ const GitEngineMock = GitEngine as jest.Mocked<typeof GitEngine>;
 const GitSyncGateMock = GitSyncGate as jest.Mocked<typeof GitSyncGate>;
 
 const TEST_REPO_PATH = '/mock/repo';
+const TEST_REPO_ID = 'test-repo-id';
 
 const MOCK_RELEASE_CYCLE = jest.fn();
 
@@ -76,7 +77,7 @@ describe('GitBranchCoordinator', () => {
       GitEngineMock.statuses.mockResolvedValue([]);
       GitEngineMock.checkoutBranch.mockResolvedValue(undefined);
 
-      const checkoutPromise = GitBranchCoordinator.checkout(TEST_REPO_PATH, 'feature-branch');
+      const checkoutPromise = GitBranchCoordinator.checkout(TEST_REPO_ID, TEST_REPO_PATH, 'feature-branch');
 
       // Should transition to checkout-running immediately
       await expect(GitBranchCoordinator.getState()).toBe('checkout-running');
@@ -89,7 +90,7 @@ describe('GitBranchCoordinator', () => {
       GitEngineMock.statuses.mockResolvedValue([]);
       GitEngineMock.checkoutBranch.mockResolvedValue(undefined);
 
-      await GitBranchCoordinator.checkout(TEST_REPO_PATH, 'feature-branch');
+      await GitBranchCoordinator.checkout(TEST_REPO_ID, TEST_REPO_PATH, 'feature-branch');
 
       expect(GitBranchCoordinator.getState()).toBe('idle');
     });
@@ -100,7 +101,7 @@ describe('GitBranchCoordinator', () => {
       GitEngineMock.checkoutBranch.mockRejectedValue(new Error('Checkout failed'));
 
       await expect(
-        GitBranchCoordinator.checkout(TEST_REPO_PATH, 'feature-branch')
+        GitBranchCoordinator.checkout(TEST_REPO_ID, TEST_REPO_PATH, 'feature-branch')
       ).rejects.toThrow('Checkout failed');
 
       expect(GitBranchCoordinator.getState()).toBe('failed');
@@ -112,7 +113,7 @@ describe('GitBranchCoordinator', () => {
       GitEngineMock.checkoutBranch.mockRejectedValue(new Error('Checkout failed'));
 
       await expect(
-        GitBranchCoordinator.checkout(TEST_REPO_PATH, 'feature-branch')
+        GitBranchCoordinator.checkout(TEST_REPO_ID, TEST_REPO_PATH, 'feature-branch')
       ).rejects.toThrow('Checkout failed');
 
       expect(GitBranchCoordinator.getState()).toBe('failed');
@@ -127,7 +128,7 @@ describe('GitBranchCoordinator', () => {
       GitEngineMock.statuses.mockResolvedValue([]);
       GitEngineMock.checkoutBranch.mockResolvedValue(undefined);
 
-      await GitBranchCoordinator.checkout(TEST_REPO_PATH, 'feature-branch');
+      await GitBranchCoordinator.checkout(TEST_REPO_ID, TEST_REPO_PATH, 'feature-branch');
       await GitBranchCoordinator.beginMutation('test-op');
 
       expect(GitBranchCoordinator.getState()).toBe('mutation-running');
@@ -143,7 +144,7 @@ describe('GitBranchCoordinator', () => {
       GitEngineMock.checkoutBranch.mockResolvedValue(undefined);
 
       await expect(
-        GitBranchCoordinator.checkout(TEST_REPO_PATH, 'feature-branch')
+        GitBranchCoordinator.checkout(TEST_REPO_ID, TEST_REPO_PATH, 'feature-branch')
       ).resolves.not.toThrow();
 
       expect(GitEngineMock.checkoutBranch).toHaveBeenCalledWith(
@@ -160,7 +161,7 @@ describe('GitBranchCoordinator', () => {
       ]);
 
       await expect(
-        GitBranchCoordinator.checkout(TEST_REPO_PATH, 'feature-branch')
+        GitBranchCoordinator.checkout(TEST_REPO_ID, TEST_REPO_PATH, 'feature-branch')
       ).rejects.toThrow(/staged/i);
 
       expect(GitEngineMock.checkoutBranch).not.toHaveBeenCalled();
@@ -173,7 +174,7 @@ describe('GitBranchCoordinator', () => {
       ]);
 
       await expect(
-        GitBranchCoordinator.checkout(TEST_REPO_PATH, 'feature-branch')
+        GitBranchCoordinator.checkout(TEST_REPO_ID, TEST_REPO_PATH, 'feature-branch')
       ).rejects.toThrow(/modified|dirty/i);
 
       expect(GitEngineMock.checkoutBranch).not.toHaveBeenCalled();
@@ -186,7 +187,7 @@ describe('GitBranchCoordinator', () => {
       ]);
 
       await expect(
-        GitBranchCoordinator.checkout(TEST_REPO_PATH, 'feature-branch')
+        GitBranchCoordinator.checkout(TEST_REPO_ID, TEST_REPO_PATH, 'feature-branch')
       ).rejects.toThrow(/untracked|working tree/i);
 
       expect(GitEngineMock.checkoutBranch).not.toHaveBeenCalled();
@@ -199,7 +200,7 @@ describe('GitBranchCoordinator', () => {
       ]);
 
       await expect(
-        GitBranchCoordinator.checkout(TEST_REPO_PATH, 'feature-branch')
+        GitBranchCoordinator.checkout(TEST_REPO_ID, TEST_REPO_PATH, 'feature-branch')
       ).rejects.toThrow(/conflicted/i);
 
       expect(GitEngineMock.checkoutBranch).not.toHaveBeenCalled();
@@ -212,7 +213,7 @@ describe('GitBranchCoordinator', () => {
       GitEngineMock.statuses.mockResolvedValue([]);
       GitEngineMock.checkoutBranch.mockResolvedValue(undefined);
 
-      await GitBranchCoordinator.checkout(TEST_REPO_PATH, 'feature-branch');
+      await GitBranchCoordinator.checkout(TEST_REPO_ID, TEST_REPO_PATH, 'feature-branch');
 
       // acquireCycle should be called before statuses
       const acquireCallOrder = GitSyncGateMock.acquireCycle.mock.invocationCallOrder[0];
@@ -225,7 +226,7 @@ describe('GitBranchCoordinator', () => {
       GitEngineMock.statuses.mockRejectedValue(new Error('Status check failed'));
 
       await expect(
-        GitBranchCoordinator.checkout(TEST_REPO_PATH, 'feature-branch')
+        GitBranchCoordinator.checkout(TEST_REPO_ID, TEST_REPO_PATH, 'feature-branch')
       ).rejects.toThrow();
 
       expect(MOCK_RELEASE_CYCLE).toHaveBeenCalled();
@@ -237,7 +238,7 @@ describe('GitBranchCoordinator', () => {
       GitEngineMock.checkoutBranch.mockRejectedValue(new Error('Checkout failed'));
 
       await expect(
-        GitBranchCoordinator.checkout(TEST_REPO_PATH, 'feature-branch')
+        GitBranchCoordinator.checkout(TEST_REPO_ID, TEST_REPO_PATH, 'feature-branch')
       ).rejects.toThrow();
 
       expect(MOCK_RELEASE_CYCLE).toHaveBeenCalled();
@@ -253,7 +254,7 @@ describe('GitBranchCoordinator', () => {
       const beginSpy = jest.spyOn(gitOperationRegistry, 'begin');
       const succeedSpy = jest.spyOn(gitOperationRegistry, 'succeed');
 
-      await GitBranchCoordinator.checkout(TEST_REPO_PATH, 'feature-branch');
+      await GitBranchCoordinator.checkout(TEST_REPO_ID, TEST_REPO_PATH, 'feature-branch');
 
       expect(beginSpy).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -273,7 +274,7 @@ describe('GitBranchCoordinator', () => {
       const failSpy = jest.spyOn(gitOperationRegistry, 'fail');
 
       await expect(
-        GitBranchCoordinator.checkout(TEST_REPO_PATH, 'feature-branch')
+        GitBranchCoordinator.checkout(TEST_REPO_ID, TEST_REPO_PATH, 'feature-branch')
       ).rejects.toThrow();
 
       expect(failSpy).toHaveBeenCalledWith(
@@ -292,7 +293,7 @@ describe('GitBranchCoordinator', () => {
       );
 
       // Start checkout
-      const checkoutPromise = GitBranchCoordinator.checkout(TEST_REPO_PATH, 'feature-branch');
+      const checkoutPromise = GitBranchCoordinator.checkout(TEST_REPO_ID, TEST_REPO_PATH, 'feature-branch');
 
       // Wait for checkout to start
       await new Promise((resolve) => setTimeout(resolve, 10));
@@ -309,7 +310,7 @@ describe('GitBranchCoordinator', () => {
       GitEngineMock.statuses.mockResolvedValue([]);
       GitEngineMock.checkoutBranch.mockResolvedValue(undefined);
 
-      await GitBranchCoordinator.checkout(TEST_REPO_PATH, 'feature-branch');
+      await GitBranchCoordinator.checkout(TEST_REPO_ID, TEST_REPO_PATH, 'feature-branch');
 
       // After checkout, mutation should be allowed
       await expect(GitBranchCoordinator.beginMutation('test-op')).resolves.not.toThrow();
@@ -328,7 +329,7 @@ describe('GitBranchCoordinator', () => {
 
       // Try to checkout - should be rejected
       await expect(
-        GitBranchCoordinator.checkout(TEST_REPO_PATH, 'feature-branch')
+        GitBranchCoordinator.checkout(TEST_REPO_ID, TEST_REPO_PATH, 'feature-branch')
       ).rejects.toThrow(/mutation|running/i);
 
       GitBranchCoordinator.endMutation();
@@ -344,7 +345,7 @@ describe('GitBranchCoordinator', () => {
 
       // After mutation ends, checkout should be allowed
       await expect(
-        GitBranchCoordinator.checkout(TEST_REPO_PATH, 'feature-branch')
+        GitBranchCoordinator.checkout(TEST_REPO_ID, TEST_REPO_PATH, 'feature-branch')
       ).resolves.not.toThrow();
     });
   });
@@ -368,7 +369,7 @@ describe('GitBranchCoordinator', () => {
       const watchdogMs = 10 * 60 * 1_000; // 10 minutes
 
       // Start checkout but never complete
-      const checkoutPromise = GitBranchCoordinator.checkout(TEST_REPO_PATH, 'feature-branch');
+      const checkoutPromise = GitBranchCoordinator.checkout(TEST_REPO_ID, TEST_REPO_PATH, 'feature-branch');
 
       // Advance time past watchdog
       jest.advanceTimersByTime(watchdogMs + 1);
@@ -385,7 +386,7 @@ describe('GitBranchCoordinator', () => {
       GitEngineMock.statuses.mockResolvedValue([]);
       GitEngineMock.checkoutBranch.mockResolvedValue(undefined);
 
-      await GitBranchCoordinator.checkout(TEST_REPO_PATH, 'feature-branch');
+      await GitBranchCoordinator.checkout(TEST_REPO_ID, TEST_REPO_PATH, 'feature-branch');
 
       expect(GitBranchCoordinator.getState()).toBe('idle');
     });
@@ -396,7 +397,7 @@ describe('GitBranchCoordinator', () => {
       GitEngineMock.checkoutBranch.mockRejectedValue(new Error('Checkout failed'));
 
       await expect(
-        GitBranchCoordinator.checkout(TEST_REPO_PATH, 'feature-branch')
+        GitBranchCoordinator.checkout(TEST_REPO_ID, TEST_REPO_PATH, 'feature-branch')
       ).rejects.toThrow();
 
       expect(GitBranchCoordinator.getState()).toBe('failed');
@@ -410,7 +411,7 @@ describe('GitBranchCoordinator', () => {
       GitEngineMock.checkoutBranch.mockRejectedValue(new Error('Checkout failed'));
 
       await expect(
-        GitBranchCoordinator.checkout(TEST_REPO_PATH, 'feature-branch')
+        GitBranchCoordinator.checkout(TEST_REPO_ID, TEST_REPO_PATH, 'feature-branch')
       ).rejects.toThrow('Checkout failed');
 
       // The state should be 'failed', not 'idle' (which would indicate successful checkout)
@@ -423,7 +424,7 @@ describe('GitBranchCoordinator', () => {
       GitEngineMock.checkoutBranch.mockRejectedValue(new Error('Checkout failed'));
 
       await expect(
-        GitBranchCoordinator.checkout(TEST_REPO_PATH, 'feature-branch')
+        GitBranchCoordinator.checkout(TEST_REPO_ID, TEST_REPO_PATH, 'feature-branch')
       ).rejects.toThrow();
 
       // statuses should not have been affected beyond the initial check

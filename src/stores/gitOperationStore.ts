@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
-import { NoteSyncQueueService, type QueuedMutation } from '../services/cloneSyncServiceImpl';
+import { NoteSyncQueueService, type QueuedMutation } from '../services/git/NoteSyncQueueService';
 import type { CycleSource } from '../services/git/GitSyncGate';
 
 /**

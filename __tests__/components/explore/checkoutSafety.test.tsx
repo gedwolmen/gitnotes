@@ -473,7 +473,7 @@ describe('Git-tab checkout exclusivity', () => {
     GitEngine.checkoutBranch.mockResolvedValue(undefined);
 
     // Calling checkout through the coordinator should work
-    await GitBranchCoordinator.checkout(mockRepo.localPath, 'feature-branch');
+    await GitBranchCoordinator.checkout(mockRepo.id, mockRepo.localPath, 'feature-branch');
 
     expect(GitBranchCoordinatorMock.getState()).toBe('idle'); // After success
     expect(GitEngine.checkoutBranch).toHaveBeenCalled();
