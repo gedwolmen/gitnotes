@@ -8,8 +8,12 @@ Pod::Spec.new do |s|
   s.source       = { :path => '.' }
   s.platform     = :ios, '16.4'
 
-  # Expo native module + UniFFI generated Swift FFI + FFI headers
-  s.source_files = '*.swift', 'generated/*.swift', 'generated/GitNotesGit2FFI/**/*'
+  # Expo native module + UniFFI generated Swift FFI + FFI header
+  s.source_files = '*.swift', 'generated/*.swift', 'generated/GitNotesGit2FFI/GitNotesGit2FFI.h'
+  s.pod_target_xcconfig = {
+    'MODULEMAP_FILE' => '../../modules/GitEngine/ios-local/generated/GitNotesGit2FFI/module.modulemap',
+    'SWIFT_INCLUDE_PATHS' => '$(inherited) ${PODS_TARGET_SRCROOT}/generated',
+  }
 
   # Rust staticlib (vendored)
   s.vendored_libraries = 'rust/*.a'
