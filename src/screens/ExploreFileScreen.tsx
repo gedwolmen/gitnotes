@@ -1,10 +1,9 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Alert, Pressable, ScrollView, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
-import { useMarkdown } from 'react-native-marked';
 import { File } from 'expo-file-system';
 
 import { Text } from '@/components/ui/text';
@@ -12,49 +11,24 @@ import { Heading } from '@/components/ui/heading';
 import { GitFsService } from '@/services/git/GitFsService';
 import { isBinaryPath } from '@/components/explore/exploreShared';
 import { useRepoStore } from '@/stores/repoStore';
-import { useTokens, useTheme } from '@/contexts/ThemeContext';
+import { useTokens } from '@/contexts/ThemeContext';
 import type { RootStackParamList } from '@/navigation/types';
-import { getMarkdownStyles } from '@/utils/preview';
-import { useRenderStyle } from '@/stores/renderStyleStore';
+import { parseLfsPointer } from '@/services/git/lfs';
+import { WorkingTreeDocumentService, workingTreeDocument } from '@/services/documents/WorkingTreeDocumentService';
+import { useCheckoutSafety } from '@/contexts/CheckoutSafetyContext';
+import { GitBranchCoordinator } from '@/services/git/GitBranchCoordinator';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 type Route = RouteProp<RootStackParamList, 'ExploreFile'>;
 
-type Mode = 'markdown' | 'code' | 'binary' | 'plain';
-
-const CODE_EXTS = new Set([
-  'ts', 'tsx', 'js', 'jsx', 'mjs', 'cjs',
-  'py', 'rb', 'go', 'rs', 'java', 'kt', 'swift',
-  'c', 'cpp', 'cc', 'h', 'hpp',
-  'cs', 'php', 'scala', 'lua', 'sh', 'bash', 'zsh',
-  'css', 'scss', 'less', 'html', 'htm', 'xml', 'svg',
-  'json', 'yaml', 'yml', 'toml', 'ini', 'conf', 'env',
-  'sql', 'graphql', 'proto', 'dockerfile', 'gitignore',
-]);
-
-function detectMode(filename: string): Mode {
-  const lower = filename.toLowerCase();
-  const ext = lower.split('.').pop() ?? '';
-  if (ext === 'md' || ext === 'markdown') return 'markdown';
-  if (isBinaryPath(lower)) return 'binary';
-  if (CODE_EXTS.has(ext)) return 'code';
-  return 'plain';
-}
-
-function MarkdownBody({ value, styles: mdStyles }: { value: string; styles: ReturnType<typeof getMarkdownStyles> }) {
-  const nodes = useMarkdown(value, { styles: mdStyles });
-  return <>{React.Children.toArray(nodes)}</>;
-}
-
-/** View a single file from the local working tree.
- * Supports markdown rendering, syntax-highlighted code, and plain text.
- * Binary files show a placeholder. */
+/** View and edit a single file from the local working tree.
+ * Plain-text editor for non-binary, non-LFS-pointer files.
+ * Binary and LFS pointer files are shown as read-only placeholders. */
 export default function ExploreFileScreen() {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<Route>();
   const { colors } = useTokens();
-  const { isDark } = useTheme();
-  const { repoId, path } = route.params;
+  const { repoId, path: filePath } = route.params;
 
   const storedRepo = useRepoStore((state) =>
     state.repositories.find((candidate) => candidate.id === repoId),
@@ -64,8 +38,25 @@ export default function ExploreFileScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fileName = useMemo(() => path.split('/').pop() ?? path, [path]);
-  const mode: Mode = useMemo(() => detectMode(fileName), [fileName]);
+  const [editorText, setEditorText] = useState<string>('');
+  const [isDirty, setIsDirty] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [savedAt, setSavedAt] = useState<number | null>(null);
+
+  const checkoutSafety = useCheckoutSafetySafe();
+  const isCheckingOut = checkoutSafety?.isCheckingOut ?? false;
+
+  const fileName = useMemo(() => filePath.split('/').pop() ?? filePath, [filePath]);
+
+  const isBinary = useMemo(() => isBinaryPath(filePath), [filePath]);
+
+  const isLfsPointer = useMemo(
+    () => (content != null ? parseLfsPointer(content) !== null : false),
+    [content],
+  );
+
+  const isReadOnly = isBinary || isLfsPointer;
 
   useEffect(() => {
     if (!storedRepo) return;
@@ -73,11 +64,14 @@ export default function ExploreFileScreen() {
     setContent(null);
     setError(null);
     setLoading(true);
+    setIsDirty(false);
+    setSaveError(null);
+    setSavedAt(null);
     (async () => {
       try {
         const workingTreeUri = GitFsService.workingTreeUri({ repoPath: storedRepo.path });
-        const filePath = `${workingTreeUri}/${path}`;
-        const file = new File(filePath);
+        const fullPath = `${workingTreeUri}/${filePath}`;
+        const file = new File(fullPath);
         if (!file.exists) {
           if (!cancelled) setError('File not found in working tree.');
           return;
@@ -85,6 +79,7 @@ export default function ExploreFileScreen() {
         const result = await file.text();
         if (cancelled) return;
         setContent(result);
+        setEditorText(result);
       } catch (caught) {
         if (cancelled) return;
         setError(caught instanceof Error ? caught.message : String(caught));
@@ -95,13 +90,63 @@ export default function ExploreFileScreen() {
     return () => {
       cancelled = true;
     };
-  }, [storedRepo, path]);
+  }, [storedRepo, filePath]);
 
-  const markdownOverrides = useRenderStyle('markdown');
-  const markdownStyles = useMemo(
-    () => getMarkdownStyles(colors, isDark, markdownOverrides),
-    [colors, isDark, markdownOverrides],
-  );
+  const handleSave = useCallback(async () => {
+    if (isSaving || isCheckingOut || !isDirty || !storedRepo) return;
+    setIsSaving(true);
+    setSaveError(null);
+    try {
+      const workingTreeUri = GitFsService.workingTreeUri({ repoPath: storedRepo.path });
+      const doc = workingTreeDocument(filePath, editorText, 'explore');
+      const service = new WorkingTreeDocumentService(workingTreeUri, filePath, doc);
+      await service.update(doc.id, { body: editorText });
+      setIsDirty(false);
+      setSavedAt(Date.now());
+    } catch (caught) {
+      setSaveError(caught instanceof Error ? caught.message : String(caught));
+    } finally {
+      setIsSaving(false);
+    }
+  }, [isSaving, isCheckingOut, isDirty, storedRepo, editorText, filePath]);
+
+  const handleCancel = useCallback(() => {
+    if (!isDirty) {
+      navigation.goBack();
+      return;
+    }
+    Alert.alert(
+      'Discard changes?',
+      'You have unsaved changes that will be lost.',
+      [
+        { text: 'Keep Editing', style: 'cancel' },
+        {
+          text: 'Discard',
+          style: 'destructive',
+          onPress: () => navigation.goBack(),
+        },
+      ],
+    );
+  }, [isDirty, navigation]);
+
+  const handleBack = useCallback(() => {
+    if (isDirty) {
+      Alert.alert(
+        'Discard changes?',
+        'You have unsaved changes that will be lost.',
+        [
+          { text: 'Keep Editing', style: 'cancel' },
+          {
+            text: 'Discard',
+            style: 'destructive',
+            onPress: () => navigation.goBack(),
+          },
+        ],
+      );
+    } else {
+      navigation.goBack();
+    }
+  }, [isDirty, navigation]);
 
   if (!storedRepo) {
     return (
@@ -120,7 +165,7 @@ export default function ExploreFileScreen() {
         style={{ borderBottomWidth: 1, borderBottomColor: colors.border }}
       >
         <Pressable
-          onPress={() => navigation.goBack()}
+          onPress={handleBack}
           hitSlop={8}
           accessibilityRole="button"
           accessibilityLabel="Go back"
@@ -133,20 +178,57 @@ export default function ExploreFileScreen() {
             {fileName}
           </Heading>
           <Text className="text-xs font-mono" style={{ color: colors.textSecondary }} numberOfLines={1}>
-            {path}
+            {filePath}
           </Text>
         </View>
+
+        {!loading && !error && content != null && !isReadOnly && (
+          <>
+            <Pressable
+              onPress={handleCancel}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Cancel editing"
+              testID="explore-file.cancel"
+              disabled={isSaving}
+            >
+              <Text style={{ color: isSaving ? colors.textSecondary : colors.error }}>
+                Cancel
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={handleSave}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Save changes"
+              testID="explore-file.save"
+              disabled={isSaving || !isDirty || isCheckingOut}
+            >
+              <Text
+                style={{
+                  color:
+                    isSaving || !isDirty || isCheckingOut
+                      ? colors.textSecondary
+                      : colors.accent,
+                  fontWeight: '600',
+                }}
+              >
+                {isSaving ? 'Saving…' : savedAt ? 'Saved' : 'Save'}
+              </Text>
+            </Pressable>
+          </>
+        )}
       </View>
 
-      {loading ? (
+      {error ? (
+        <View className="flex-1 items-center justify-center px-8" style={{ flex: 1 }}>
+          <Ionicons name="alert-circle-outline" size={40} color={colors.error} />
+          <Text className="mt-2 text-center text-sm" style={{ color: colors.error }} testID="explore-file.error">{error}</Text>
+        </View>
+      ) : loading ? (
         <View className="flex-1 items-center justify-center gap-2" style={{ flex: 1 }}>
           <ActivityIndicator size="small" color={colors.accent} />
           <Text style={{ color: colors.textSecondary }}>Reading file…</Text>
-        </View>
-      ) : error ? (
-        <View className="flex-1 items-center justify-center px-8" style={{ flex: 1 }}>
-          <Ionicons name="alert-circle-outline" size={40} color={colors.error} />
-          <Text className="mt-2 text-center text-sm" style={{ color: colors.error }}>{error}</Text>
         </View>
       ) : content == null ? (
         <View className="flex-1 items-center justify-center px-8" style={{ flex: 1 }}>
@@ -155,32 +237,79 @@ export default function ExploreFileScreen() {
             Empty file.
           </Text>
         </View>
-      ) : mode === 'binary' ? (
+      ) : isBinary ? (
         <View className="flex-1 items-center justify-center px-8" style={{ flex: 1 }}>
           <Ionicons name="cube-outline" size={44} color={colors.textSecondary} />
-          <Text className="mt-2 text-center" style={{ color: colors.textSecondary }}>
+          <Text className="mt-2 text-center" style={{ color: colors.textSecondary }} testID="explore-file.binary-message">
             Binary file — no textual preview available.
           </Text>
         </View>
+      ) : isLfsPointer ? (
+        <View className="flex-1 items-center justify-center px-8" style={{ flex: 1 }}>
+          <Ionicons name="git-branch-outline" size={44} color={colors.textSecondary} />
+          <Text className="mt-2 text-center" style={{ color: colors.textSecondary }} testID="explore-file.lfs-pointer-message">
+            LFS pointer file — content is stored in Git LFS.
+          </Text>
+        </View>
       ) : (
-        <ScrollView
-          className="flex-1"
-          contentContainerClassName="p-4 pb-10"
-          showsVerticalScrollIndicator
-        >
-          {mode === 'markdown' ? (
-            <MarkdownBody value={content} styles={markdownStyles} />
-          ) : (
-            <Text
-              className={mode === 'code' ? 'text-[13px] leading-[18px] font-mono' : 'text-sm leading-5'}
-              style={{ color: colors.text }}
-              selectable
-            >
-              {content}
-            </Text>
-          )}
+        <ScrollView className="flex-1" keyboardDismissMode="interactive">
+          <TextInput
+            testID="explore-file.editor"
+            style={{
+              flex: 1,
+              color: colors.text,
+              fontSize: 14,
+              lineHeight: 20,
+              paddingHorizontal: 16,
+              paddingVertical: 12,
+              fontFamily: 'monospace',
+            }}
+            value={editorText}
+            onChangeText={(text) => {
+              setEditorText(text);
+              setIsDirty(text !== content);
+              setSavedAt(null);
+            }}
+            multiline
+            scrollEnabled={false}
+            autoCapitalize="none"
+            autoCorrect={false}
+            keyboardType="default"
+            placeholder="Empty file"
+            placeholderTextColor={colors.textSecondary}
+            editable={!isSaving && !isCheckingOut}
+          />
         </ScrollView>
+      )}
+
+      {saveError && (
+        <View
+          className="px-4 py-3"
+          style={{ borderTopWidth: 1, borderTopColor: colors.error }}
+        >
+          <Text style={{ color: colors.error }} testID="explore-file.save-error">
+            {saveError}
+          </Text>
+        </View>
       )}
     </SafeAreaView>
   );
+}
+
+/** Fallback checkout safety using GitBranchCoordinator when outside provider context. */
+function useCheckoutSafetySafe(): { isCheckingOut: boolean } | null {
+  try {
+    return useCheckoutSafety();
+  } catch {
+    const [isCheckingOut, setIsCheckingOut] = useState(
+      GitBranchCoordinator.getState() === 'checkout-running',
+    );
+    useEffect(() => {
+      const unsubscribe = GitBranchCoordinator.onStateChange((state) => {
+        setIsCheckingOut(state === 'checkout-running');
+      });
+      return unsubscribe;
+    }, []);
+    return isCheckingOut ? { isCheckingOut } : null;
+  }
 }

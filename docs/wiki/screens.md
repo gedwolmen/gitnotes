@@ -229,9 +229,11 @@ The canonical route param types are in `src/navigation/types.ts`:
 
 ### ExploreFileScreen
 
-**Purpose:** View a file at a specific commit or branch state.
+**Purpose:** View and edit a text file from the local working tree. Binary files and LFS pointer files are read-only. Text files are editable as plain text via a multiline editor.
 
 **Route params:** `{ repoId: string; path: string }`
+
+**Save behavior:** Save writes raw UTF-8 content directly to the working tree without staging, committing, or pushing. The file appears as an unstaged modification in the Git workspace. User reviews, stages, commits, and pushes from the existing Git workspace.
 
 **Navigation:** Tapped from `ExploreScreen` file tree.
 
