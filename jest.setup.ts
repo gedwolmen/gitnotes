@@ -252,6 +252,33 @@ jest.mock('expo-file-system/legacy', () => ({
   EncodingType: { UTF8: 'utf8', Base64: 'base64' },
 }));
 
+jest.mock('expo-file-system', () => {
+  const noop = () => {};
+  const mockDir = { uri: '', path: '', deleteAsync: jest.fn(), exists: jest.fn(() => false) };
+  const MockDirectory = jest.fn(() => mockDir);
+  const mockFile = { uri: '', path: '', deleteAsync: jest.fn(), exists: jest.fn(() => false), create: jest.fn() };
+  const MockFile = jest.fn(() => mockFile);
+  const MockPaths = jest.fn();
+  Object.defineProperties(MockPaths, {
+    cache: { get: jest.fn(() => mockDir) },
+    document: { get: jest.fn(() => mockDir) },
+    bundle: { get: jest.fn(() => mockDir) },
+    appleSharedContainers: { get: jest.fn(() => ({})) },
+  });
+  return {
+    __esModule: true,
+    File: MockFile,
+    Directory: MockDirectory,
+    Paths: MockPaths,
+    DownloadTask: jest.fn(),
+    UploadTask: jest.fn(),
+    EncodingType: { UTF8: 'utf8', Base64: 'base64' },
+    UploadType: {},
+    FileMode: {},
+    default: { File: MockFile, Directory: MockDirectory, Paths: MockPaths },
+  };
+});
+
 jest.mock('@expo/vector-icons', () => {
   const React = require('react');
   const { View } = require('react-native');
