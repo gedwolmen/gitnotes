@@ -8,6 +8,16 @@ All notable fixes and feature changes to GitNotēs are documented here.
 >
 > **History**: prior fixes (pre-2026-08) lived in single-PR wiki pages. Those pages were retired in [#1047](https://github.com/gedwolmen/gitnotes/pull/1047); their full diagnostic content is preserved in git history via `git log -p -- docs/wiki/<file>.md`.
 
+## 2026-09-10
+
+### fix(ios): keep GitEngine module maps out of Sources
+
+**What:** Xcode 26 treated the UniFFI `GitNotesGit2FFI` module map as a source file, failing the iOS build before linking native modules.
+
+**fix(ios):** Declare only the generated Swift and C header as sources, then pass the module map explicitly through the GitEngine pod target settings.
+
+**PR:** TBD
+
 ## 2026-09-09
 
 ### fix(ios): disable explicit modules for ExpoSQLite on Xcode 26
