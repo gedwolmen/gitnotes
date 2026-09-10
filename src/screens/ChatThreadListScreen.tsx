@@ -347,8 +347,8 @@ export default function ChatThreadListScreen() {
             <RefreshControl
               refreshing={isPullRefreshing}
               onRefresh={handleRefresh}
-              tintColor={colors.primary}
-              colors={[colors.primary]}
+              tintColor="transparent"
+              colors={['transparent']}
             />
           }
           ListEmptyComponent={renderEmptyState}

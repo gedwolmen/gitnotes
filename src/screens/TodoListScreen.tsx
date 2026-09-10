@@ -526,8 +526,8 @@ export default function TodoListScreen() {
                 refreshing={isRefreshing}
                 onRefresh={handlePullToRefresh}
                 enabled={!gateBusy}
-                tintColor={colors.primary}
-                colors={[colors.primary]}
+                tintColor="transparent"
+                colors={['transparent']}
                 progressViewOffset={headerBlurHeight}
               />
             )
