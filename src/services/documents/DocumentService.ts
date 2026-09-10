@@ -4,8 +4,9 @@
  * Documents are plain files under `Paths.document/documents/<type>/<slug>.<ext>`
  * with a YAML-ish frontmatter block (see `src/utils/frontmatterParser.ts`).
  * The file is the source of truth; `DocumentIndex` mirrors metadata in sqlite
- * for fast listing/search/folders/tags/backlinks. No document body is ever
- * stored in sqlite, and no legacy `expo-file-system` API is used.
+ * for fast listing/search/folders/tags/backlinks. Document bodies are also
+ * indexed in SQLite FTS5 for full-text search, and no legacy `expo-file-system`
+ * API is used.
  */
 
 import { File, Directory, Paths } from 'expo-file-system';
@@ -280,7 +281,7 @@ export class DocumentService {
       );
     }
     writeFileContent(fileFor(type, slug, ext), raw);
-    await this.index.upsertDocument(meta);
+    await this.index.upsertDocument(meta, body);
     await this.index.syncTags(tags);
     const created: Document = { ...meta, body, raw };
     await reindexDocumentBacklinks(this, created);
@@ -371,7 +372,7 @@ export class DocumentService {
     const raw = buildFileContent(next, body, extra);
     writeFileContent(file, raw);
 
-    await this.index.upsertDocument(next);
+    await this.index.upsertDocument(next, body);
     await this.index.syncTags(tags);
     const updated: Document = { ...next, body, raw };
     await reindexDocumentBacklinks(this, updated);
@@ -481,11 +482,11 @@ export class DocumentService {
         continue;
       }
       for (const file of collectFiles(dir)) {
-        const meta = await this.metaFromFile(file);
-        if (meta === null) {
+        const document = await this.documentFromFile(file);
+        if (document === null) {
           continue;
         }
-        await this.index.upsertDocument(meta);
+        await this.index.upsertDocument(document.meta, document.body);
         count += 1;
       }
     }
@@ -567,7 +568,7 @@ export class DocumentService {
     if (raw === null) {
       return null;
     }
-    const { frontmatter } = parseFrontmatter(raw);
+    const { frontmatter, body } = parseFrontmatter(raw);
     const fm = frontmatter as DocumentFrontmatter;
     const id = typeof fm.id === 'string' ? fm.id : meta.id;
     const title = typeof fm.title === 'string' ? fm.title : meta.title;
@@ -588,12 +589,14 @@ export class DocumentService {
       isPinned,
       createdAt,
       updatedAt,
-      body: parseFrontmatter(raw).body,
+      body,
       raw,
     };
   }
 
-  private async metaFromFile(file: File): Promise<DocumentMeta | null> {
+  private async documentFromFile(
+    file: File,
+  ): Promise<{ meta: DocumentMeta; body: string } | null> {
     const type = typeFromDirectoryName(file.parentDirectory.name);
     if (type === null) {
       return null;
@@ -602,7 +605,7 @@ export class DocumentService {
     if (raw === null) {
       return null;
     }
-    const { frontmatter } = parseFrontmatter(raw);
+    const { frontmatter, body } = parseFrontmatter(raw);
     const fm = frontmatter as DocumentFrontmatter;
     const slug = file.name.replace(/\.[^.]*$/, '');
     const ext = extensionFromPath(file.name);
@@ -610,19 +613,22 @@ export class DocumentService {
     const createdAt = toMs(fm.createdAt) ?? now;
     const updatedAt = toMs(fm.updatedAt) ?? (file.lastModified ?? now);
     return {
-      id: typeof fm.id === 'string' ? fm.id : generateId(),
-      type,
-      path: relativePathFor(type, slug, ext),
-      title: typeof fm.title === 'string' ? fm.title : slug,
-      slug,
-      folder: typeof fm.folder === 'string' ? fm.folder : null,
-      tags: Array.isArray(fm.tags)
-        ? fm.tags.filter((tag): tag is string => typeof tag === 'string')
-        : [],
-      createdAt,
-      updatedAt,
-      isPinned: fm.isPinned === true,
-      deleted: false,
+      meta: {
+        id: typeof fm.id === 'string' ? fm.id : generateId(),
+        type,
+        path: relativePathFor(type, slug, ext),
+        title: typeof fm.title === 'string' ? fm.title : slug,
+        slug,
+        folder: typeof fm.folder === 'string' ? fm.folder : null,
+        tags: Array.isArray(fm.tags)
+          ? fm.tags.filter((tag): tag is string => typeof tag === 'string')
+          : [],
+        createdAt,
+        updatedAt,
+        isPinned: fm.isPinned === true,
+        deleted: false,
+      },
+      body,
     };
   }
 }

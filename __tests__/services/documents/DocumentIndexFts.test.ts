@@ -18,6 +18,12 @@ jest.mock('expo-sqlite', () => ({
   openDatabaseAsync: jest.fn(),
 }));
 
+jest.mock('expo-file-system', () => ({
+  File: jest.fn(),
+  Directory: jest.fn(),
+  Paths: { document: '/mock/documents' },
+}));
+
 const mockDb = {
   execAsync: jest.fn(),
   runAsync: jest.fn(),
@@ -37,7 +43,12 @@ describe('DocumentIndex FTS5', () => {
     mockDb.execAsync.mockResolvedValue(undefined);
     mockDb.runAsync.mockResolvedValue({ lastInsertRowId: 1 });
     mockDb.getFirstAsync.mockResolvedValue({ rowid: 1 });
-    mockDb.getAllAsync.mockResolvedValue([]);
+    mockDb.getAllAsync.mockReset();
+    mockDb.getAllAsync.mockImplementation((query: string) =>
+      query.includes('PRAGMA user_version')
+        ? Promise.resolve([{ user_version: 0 }])
+        : Promise.resolve([]),
+    );
     index = new DocumentIndex();
     // Initialize the database
     await getDocumentDb();
@@ -46,36 +57,55 @@ describe('DocumentIndex FTS5', () => {
   describe('FTS5 table creation', () => {
     it('creates FTS5 virtual table after main schema', async () => {
       // Verify the execAsync calls
-      expect(mockDb.execAsync).toHaveBeenCalledTimes(2);
-      // Second call should be the FTS5 creation
-      expect(mockDb.execAsync).toHaveBeenLastCalledWith(
-        `CREATE VIRTUAL TABLE IF NOT EXISTS documents_fts USING fts5(title, body, tags, content=documents, content_rowid=rowid)`,
+      expect(mockDb.execAsync).toHaveBeenCalledWith(
+        `CREATE VIRTUAL TABLE IF NOT EXISTS documents_fts USING fts5(title, body, tags, content='', contentless_delete=1)`,
       );
     });
   });
 
   describe('upsertFts', () => {
-    it('inserts FTS row with ON CONFLICT handling', async () => {
+    it('reindexes an existing FTS row without SQLite UPSERT', async () => {
+      await index.upsertFts(1, 'Updated Title', 'Updated body', '["tag2"]');
+
+      expect(mockDb.runAsync).toHaveBeenNthCalledWith(
+        1,
+        'DELETE FROM documents_fts WHERE rowid = ?',
+        1,
+      );
+      expect(mockDb.runAsync).toHaveBeenNthCalledWith(
+        2,
+        'INSERT INTO documents_fts(rowid, title, body, tags) VALUES (?, ?, ?, ?)',
+        [1, 'Updated Title', 'Updated body', '["tag2"]'],
+      );
+    });
+
+    it('inserts a new FTS row', async () => {
       await index.upsertFts(1, 'Test Title', 'Test body content', '["tag1"]');
 
       expect(mockDb.runAsync).toHaveBeenCalledWith(
-        `INSERT INTO documents_fts(rowid, title, body, tags) VALUES (?, ?, ?, ?)
-         ON CONFLICT(rowid) DO UPDATE SET title=excluded.title, body=excluded.body, tags=excluded.tags`,
+        'INSERT INTO documents_fts(rowid, title, body, tags) VALUES (?, ?, ?, ?)',
         [1, 'Test Title', 'Test body content', '["tag1"]'],
       );
     });
 
-    it('updates existing FTS row on conflict', async () => {
-      // First insert
+    it('deletes old indexed values before inserting an updated FTS row', async () => {
       await index.upsertFts(1, 'Original Title', 'Original body', '["tag1"]');
-      // Second insert with same rowid should update
       await index.upsertFts(1, 'Updated Title', 'Updated body', '["tag2"]');
 
-      expect(mockDb.runAsync).toHaveBeenCalledTimes(2);
+      expect(mockDb.runAsync).toHaveBeenCalledTimes(4);
       expect(mockDb.runAsync).toHaveBeenLastCalledWith(
-        `INSERT INTO documents_fts(rowid, title, body, tags) VALUES (?, ?, ?, ?)
-         ON CONFLICT(rowid) DO UPDATE SET title=excluded.title, body=excluded.body, tags=excluded.tags`,
+        'INSERT INTO documents_fts(rowid, title, body, tags) VALUES (?, ?, ?, ?)',
         [1, 'Updated Title', 'Updated body', '["tag2"]'],
+      );
+      expect(mockDb.runAsync).toHaveBeenNthCalledWith(
+        2,
+        'INSERT INTO documents_fts(rowid, title, body, tags) VALUES (?, ?, ?, ?)',
+        [1, 'Original Title', 'Original body', '["tag1"]'],
+      );
+      expect(mockDb.runAsync).toHaveBeenNthCalledWith(
+        3,
+        'DELETE FROM documents_fts WHERE rowid = ?',
+        1,
       );
     });
   });
@@ -143,12 +173,9 @@ describe('DocumentIndex FTS5', () => {
     it('indexes body content when body is provided', async () => {
       await index.upsertDocument(mockMeta, 'This is the note body content');
 
-      // Should have called runAsync twice: once for documents table, once for FTS
-      expect(mockDb.runAsync).toHaveBeenCalledTimes(2);
-      // Second call should be the FTS upsert
+      expect(mockDb.runAsync).toHaveBeenCalledTimes(3);
       expect(mockDb.runAsync).toHaveBeenLastCalledWith(
-        `INSERT INTO documents_fts(rowid, title, body, tags) VALUES (?, ?, ?, ?)
-         ON CONFLICT(rowid) DO UPDATE SET title=excluded.title, body=excluded.body, tags=excluded.tags`,
+        'INSERT INTO documents_fts(rowid, title, body, tags) VALUES (?, ?, ?, ?)',
         [99, 'Test Note', 'This is the note body content', '["test"]'],
       );
     });

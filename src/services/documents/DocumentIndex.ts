@@ -22,7 +22,9 @@ import type {
 
 const DB_NAME = 'gitnotes.db';
 const MAX_LIMIT = 500;
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
+const FTS_SCHEMA =
+  `CREATE VIRTUAL TABLE IF NOT EXISTS documents_fts USING fts5(title, body, tags, content='', contentless_delete=1)`;
 
 const SCHEMA = `
   PRAGMA journal_mode = WAL;
@@ -247,14 +249,13 @@ export function getDocumentDb(): Promise<SQLiteDatabase> {
   if (!dbPromise) {
     dbPromise = openDatabaseAsync(DB_NAME).then(async (db) => {
       await db.execAsync(SCHEMA);
-      await db.execAsync(
-        `CREATE VIRTUAL TABLE IF NOT EXISTS documents_fts USING fts5(title, body, tags, content=documents, content_rowid=rowid)`,
-      );
       const [{ 'user_version': version }] = await db.getAllAsync<{ 'user_version': number }>(
         `PRAGMA user_version`,
       );
       if (version < SCHEMA_VERSION) {
-        migrateBodyColumn(db).catch((err) => console.error('[DocumentIndex] body column migration failed:', err));
+        await db.execAsync(`DROP TABLE IF EXISTS documents_fts`);
+        await db.execAsync(FTS_SCHEMA);
+        await migrateBodyColumn(db);
         await db.execAsync(`PRAGMA user_version = ${SCHEMA_VERSION}`);
       }
       return db;
@@ -282,8 +283,7 @@ async function migrateBodyColumn(db: SQLiteDatabase): Promise<void> {
         const raw = await file.text();
         const body = parseFrontmatter(raw).body ?? '';
         await db.runAsync(
-          `INSERT INTO documents_fts(rowid, title, body, tags) VALUES (?, ?, ?, ?)
-           ON CONFLICT(rowid) DO UPDATE SET title=excluded.title, body=excluded.body, tags=excluded.tags`,
+          'INSERT INTO documents_fts(rowid, title, body, tags) VALUES (?, ?, ?, ?)',
           [doc.rowid, doc.title, body, doc.tags],
         );
       } catch (err) {
@@ -301,7 +301,7 @@ export class DocumentIndex {
 
   // ------------------------------------------------------------------ upsert
 
-  async upsertDocument(meta: DocumentMeta, body?: string): Promise<void> {
+  async upsertDocument(meta: DocumentMeta, body?: string | null): Promise<void> {
     await this.withDb(async (db) => {
       await db.runAsync(
         `INSERT INTO documents
@@ -320,7 +320,7 @@ export class DocumentIndex {
            deleted = excluded.deleted`,
         metaToParams(meta),
       );
-      if (body !== undefined) {
+      if (body != null) {
         const row = await db.getFirstAsync<{ rowid: number }>(
           'SELECT rowid FROM documents WHERE id = ? LIMIT 1',
           meta.id,
@@ -334,9 +334,9 @@ export class DocumentIndex {
 
   async upsertFts(rowid: number, title: string, body: string, tags: string): Promise<void> {
     await this.withDb(async (db) => {
+      await db.runAsync('DELETE FROM documents_fts WHERE rowid = ?', rowid);
       await db.runAsync(
-        `INSERT INTO documents_fts(rowid, title, body, tags) VALUES (?, ?, ?, ?)
-         ON CONFLICT(rowid) DO UPDATE SET title=excluded.title, body=excluded.body, tags=excluded.tags`,
+        'INSERT INTO documents_fts(rowid, title, body, tags) VALUES (?, ?, ?, ?)',
         [rowid, title, body, tags],
       );
     });

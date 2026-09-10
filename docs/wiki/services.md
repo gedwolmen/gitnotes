@@ -85,13 +85,13 @@ GitNotēs uses a **centralized branch model** for clone-mode repositories:
 
 ## Documents (`src/services/documents/`)
 
-> **Local-first architecture:** Files are the source of truth. `DocumentIndex` is a SQLite mirror of frontmatter metadata for fast listing/search — no document bodies are stored in SQLite.
+> **Local-first architecture:** Files are the source of truth. `DocumentIndex` mirrors frontmatter metadata in SQLite for fast listing/search and indexes document bodies in the `documents_fts` FTS5 virtual table for full-text search.
 
 | File | Purpose |
 |------|---------|
 | `DocumentService.ts` | Core local-first document service. Creates/reads/updates/deletes files with YAML-ish frontmatter (`---` delimiter). All note content is a plain file on disk. |
 | `WorkingTreeDocumentService.ts` | Document operations scoped to the current git working tree. |
-| `DocumentIndex.ts` | SQLite index of document metadata (id, title, folder, tags, timestamps). Used for fast listing, folder tree, tag autocomplete, and search without reading file bodies. |
+| `DocumentIndex.ts` | SQLite index of document metadata (id, title, folder, tags, timestamps) plus an FTS5 body index. Used for fast listing, folder tree, tag autocomplete, and full-text search. |
 
 ## Sync (`src/services/`)
 
