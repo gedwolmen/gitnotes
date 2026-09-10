@@ -18,7 +18,7 @@
  */
 
 import { gitOperationRegistry, type GitOpKind } from '@/stores/gitOperationStore';
-import { GitSyncGate, type PreflightState } from './GitSyncGate';
+import { GitSyncGate } from './GitSyncGate';
 import { emitGitContentRefresh } from '@/hooks/useGitRefreshEvent';
 import { invalidateCache } from './branchResolver';
 import { setActiveBranchAfterCheckout } from './activeBranchStore';
@@ -123,13 +123,9 @@ class GitBranchCoordinatorClass {
     });
 
     let releaseCycle: (() => void) | null = null;
-    let preflight: PreflightState | null = null;
-
     return (async () => {
       try {
         releaseCycle = await GitSyncGate.acquireCycle('manual');
-
-        preflight = await GitSyncGate.capturePreflight(repoId, localPath);
 
         this.armWatchdog();
 
@@ -156,23 +152,8 @@ class GitBranchCoordinatorClass {
           throw checkoutError;
         }
 
-        const postflightResult = await GitSyncGate.verifyPostflight(preflight!, opId);
-
-        if (!postflightResult.ok && postflightResult.reason === 'head-changed') {
-          preflight = await GitSyncGate.capturePreflight(repoId, localPath);
-          try {
-            await GitEngine.checkoutBranch(localPath, branchName, remoteName);
-          } catch (retryError) {
-            checkoutError = retryError instanceof Error ? retryError : new Error(String(retryError));
-            throw checkoutError;
-          }
-          const retryResult = await GitSyncGate.verifyPostflight(preflight!, opId);
-          if (!retryResult.ok) {
-            gitOperationRegistry.fail(opId, `Postflight failed after retry: ${retryResult.reason}`);
-            this.setState('failed');
-            throw new Error('Checkout aborted: branch state changed during operation');
-          }
-        } else if (!postflightResult.ok) {
+        const postflightResult = await GitSyncGate.verifyCheckoutPostflight(localPath, branchName, opId);
+        if (!postflightResult.ok) {
           gitOperationRegistry.fail(opId, `Postflight: ${postflightResult.reason}`);
           this.setState('failed');
           throw new Error('Checkout aborted: branch state changed during operation');
@@ -190,7 +171,6 @@ class GitBranchCoordinatorClass {
         this.setState('failed');
         throw error;
       } finally {
-        if (preflight) GitSyncGate.clearPreflight(repoId);
         if (releaseCycle) {
           releaseCycle();
         }
