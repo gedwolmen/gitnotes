@@ -71,7 +71,7 @@ GitNotēs is a mobile notes/todos/canvases app backed by a **Git repository** (G
 | AsyncStorage | Local key-value storage |
 | Expo Secure Store | Auth tokens |
 | Expo File System | Working tree files |
-| Expo SQLite | (reserved for future use) |
+| Expo SQLite | Local document metadata and FTS5 body index |
 
 ### Platform Services
 

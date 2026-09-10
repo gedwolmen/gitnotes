@@ -76,16 +76,17 @@ Example: `DocumentService` writes to `documents/note/my-first-note.md` relative 
 Reading every file from disk for listing/search would be slow. `DocumentIndex` maintains a **SQLite mirror** of frontmatter metadata:
 
 - `documents` table: `id, type, path, title, slug, folder, tags, createdAt, updatedAt, isPinned, deleted`
+- `documents_fts` FTS5 virtual table: `title, body, tags`
 - `folders` table: `path, type, repo`
 - `tags` table: `name, repo`
 
-**Rule:** No document body is ever stored in SQLite. Only metadata. The file is always the source of truth.
+`documents_fts` stores document body text in an FTS5 virtual table for full-text search. The file is always the source of truth for document content.
 
 `DocumentIndex` is used for:
 - Fast note listing (without reading file bodies)
 - Folder tree building
 - Tag autocomplete
-- Search (title, tags — not full-text)
+- Full-text search via FTS5, plus metadata search via SQLite `LIKE`
 
 ## Note Formats
 
