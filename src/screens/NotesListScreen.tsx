@@ -487,6 +487,7 @@ export default function NotesListScreen() {
               enabled={!gateBusy}
               tintColor={colors.primary}
               colors={[colors.primary]}
+              progressViewOffset={headerBlurHeight}
             />
           }
           ListEmptyComponent={<NotesEmptyState isFiltered={!!searchQuery || activeFilterCount > 0} />}
