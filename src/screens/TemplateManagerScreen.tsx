@@ -14,13 +14,10 @@ import { useResponsive } from '../hooks/useResponsive';
 import { ScreenHeader, IconButton, useScreenHeaderHeight } from '../components/ui';
 import { SafeAreaView } from '../components/ui/SafeAreaView';
 import { useTemplateStore } from '../stores/templateStore';
-import { useRepoStore } from '../stores/repoStore';
-import { getActiveBranch } from '../services/git/activeBranchStore';
 import { NoteTemplate, NoteTemplateIcon } from '../services/TemplateService';
 import { HapticService } from '../utils/haptics';
 import { TemplateRepoPreferenceService, TemplateRepoPreference } from '../services/TemplateRepoPreferenceService';
 import { pullTemplatesFromConfiguredRepo } from '../services/RepoPullService';
-import { syncTemplateToGitHub } from '../services/TemplateGitHubSyncService';
 import {
   commitPendingTag,
   parseTagInput,
@@ -48,7 +45,6 @@ export default function TemplateManagerScreen() {
   const deleteTemplate = useTemplateStore((s) => s.deleteTemplate);
   const togglePin = useTemplateStore((s) => s.togglePin);
   const getAllTemplates = useTemplateStore((s) => s.getAllTemplates);
-  const repositories = useRepoStore((s) => s.repositories);
 
   const [showEditor, setShowEditor] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -170,7 +166,6 @@ export default function TemplateManagerScreen() {
     const finalTags = commitPendingTag(tagDraft, draftTags);
 
     try {
-      let savedTemplate: NoteTemplate | null = null;
       if (editingId) {
         await updateTemplate(editingId, {
           name,
@@ -180,26 +175,14 @@ export default function TemplateManagerScreen() {
           content: draftContent,
           tags: finalTags,
         });
-        savedTemplate = getAllTemplates().find((t) => t.id === editingId) ?? null;
       } else {
-        savedTemplate = await createTemplate({
+        await createTemplate({
           name,
           icon: draftIcon,
           description,
           title: title || undefined,
           content: draftContent,
           tags: finalTags,
-        });
-      }
-
-      if (savedTemplate && templatesRepoPref) {
-        const repoId = repositories.find((r) => r.path === templatesRepoPref.repoPath)?.id;
-        const activeBranchState = repoId ? await getActiveBranch(repoId) : null;
-        const branch = activeBranchState?.activeBranch ?? 'main';
-        await syncTemplateToGitHub({
-          repoPath: templatesRepoPref.repoPath,
-          branch,
-          template: savedTemplate,
         });
       }
 
@@ -221,8 +204,6 @@ export default function TemplateManagerScreen() {
     editingId,
     createTemplate,
     updateTemplate,
-    templatesRepoPref,
-    getAllTemplates,
     t,
   ]);
 

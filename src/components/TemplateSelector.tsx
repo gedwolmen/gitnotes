@@ -14,6 +14,7 @@ import { ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { NoteTemplate, TemplateService } from '../services/TemplateService';
+import { useTemplateStore } from '../stores/templateStore';
 import { useTheme } from '../contexts/ThemeContext';
 import { useProGate } from '../hooks/useProGate';
 import { Modal } from './ui';
@@ -75,14 +76,34 @@ export default function TemplateSelector({ visible, onClose, onSelect }: Templat
     navigation.navigate('TemplateManager');
   }, [onClose, navigation, isPro, openPaywall]);
 
+  const customTemplates = useTemplateStore((s) => s.customTemplates);
+  const loadTemplatesFromStore = useTemplateStore((s) => s.loadTemplates);
+
   const loadTemplates = useCallback(async () => {
     setIsLoading(true);
-    const results = searchQuery
+
+    if (customTemplates.length === 0) {
+      await loadTemplatesFromStore();
+    }
+
+    const builtIns = searchQuery
       ? await TemplateService.searchTemplates(searchQuery)
       : await TemplateService.getAllTemplates();
-    setTemplates(results);
+
+    const lowerQuery = searchQuery.toLowerCase();
+    const filteredCustom = searchQuery
+      ? customTemplates.filter(
+          (t) =>
+            t.name.toLowerCase().includes(lowerQuery) ||
+            t.description.toLowerCase().includes(lowerQuery) ||
+            t.tags.some((tag) => tag.toLowerCase().includes(lowerQuery)),
+        )
+      : customTemplates;
+
+    const allTemplates = [...builtIns, ...filteredCustom];
+    setTemplates(allTemplates);
     setIsLoading(false);
-  }, [searchQuery]);
+  }, [searchQuery, customTemplates, loadTemplatesFromStore]);
 
   useEffect(() => {
     if (visible) {
