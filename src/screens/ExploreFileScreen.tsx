@@ -191,6 +191,7 @@ export default function ExploreFileScreen() {
               accessibilityLabel="Cancel editing"
               testID="explore-file.cancel"
               disabled={isSaving}
+              style={{ marginRight: 12 }}
             >
               <Text style={{ color: isSaving ? colors.textSecondary : colors.error }}>
                 Cancel
