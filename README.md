@@ -23,6 +23,11 @@
 </p>
 
 <p align="center">
+  <a href="https://play.google.com/store/apps/details?id=org.gitnotes.app"><img height="60" src="https://play.google.com/intl/en/badges/static/images/badges/en_badge_web_generic.png" alt="Get it on Google Play"></a>
+  <a href="https://apps.apple.com/lk/app/gitnot%C4%93s-notes-todos-git/id6764829004"><img height="60" src="https://linkmaker.itunes.apple.com/en-us/badges/appstore_badge.png" alt="Download on the App Store"></a>
+</p>
+
+<p align="center">
   <img src="assets/feature_graphic.png" alt="GitNotēs Feature Graphic" />
 </p>
 
