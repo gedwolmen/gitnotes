@@ -16,7 +16,7 @@ All notable fixes and feature changes to GitNotēs are documented here.
 
 **Fix:** Forward both `skip` and `limit` so Android matches the shared native contract.
 
-**PR:** TBD
+**PR:** [#1511](https://github.com/gedwolmen/gitnotes/pull/1511)
 
 ### fix(ios): keep GitEngine module maps out of Sources
 
