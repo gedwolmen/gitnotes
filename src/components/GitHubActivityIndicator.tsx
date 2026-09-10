@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTokens } from '../contexts/ThemeContext';
 import { useGitHubActivityStore, githubActivity, SyncProgress } from '../stores/githubActivityStore';
 import { useGitOperationStore, pendingRunningCount } from '../stores/gitOperationStore';
+import { operationActivityTransition } from '../stores/gitActivityLifecycle';
 import { NoteSyncQueueService } from '../services/cloneSyncServiceImpl';
 
 function ProgressBar({ progress, color }: { progress: SyncProgress; color: string }) {
@@ -77,14 +78,15 @@ export function GitHubActivityIndicator() {
     refreshPending();
     const unsubscribeQueue = NoteSyncQueueService.subscribe(refreshPending);
 
-    const unsubscribeOps = useGitOperationStore.subscribe((state) => {
-      const running = pendingRunningCount(state.ops);
-      if (running > 0) {
-        githubActivity.begin('Syncing…');
-      } else {
-        githubActivity.end();
-      }
-    });
+    let operationsActive = false;
+    const syncOperationActivity = (state: { ops: Parameters<typeof pendingRunningCount>[0] }) => {
+      const transition = operationActivityTransition(operationsActive, pendingRunningCount(state.ops));
+      operationsActive = transition.active;
+      if (transition.action === 'begin') githubActivity.begin('Syncing…');
+      if (transition.action === 'end') githubActivity.end();
+    };
+    syncOperationActivity(useGitOperationStore.getState());
+    const unsubscribeOps = useGitOperationStore.subscribe(syncOperationActivity);
 
     return () => {
       unsubscribeQueue();
