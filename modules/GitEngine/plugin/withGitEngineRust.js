@@ -1,5 +1,7 @@
 const { withPodfile, withXcodeProject } = require('@expo/config-plugins');
-const { getBuildConfigurationsForListId } = require('@expo/config-plugins/build/ios/utils/Xcodeproj');
+const {
+  getBuildConfigurationsForListId,
+} = require('@expo/config-plugins/build/ios/utils/Xcodeproj');
 
 const PHASE_NAME = 'Build Rust (gitnotes_git2)';
 
@@ -50,7 +52,10 @@ function withGitEngineRust(config) {
     const project = modConfig.modResults;
     const targetUuid = project.getFirstTarget().uuid;
     const nativeTarget = project.hash.project.objects.PBXNativeTarget[targetUuid];
-    const buildConfigs = getBuildConfigurationsForListId(project, nativeTarget.buildConfigurationList);
+    const buildConfigs = getBuildConfigurationsForListId(
+      project,
+      nativeTarget.buildConfigurationList,
+    );
     for (const [, buildConfig] of buildConfigs) {
       const settings = buildConfig.buildSettings;
       if (!settings) continue;
