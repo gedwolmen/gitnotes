@@ -10,6 +10,14 @@ All notable fixes and feature changes to GitNotēs are documented here.
 
 ## 2026-09-10
 
+### fix(git): accept intentional branch changes during checkout
+
+**What:** Branch checkout was rejected because postflight validation compared the requested checkout's new branch and HEAD against the pre-checkout state.
+
+**Fix:** Validate checkout postflight against the requested branch while retaining strict branch/HEAD stability checks for push operations.
+
+**PR:** TBD
+
 ### fix(android): align recent commits pagination parameters
 
 **What:** The Android GitEngine bridge exposed `recentCommits` without the `skip` parameter already used by the TypeScript, iOS, and Rust layers.

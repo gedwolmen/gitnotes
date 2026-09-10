@@ -31,6 +31,7 @@ jest.mock('@/services/git/engine/GitEngine', () => ({
 jest.mock('@/services/git/GitSyncGate', () => ({
   GitSyncGate: {
     acquireCycle: jest.fn(),
+    verifyCheckoutPostflight: jest.fn(),
     isCycleHeld: jest.fn(),
     forceReleaseCycle: jest.fn(),
     __resetForTest: jest.fn(),
@@ -62,6 +63,7 @@ describe('GitBranchCoordinator', () => {
     jest.clearAllMocks();
     MOCK_RELEASE_CYCLE.mockReturnValue(undefined);
     GitSyncGateMock.acquireCycle.mockResolvedValue(MOCK_RELEASE_CYCLE);
+    GitSyncGateMock.verifyCheckoutPostflight.mockResolvedValue({ ok: true });
     GitSyncGateMock.isCycleHeld.mockReturnValue(false);
     GitBranchCoordinator.__resetForTests();
   });
@@ -136,6 +138,37 @@ describe('GitBranchCoordinator', () => {
   });
 
   describe('working tree safety checks', () => {
+    it('accepts the requested branch after checkout changes HEAD', async () => {
+      const { GitBranchCoordinator } = await import('@/services/git/GitBranchCoordinator');
+      GitEngineMock.statuses.mockResolvedValue([]);
+      GitEngineMock.checkoutBranch.mockResolvedValue(undefined);
+
+      await expect(
+        GitBranchCoordinator.checkout(TEST_REPO_ID, TEST_REPO_PATH, 'feature-branch')
+      ).resolves.not.toThrow();
+
+      expect(GitSyncGateMock.verifyCheckoutPostflight).toHaveBeenCalledWith(
+        TEST_REPO_PATH,
+        'feature-branch',
+        expect.any(String),
+      );
+    });
+
+    it('fails when checkout postflight finds a different branch', async () => {
+      const { GitBranchCoordinator } = await import('@/services/git/GitBranchCoordinator');
+      GitEngineMock.statuses.mockResolvedValue([]);
+      GitEngineMock.checkoutBranch.mockResolvedValue(undefined);
+      GitSyncGateMock.verifyCheckoutPostflight.mockResolvedValue({
+        ok: false,
+        reason: 'branch-changed',
+      });
+
+      await expect(
+        GitBranchCoordinator.checkout(TEST_REPO_ID, TEST_REPO_PATH, 'feature-branch')
+      ).rejects.toThrow(/branch state changed/i);
+      expect(GitBranchCoordinator.getState()).toBe('failed');
+    });
+
     it('allows checkout when all files are Unmodified (clean tree)', async () => {
       const { GitBranchCoordinator } = await import('@/services/git/GitBranchCoordinator');
       GitEngineMock.statuses.mockResolvedValue([

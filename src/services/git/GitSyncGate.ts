@@ -185,6 +185,28 @@ class GitSyncGateClass {
     }
   }
 
+  async verifyCheckoutPostflight(
+    repoPath: string,
+    expectedBranch: string,
+    registryOpId?: string,
+  ): Promise<PostflightResult> {
+    try {
+      const repoInfo = await GitEngine.repoInfo(repoPath);
+      if (repoInfo.currentBranch !== expectedBranch) {
+        if (registryOpId) {
+          gitOperationRegistry.fail(registryOpId, 'Branch changed during checkout (stale)');
+        }
+        return { ok: false, reason: 'branch-changed' };
+      }
+      return { ok: true };
+    } catch {
+      if (registryOpId) {
+        gitOperationRegistry.fail(registryOpId, 'Checkout postflight verification error');
+      }
+      return { ok: false, reason: 'error' };
+    }
+  }
+
   clearPreflight(repoId: string): void {
     this.preflightStates.delete(repoId);
   }
