@@ -21,6 +21,15 @@ User edits note
 
 Delete operations remove the working-tree file without staging the deletion, so the user can review, stage, and commit it from the Git workspace.
 
+### Explore File Editing (Raw Working-Tree Write)
+
+When editing a file from the Git → Files tab:
+- `ExploreFileScreen` loads the file content from the local working tree
+- Save writes the exact UTF-8 content back to the working tree via `WorkingTreeDocumentService`
+- No staging, committing, pushing, queue enqueue, or branch checkout occurs
+- The file appears as an unstaged modification in the Git workspace
+- User reviews, stages, commits, and pushes from the existing Git workspace
+
 ### Push Triggers
 
 After a local commit, push is triggered automatically by any of:

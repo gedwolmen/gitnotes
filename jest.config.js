@@ -6,6 +6,7 @@ module.exports = {
     '^.+\\.tsx$': 'babel-jest',
   },
   testEnvironment: 'node',
+  roots: ['<rootDir>'],
   testMatch: [
     '**/__tests__/**/*.test.{ts,tsx}',
     '**/?(*.)+(spec|test).{ts,tsx}',
@@ -24,7 +25,7 @@ module.exports = {
   setupFiles: ['<rootDir>/jest.setup.ts'],
   testPathIgnorePatterns: [
     '/node_modules/',
-    '/.worktrees/',
+    '/.worktrees/(?!git-files-text-edit)/',
   ],
   transformIgnorePatterns: [
     'node_modules/(?!(react-native|@react-native|@react-navigation|expo|expo-[^/]+|@expo|react-native-reanimated|@shopify|nativewind|react-native-css|@rn-primitives|class-variance-authority|tailwind-merge|tailwindcss-animate)/)',
