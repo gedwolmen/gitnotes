@@ -6,10 +6,15 @@ import { useEffect, useRef, useReducer } from 'react';
  * useGitRepoStatus listens to stay in sync.
  */
 
+export type GitContentRefreshEvent =
+  | { kind: 'content' }
+  | { kind: 'checkout'; repoId: string; branch: string };
+
 type GitRefreshListener = () => void;
+type GitContentRefreshListener = (event: GitContentRefreshEvent) => void;
 
 const listeners = new Set<GitRefreshListener>();
-const contentListeners = new Set<GitRefreshListener>();
+const contentListeners = new Set<GitContentRefreshListener>();
 
 export function emitGitRefresh(): void {
   listeners.forEach((listener) => listener());
@@ -20,11 +25,11 @@ export function subscribeGitRefresh(listener: GitRefreshListener): () => void {
   return () => listeners.delete(listener);
 }
 
-export function emitGitContentRefresh(): void {
-  contentListeners.forEach((listener) => listener());
+export function emitGitContentRefresh(event: GitContentRefreshEvent = { kind: 'content' }): void {
+  contentListeners.forEach((listener) => listener(event));
 }
 
-export function subscribeGitContentRefresh(listener: GitRefreshListener): () => void {
+export function subscribeGitContentRefresh(listener: GitContentRefreshListener): () => void {
   contentListeners.add(listener);
   return () => contentListeners.delete(listener);
 }
