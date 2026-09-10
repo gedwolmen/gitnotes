@@ -16,7 +16,7 @@ All notable fixes and feature changes to GitNotēs are documented here.
 
 **fix(ios):** Declare only the generated Swift and C header as sources, then pass the module map explicitly through the GitEngine pod target settings.
 
-**PR:** TBD
+**PR:** [#1510](https://github.com/gedwolmen/gitnotes/pull/1510)
 
 ## 2026-09-09
 
