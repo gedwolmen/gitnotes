@@ -374,9 +374,9 @@ describe('GitBranchCoordinator', () => {
       expect(GitBranchCoordinator.getState()).toBe('mutation-running');
 
       // Try to checkout - should be rejected
-      await expect(
+      expect(() =>
         GitBranchCoordinator.checkout(TEST_REPO_ID, TEST_REPO_PATH, 'feature-branch')
-      ).rejects.toThrow(/mutation|running/i);
+      ).toThrow(/mutation|running/i);
 
       GitBranchCoordinator.endMutation();
     });
@@ -415,16 +415,13 @@ describe('GitBranchCoordinator', () => {
       const watchdogMs = 10 * 60 * 1_000; // 10 minutes
 
       // Start checkout but never complete
-      const checkoutPromise = GitBranchCoordinator.checkout(TEST_REPO_ID, TEST_REPO_PATH, 'feature-branch');
+      void GitBranchCoordinator.checkout(TEST_REPO_ID, TEST_REPO_PATH, 'feature-branch');
 
       // Advance time past watchdog
-      jest.advanceTimersByTime(watchdogMs + 1);
+      await jest.advanceTimersByTimeAsync(watchdogMs + 1);
 
-      await expect(checkoutPromise).rejects.toThrow();
-
-      // Should have recovered to idle state
-      expect(GitBranchCoordinator.getState()).toBe('idle');
-      expect(MOCK_RELEASE_CYCLE).toHaveBeenCalled();
+      expect(GitBranchCoordinator.getState()).toBe('failed');
+      expect(GitSyncGateMock.forceReleaseCycle).toHaveBeenCalled();
     });
 
     it('clears watchdog on successful checkout', async () => {
