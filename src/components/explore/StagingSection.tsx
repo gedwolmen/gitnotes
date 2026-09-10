@@ -229,7 +229,7 @@ export function StagingSection({ repo, active, onChanged, chromeTopInset = 0, on
         renderItem={renderItem}
         contentContainerStyle={{ paddingTop: chromeTopInset, paddingBottom: 16 }}
         refreshControl={
-          <RefreshControl refreshing={loading} onRefresh={() => void load()} tintColor={colors.accent} />
+          <RefreshControl refreshing={loading} onRefresh={() => void load()} tintColor="transparent" colors={['transparent']} />
         }
         ListHeaderComponent={
           <View className="flex-row items-center justify-between px-4 pb-2">

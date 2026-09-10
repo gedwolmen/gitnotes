@@ -212,7 +212,7 @@ export function FilesSection({ repo, active, chromeTopInset = 0, branchInvalidat
       renderItem={renderItem}
       contentContainerStyle={listContentContainerStyle}
       refreshControl={
-        <RefreshControl refreshing={loading} onRefresh={() => void load()} tintColor={colors.accent} />
+        <RefreshControl refreshing={loading} onRefresh={() => void load()} tintColor="transparent" colors={['transparent']} />
       }
       ListHeaderComponent={
         <View className="flex-row items-center justify-between px-4 pb-2">

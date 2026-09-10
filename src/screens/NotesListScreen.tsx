@@ -485,8 +485,8 @@ export default function NotesListScreen() {
               refreshing={isPullRefreshing}
               onRefresh={handlePullToRefresh}
               enabled={!gateBusy}
-              tintColor={colors.primary}
-              colors={[colors.primary]}
+              tintColor="transparent"
+              colors={['transparent']}
               progressViewOffset={headerBlurHeight}
             />
           }

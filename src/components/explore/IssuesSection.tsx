@@ -168,7 +168,7 @@ export function IssuesSection({ repo, active, chromeTopInset = 0 }: SectionProps
       renderItem={renderItem}
       contentContainerStyle={listContentContainerStyle}
       refreshControl={
-        <RefreshControl refreshing={loading} onRefresh={() => void load()} tintColor={colors.accent} />
+        <RefreshControl refreshing={loading} onRefresh={() => void load()} tintColor="transparent" colors={['transparent']} />
       }
       ListHeaderComponent={
         <View>

@@ -204,7 +204,7 @@ export function CommitsSection({ repo, active, chromeTopInset = 0, refreshStatus
       onEndReached={loadMore}
       onEndReachedThreshold={0.5}
       refreshControl={
-        <RefreshControl refreshing={loading} onRefresh={() => void loadInitial()} tintColor={colors.accent} />
+        <RefreshControl refreshing={loading} onRefresh={() => void loadInitial()} tintColor="transparent" colors={['transparent']} />
       }
       ListHeaderComponent={
         <View className="flex-row items-center justify-end px-4 pb-2">
