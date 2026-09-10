@@ -25,7 +25,7 @@ const SWIFTUICORE_WORKAROUND = `    installer.aggregate_targets.each do |aggrega
           swift_flags = build_configuration.build_settings['OTHER_SWIFT_FLAGS'] || '$(inherited)'
           swift_flags = swift_flags.join(' ') if swift_flags.is_a?(Array)
           unless swift_flags.include?('${SWIFTUI_PRIVATE_AUTOLINK_FLAGS}')
-            build_configuration.build_settings['OTHER_SWIFT_FLAGS'] = "\#{swift_flags} ${SWIFTUI_PRIVATE_AUTOLINK_FLAGS}"
+            build_configuration.build_settings['OTHER_SWIFT_FLAGS'] = "\\#{swift_flags} ${SWIFTUI_PRIVATE_AUTOLINK_FLAGS}"
           end
         end
       end
@@ -38,7 +38,20 @@ const SWIFTUICORE_WORKAROUND = `    installer.aggregate_targets.each do |aggrega
         swift_flags = build_configuration.build_settings['OTHER_SWIFT_FLAGS'] || '$(inherited)'
         swift_flags = swift_flags.join(' ') if swift_flags.is_a?(Array)
         unless swift_flags.include?('${SWIFTUI_PRIVATE_AUTOLINK_FLAGS}')
-          build_configuration.build_settings['OTHER_SWIFT_FLAGS'] = "\#{swift_flags} ${SWIFTUI_PRIVATE_AUTOLINK_FLAGS}"
+          build_configuration.build_settings['OTHER_SWIFT_FLAGS'] = "\\#{swift_flags} ${SWIFTUI_PRIVATE_AUTOLINK_FLAGS}"
+        end
+      end
+    end
+`;
+
+const INCLUDE_PATH_WORKAROUND = `    installer.pods_project.targets.each do |target|
+      next unless target.name == 'ExpoSQLite'
+
+      target.build_configurations.each do |build_configuration|
+        existing_swift_include_paths = build_configuration.build_settings['SWIFT_INCLUDE_PATHS'] || '$(inherited)'
+        unless existing_swift_include_paths.include?('$(PODS_TARGET_SRCROOT)')
+          build_configuration.build_settings['SWIFT_INCLUDE_PATHS'] =
+            "\\#{existing_swift_include_paths} $(PODS_TARGET_SRCROOT)".strip
         end
       end
     end
@@ -60,7 +73,8 @@ function withExpoSqliteXcode26(config) {
         "build_configuration.build_settings['SWIFT_ENABLE_EXPLICIT_MODULES'] = 'NO'";
       const legacySwiftSetting = "build_settings['SWIFT_ENABLE_EXPLICIT_MODULES'] = 'NO'";
       const marker = '    react_native_post_install(\n';
-      if (!podfile.includes(marker)) {
+      const postInstallEndMarker = '    )\n  end\nend\n';
+      if (!podfile.includes(marker) || !podfile.includes(postInstallEndMarker)) {
         throw new Error('expo-sqlite-xcode26: could not locate the Podfile post_install hook');
       }
 
@@ -68,35 +82,28 @@ function withExpoSqliteXcode26(config) {
         podfile = podfile.replace(legacySwiftSetting, swiftSetting);
       }
 
-      if (podfile.includes(SWIFTUI_PRIVATE_AUTOLINK_FLAGS)) {
-        await fs.promises.writeFile(podfilePath, podfile);
-        return config;
+      if (!podfile.includes(SWIFTUI_PRIVATE_AUTOLINK_FLAGS)) {
+        if (podfile.includes(clangSetting)) {
+          podfile = podfile.replace(marker, `${SWIFTUICORE_WORKAROUND}\n${marker}`);
+        } else if (podfile.includes(swiftSetting)) {
+          const migratedPodfile = podfile.replace(
+            swiftSetting,
+            `${clangSetting}\n        ${swiftSetting}`,
+          );
+          podfile = migratedPodfile.replace(marker, `${SWIFTUICORE_WORKAROUND}\n${marker}`);
+        } else {
+          podfile = podfile.replace(marker, `${EXPLICIT_MODULES_WORKAROUND}\n${marker}`);
+        }
       }
 
-      if (podfile.includes(clangSetting)) {
-        await fs.promises.writeFile(
-          podfilePath,
-          podfile.replace(marker, `${SWIFTUICORE_WORKAROUND}\n${marker}`),
+      if (!podfile.includes("build_settings['SWIFT_INCLUDE_PATHS']")) {
+        podfile = podfile.replace(
+          postInstallEndMarker,
+          `    )\n\n${INCLUDE_PATH_WORKAROUND}  end\nend\n`,
         );
-        return config;
       }
 
-      if (podfile.includes(swiftSetting)) {
-        const migratedPodfile = podfile.replace(
-          swiftSetting,
-          `${clangSetting}\n        ${swiftSetting}`,
-        );
-        await fs.promises.writeFile(
-          podfilePath,
-          migratedPodfile.replace(marker, `${SWIFTUICORE_WORKAROUND}\n${marker}`),
-        );
-        return config;
-      }
-
-      await fs.promises.writeFile(
-        podfilePath,
-        podfile.replace(marker, `${EXPLICIT_MODULES_WORKAROUND}\n${marker}`),
-      );
+      await fs.promises.writeFile(podfilePath, podfile);
       return config;
     },
   ]);
