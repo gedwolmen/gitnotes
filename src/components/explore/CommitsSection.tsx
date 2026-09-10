@@ -26,6 +26,7 @@ export function CommitsSection({ repo, active, chromeTopInset = 0, refreshStatus
   const [commits, setCommits] = useState<CommitInfo[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+  const loadingMoreRef = useRef(false);
   const [pushing, setPushing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notCloned, setNotCloned] = useState(false);
@@ -58,7 +59,8 @@ export function CommitsSection({ repo, active, chromeTopInset = 0, refreshStatus
   }, [loadInitial, branchInvalidationKey]);
 
   const loadMore = useCallback(async () => {
-    if (loadingMore || !hasMore.current) return;
+    if (loadingMoreRef.current || !hasMore.current) return;
+    loadingMoreRef.current = true;
     setLoadingMore(true);
     try {
       const skip = commits.length;
@@ -68,9 +70,10 @@ export function CommitsSection({ repo, active, chromeTopInset = 0, refreshStatus
     } catch {
       // silent fail for load more — user can scroll again
     } finally {
+      loadingMoreRef.current = false;
       setLoadingMore(false);
     }
-  }, [commits.length, loadingMore, repo.localPath]);
+  }, [commits.length, repo.localPath]);
 
   const handlePush = useCallback(async () => {
     if (loading || pushing) return;
