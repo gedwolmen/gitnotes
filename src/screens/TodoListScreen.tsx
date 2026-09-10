@@ -520,17 +520,15 @@ export default function TodoListScreen() {
           ListEmptyComponent={<TodosEmptyState isFiltered={hasActiveFilters} />}
           showsVerticalScrollIndicator={false}
           refreshControl={
-            gitOperationActive ? undefined : (
-              <RefreshControl
-                testID="todo-list.swipe.pull-refresh"
-                refreshing={isRefreshing}
-                onRefresh={handlePullToRefresh}
-                enabled={!gateBusy}
-                tintColor="transparent"
-                colors={['transparent']}
-                progressViewOffset={headerBlurHeight}
-              />
-            )
+            <RefreshControl
+              testID="todo-list.swipe.pull-refresh"
+              refreshing={isRefreshing}
+              onRefresh={handlePullToRefresh}
+              enabled={!gateBusy && !gitOperationActive}
+              tintColor="transparent"
+              colors={['transparent']}
+              progressViewOffset={headerBlurHeight}
+            />
           }
         />
       )}
