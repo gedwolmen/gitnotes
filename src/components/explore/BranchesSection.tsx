@@ -312,7 +312,7 @@ export function BranchesSection({ repo, active, onChanged, chromeTopInset = 0, b
       renderItem={renderItem}
        contentContainerStyle={{ paddingTop: chromeTopInset, paddingBottom: 96, flexGrow: 1 }}
       refreshControl={
-        <RefreshControl refreshing={loading} onRefresh={() => void load()} tintColor={colors.accent} />
+        <RefreshControl refreshing={loading} onRefresh={() => void load()} tintColor="transparent" colors={['transparent']} />
       }
       ListHeaderComponent={
         <View className="px-4 pb-1">
