@@ -23,6 +23,11 @@
 </p>
 
 <p align="center">
+  <a href="https://play.google.com/store/apps/details?id=org.gitnotes.app"><img src="https://img.shields.io/badge/Google_Play-000?logo=googleplay&logoColor=FFF" alt="Get it on Google Play"></a>
+  <a href="https://apps.apple.com/lk/app/gitnot%C4%93s-notes-todos-git/id6764829004"><img src="https://img.shields.io/badge/App_Store-000?logo=apple&logoColor=FFF" alt="Download on the App Store"></a>
+</p>
+
+<p align="center">
   <img src="assets/feature_graphic.png" alt="GitNotēs Feature Graphic" />
 </p>
 
