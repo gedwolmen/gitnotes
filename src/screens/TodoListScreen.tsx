@@ -528,6 +528,7 @@ export default function TodoListScreen() {
                 enabled={!gateBusy}
                 tintColor={colors.primary}
                 colors={[colors.primary]}
+                progressViewOffset={headerBlurHeight}
               />
             )
           }
