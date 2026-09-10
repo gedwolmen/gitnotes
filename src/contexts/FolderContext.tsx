@@ -2,6 +2,7 @@ import React, { useEffect, useMemo } from 'react';
 import { Folder, FolderCreateInput } from '../models/Folder';
 import { getChildFolders, getFolderPathParts } from '../models/Folder';
 import { useFolderStore } from '../stores/folderStore';
+import { useGitContentRefreshSignal } from '../hooks/useGitRefreshEvent';
 
 interface FolderContextType {
   folders: Folder[];
@@ -19,11 +20,17 @@ interface FolderContextType {
 
 export function FolderProvider({ children }: { children: React.ReactNode }) {
   const loadFolders = useFolderStore((s) => s.loadFolders);
+  const refreshFolders = useFolderStore((s) => s.refreshFolders);
   const needsLoad = useFolderStore((s) => s.isLoading && s.folders.length === 0);
+  const refreshSignal = useGitContentRefreshSignal();
 
   useEffect(() => {
     if (needsLoad) loadFolders();
   }, [needsLoad, loadFolders]);
+
+  useEffect(() => {
+    if (refreshSignal > 0) void refreshFolders();
+  }, [refreshFolders, refreshSignal]);
 
   return <>{children}</>;
 }

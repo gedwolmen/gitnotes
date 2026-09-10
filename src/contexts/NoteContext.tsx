@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo } from 'react';
 import { Note, NoteCreateInput, NoteUpdateInput } from '../models/Note';
 import { useNoteStore, useFilteredNotes } from '../stores/noteStore';
+import { useGitContentRefreshSignal } from '../hooks/useGitRefreshEvent';
 
 interface NotesData {
   notes: Note[];
@@ -26,11 +27,17 @@ type NoteContextType = NotesData & NotesActions;
 
 export function NoteProvider({ children }: { children: React.ReactNode }) {
   const loadNotes = useNoteStore((s) => s.loadNotes);
+  const refreshNotes = useNoteStore((s) => s.refreshNotes);
   const needsLoad = useNoteStore((s) => s.isLoading && s.notes.length === 0);
+  const refreshSignal = useGitContentRefreshSignal();
 
   useEffect(() => {
     if (needsLoad) loadNotes();
   }, [needsLoad, loadNotes]);
+
+  useEffect(() => {
+    if (refreshSignal > 0) void refreshNotes();
+  }, [refreshNotes, refreshSignal]);
 
   return <>{children}</>;
 }
