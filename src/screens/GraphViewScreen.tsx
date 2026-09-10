@@ -34,6 +34,7 @@ interface GraphNode {
 interface GraphEdge {
   from: string;
   to: string;
+  isBlockLevel?: boolean;
 }
 
 const NODE_SIZE = 72;
@@ -114,7 +115,7 @@ export default function GraphViewScreen() {
       const backlinks = backlinkIndex.get(note.id) || [];
       backlinks.forEach((bl) => {
         if (bl.sourceNoteId !== note.id) {
-          graphEdges.push({ from: bl.sourceNoteId, to: note.id });
+          graphEdges.push({ from: bl.sourceNoteId, to: note.id, isBlockLevel: !!bl.blockAnchor });
           nodeMap.get(bl.sourceNoteId)?.connections.add(note.id);
           nodeMap.get(note.id)?.connections.add(bl.sourceNoteId);
         }
@@ -313,18 +314,24 @@ export default function GraphViewScreen() {
     [colors]
   );
 
-  const edgePath = useMemo(() => {
-    const path = Skia.Path.Make();
+  const { pageEdgePath, blockEdgePath } = useMemo(() => {
+    const pagePath = Skia.Path.Make();
+    const blockPath = Skia.Path.Make();
     const nodeById = new Map(localNodes.map((n) => [n.id, n]));
     edges.forEach((edge) => {
       const source = nodeById.get(edge.from);
       const target = nodeById.get(edge.to);
       if (source && target) {
-        path.moveTo(source.x, source.y);
-        path.lineTo(target.x, target.y);
+        if (edge.isBlockLevel) {
+          blockPath.moveTo(source.x, source.y);
+          blockPath.lineTo(target.x, target.y);
+        } else {
+          pagePath.moveTo(source.x, source.y);
+          pagePath.lineTo(target.x, target.y);
+        }
       }
     });
-    return path;
+    return { pageEdgePath: pagePath, blockEdgePath: blockPath };
   }, [edges, localNodes]);
 
   const pinchGesture = Gesture.Pinch()
@@ -397,11 +404,18 @@ export default function GraphViewScreen() {
               <View style={{ width: canvasWidth, height: canvasHeight }}>
                 <Canvas style={{ width: canvasWidth, height: canvasHeight }}>
                   <Path
-                    path={edgePath}
+                    path={pageEdgePath}
                     color={colors.border}
                     style="stroke"
                     strokeWidth={selectedNodeId ? 2.5 : 1.5}
                     opacity={0.4}
+                  />
+                  <Path
+                    path={blockEdgePath}
+                    color={colors.border}
+                    style="stroke"
+                    strokeWidth={0.75}
+                    opacity={0.2}
                   />
                 </Canvas>
 

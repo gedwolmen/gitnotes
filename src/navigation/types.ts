@@ -30,6 +30,7 @@ type ProductionStackParamList = {
   ExploreRepoInfo: { repoId: string };
   ExploreIssues: { repoId: string };
   ExplorePullRequests: { repoId: string };
+  Calendar: { selectedDate?: string };
 };
 
 type DevOnlyStackParamList = {

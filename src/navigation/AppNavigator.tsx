@@ -25,6 +25,7 @@ import AppFloatingGitButton from '../components/git/AppFloatingGitButton';
 import { ChatRepoPickerModal } from '../components/ai/ChatRepoPickerModal';
 import { AddReminderScreen } from '../components/settings/AddReminderScreen';
 import ThoughtDumpScreen from '../screens/ThoughtDumpScreen';
+import CalendarScreen from '../screens/CalendarScreen';
 import PaywallScreen from '../screens/PaywallScreen';
 import OnboardingScreen from '../screens/OnboardingScreen';
 import ExploreCommitScreen from '../screens/ExploreCommitScreen';
@@ -270,6 +271,11 @@ export default function AppNavigator({ showOnboarding, onOnboardingComplete, onO
             <Stack.Screen
               name="ThoughtDump"
               component={ThoughtDumpScreen}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="Calendar"
+              component={CalendarScreen}
               options={{ headerShown: false }}
             />
             <Stack.Screen

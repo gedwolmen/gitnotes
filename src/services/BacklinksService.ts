@@ -6,6 +6,7 @@ export interface Backlink {
   sourceNoteTitle: string;
   snippet: string;
   linkText: string;
+  blockAnchor?: string;
 }
 
 const SNIPPET_MAX_LENGTH = 120;
@@ -98,12 +99,13 @@ function getSnippet(content: string, startIndex: number): string {
   return `${snippet.slice(0, SNIPPET_MAX_LENGTH - 3).trimEnd()}...`;
 }
 
-function createBacklink(sourceNote: Note, snippet: string, linkText: string): Backlink {
+function createBacklink(sourceNote: Note, snippet: string, linkText: string, blockAnchor?: string): Backlink {
   return {
     sourceNoteId: sourceNote.id,
     sourceNoteTitle: sourceNote.title,
     snippet,
     linkText,
+    blockAnchor,
   };
 }
 
@@ -151,7 +153,7 @@ export function buildBacklinkIndex(notes: Note[]): Map<string, Backlink[]> {
         continue;
       }
 
-      backlinks.push(createBacklink(sourceNote, getSnippet(sourceNote.content, link.startIndex), link.displayText));
+      backlinks.push(createBacklink(sourceNote, getSnippet(sourceNote.content, link.startIndex), link.displayText, link.blockAnchor));
     }
   }
 
@@ -166,6 +168,13 @@ export function computeBacklinks(notes: Note[], currentNotePath: string): Backli
   }
 
   return buildBacklinkIndex(notes).get(currentNote.id) ?? [];
+}
+
+export function listBlockBacklinksFor(notes: Note[], targetNoteId: string, blockId: string): Backlink[] {
+  const index = buildBacklinkIndex(notes);
+  const pageBacklinks = index.get(targetNoteId) ?? [];
+
+  return pageBacklinks.filter((backlink) => backlink.blockAnchor === blockId);
 }
 
 export async function reindexDocumentBacklinks(_service: unknown, _document: unknown): Promise<void> {
