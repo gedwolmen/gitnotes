@@ -80,7 +80,7 @@ export function GitHubActivityIndicator() {
     const unsubscribeOps = useGitOperationStore.subscribe((state) => {
       const running = pendingRunningCount(state.ops);
       if (running > 0) {
-        githubActivity.begin('Git operation');
+        githubActivity.begin('Syncing…');
       } else {
         githubActivity.end();
       }
