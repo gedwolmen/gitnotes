@@ -23,8 +23,8 @@
 </p>
 
 <p align="center">
-  <a href="https://play.google.com/store/apps/details?id=org.gitnotes.app"><img height="60" src="https://play.google.com/intl/en/badges/static/images/badges/en_badge_web_generic.png" alt="Get it on Google Play"></a>
-  <a href="https://apps.apple.com/lk/app/gitnot%C4%93s-notes-todos-git/id6764829004"><img height="60" src="https://tools.applemediaservices.com/api/bag/badge?bundleId=com.gitnotes.app&c=11&l=en-LK&mt=8" alt="Download on the App Store"></a>
+  <a href="https://play.google.com/store/apps/details?id=org.gitnotes.app"><img src="https://img.shields.io/badge/Google_Play-000?logo=googleplay&logoColor=FFF" alt="Get it on Google Play"></a>
+  <a href="https://apps.apple.com/lk/app/gitnot%C4%93s-notes-todos-git/id6764829004"><img src="https://img.shields.io/badge/App_Store-000?logo=apple&logoColor=FFF" alt="Download on the App Store"></a>
 </p>
 
 <p align="center">
