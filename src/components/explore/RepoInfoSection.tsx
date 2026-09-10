@@ -44,8 +44,6 @@ function describeRepair(report: RepairReport): string {
   return `${report.isHealthy ? 'Healthy after repair.' : 'NOT healthy.'} ${parts.join(' ')}`.trim();
 }
 
-/** Repo Info section (todo 25): metadata + Sync now (push-with-integrate),
- * Repair repo, and Remove repo. */
 export function RepoInfoSection({ repo, status, active, onChanged, chromeTopInset = 0 }: SectionProps) {
   const navigation = useNavigation<NavigationProp>();
   const { colors } = useTokens();
@@ -131,7 +129,7 @@ export function RepoInfoSection({ repo, status, active, onChanged, chromeTopInse
       await removeRepo(repo.id);
       navigation.goBack();
     } catch (caught) {
-      Alert.alert('Could not remove repo', caught instanceof Error ? caught.message : String(caught));
+      Alert.alert('Could not remove repository', caught instanceof Error ? caught.message : String(caught));
       setBusy(null);
     }
   }, [removeRepo, repo.id, navigation]);
@@ -151,7 +149,7 @@ export function RepoInfoSection({ repo, status, active, onChanged, chromeTopInse
               [
                 { text: 'Cancel', style: 'cancel' },
                 {
-                  text: 'Remove repo',
+                  text: 'Remove repository',
                   style: 'destructive',
                   onPress: () => void removeNow(),
                 },
@@ -234,7 +232,7 @@ export function RepoInfoSection({ repo, status, active, onChanged, chromeTopInse
         testID="explore.info.repair"
       >
         {busy === 'repair' ? <ActivityIndicator size="small" color={colors.text} /> : null}
-        <ButtonText>Repair repo</ButtonText>
+        <ButtonText>Repair repository</ButtonText>
       </Button>
       {repairResult && (
         <Text className="mt-2 text-xs" style={{ color: colors.textSecondary }} testID="explore.info.repair-result">
@@ -250,7 +248,7 @@ export function RepoInfoSection({ repo, status, active, onChanged, chromeTopInse
         testID="explore.info.remove"
       >
         {busy === 'remove' ? <ActivityIndicator size="small" color={colors.error} /> : null}
-        <ButtonText style={{ color: colors.error }}>Remove repo…</ButtonText>
+        <ButtonText style={{ color: colors.error }}>Remove repository…</ButtonText>
       </Button>
       <Text className="mt-2 pb-24 text-center text-[11px]" style={{ color: colors.textSecondary }}>
         Repair rebuilds a damaged index and prunes corrupt objects. Remove deletes the local clone after two confirmations.
