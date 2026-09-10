@@ -5,12 +5,10 @@ import {
   StyleSheet,
   TouchableOpacity,
   FlatList,
-  ActivityIndicator,
   TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { GitBranch, GitService } from '../services/GitService';
 import { LastUsedRepoService } from '../services/LastUsedRepoService';
 import { LastSelectionPreferenceService, SelectionEntityType } from '../services/LastSelectionPreferenceService';
 import { useRepos } from '../contexts/RepoContext';
@@ -20,31 +18,21 @@ import { Modal } from './ui';
 
 interface GitContextPickerProps {
   repo?: string;
-  branch?: string;
-  commit?: string;
   entityType?: SelectionEntityType;
   onRepoChange: (repo: string | undefined) => void;
-  onBranchChange: (branch: string | undefined) => void;
-  onCommitChange: (commit: string | undefined) => void;
 }
 
-type SheetView = 'main' | 'repo' | 'branch';
+type SheetView = 'main' | 'repo';
 
 export default function GitContextPicker({
   repo,
-  branch,
   entityType,
   onRepoChange,
-  onBranchChange,
-  onCommitChange,
 }: GitContextPickerProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [view, setView] = useState<SheetView>('main');
-  const [isLoading, setIsLoading] = useState(false);
   const { repositories } = useRepos();
-  const [branches, setBranches] = useState<GitBranch[]>([]);
   const [repoSearch, setRepoSearch] = useState('');
-  const [branchInput, setBranchInput] = useState('');
 
   const { colors } = useTheme();
 
@@ -64,35 +52,6 @@ export default function GitContextPicker({
     setView('repo');
   }, []);
 
-  const goToBranchView = useCallback(async () => {
-    if (!repo) return;
-    setBranchInput('');
-    setView('branch');
-    setIsLoading(true);
-    try {
-      setBranches(await GitService.getBranches(repo));
-    } catch (error) {
-      console.warn('[GitContextPicker] goToBranchView failed:', error);
-      setBranches([]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [repo]);
-
-  const refreshBranches = useCallback(async () => {
-    if (!repo) return;
-    setIsLoading(true);
-    try {
-      await GitService.clearCache();
-      setBranches(await GitService.getBranches(repo));
-    } catch (error) {
-      console.warn('[GitContextPicker] refreshBranches failed:', error);
-      setBranches([]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [repo]);
-
   const openSheet = useCallback(() => {
     setView('main');
     setIsExpanded(true);
@@ -109,23 +68,19 @@ export default function GitContextPicker({
 
   const handleClearContext = useCallback(() => {
     onRepoChange(undefined);
-    onBranchChange(undefined);
-    onCommitChange(undefined);
-  }, [onRepoChange, onBranchChange, onCommitChange]);
+  }, [onRepoChange]);
 
   const handleRepoPick = useCallback(
     (path: string) => {
       HapticService.selection();
       onRepoChange(path);
-      onBranchChange(undefined);
-      onCommitChange(undefined);
       void LastUsedRepoService.set(path);
       if (entityType) {
         void LastSelectionPreferenceService.set(entityType, { repo: path });
       }
       setView('main');
     },
-    [onRepoChange, onBranchChange, onCommitChange, entityType],
+    [onRepoChange, entityType],
   );
 
   // Auto-fill the repo when opening this picker for a new note/canvas/etc.
@@ -155,66 +110,9 @@ export default function GitContextPicker({
     });
   }, [repo, repositories, onRepoChange]);
 
-  // Auto-fill branch when repo is set but branch is not.
-  // Priority: last selected branch for entityType > default branch (isCurrent: true).
-  const didAutoFillBranchRef = useRef(false);
-  useEffect(() => {
-    if (!repo || branch) {
-      didAutoFillBranchRef.current = false;
-      return;
-    }
-    if (didAutoFillBranchRef.current) return;
-    didAutoFillBranchRef.current = true;
-
-    const autoFill = async () => {
-      try {
-        const branchList = await GitService.getBranches(repo);
-        if (branchList.length === 0) return;
-
-        // Try last selected branch first
-        let lastBranch: string | undefined;
-        if (entityType) {
-          const lastSelection = await LastSelectionPreferenceService.get(entityType);
-          lastBranch = lastSelection.branch;
-        }
-
-        if (lastBranch && branchList.some((b) => b.name === lastBranch)) {
-          onBranchChange(lastBranch);
-          return;
-        }
-
-        // Fall back to default branch
-        const defaultBranch = branchList.find((b) => b.isCurrent);
-        if (defaultBranch) {
-          onBranchChange(defaultBranch.name);
-          return;
-        }
-
-        // Last resort: first branch
-        onBranchChange(branchList[0].name);
-      } catch {
-        // Silently fail - user can still manually select
-      }
-    };
-
-    void autoFill();
-  }, [repo, branch, entityType, onBranchChange]);
-
-  const handleBranchPick = useCallback(
-    (name: string) => {
-      HapticService.selection();
-      onBranchChange(name);
-      if (entityType && repo) {
-        void LastSelectionPreferenceService.set(entityType, { repo, branch: name });
-      }
-      setView('main');
-    },
-    [onBranchChange, entityType, repo],
-  );
-
   const isListView = view !== 'main';
   const headerTitle =
-    view === 'repo' ? 'Select Repository' : view === 'branch' ? 'Select Branch' : 'Git Context';
+    view === 'repo' ? 'Select Repository' : 'Git Context';
 
   return (
     <View>
@@ -234,7 +132,7 @@ export default function GitContextPicker({
           numberOfLines={1}
         >
           {repo
-            ? `${repo.split('/').pop()}${branch ? ` · ${branch}` : ''}`
+            ? repo.split('/').pop()
             : repositories.length === 0
             ? 'None'
             : 'Select repository'}
@@ -293,28 +191,8 @@ export default function GitContextPicker({
                   </View>
                 </TouchableOpacity>
 
-                <View testID="note-editor-form.picker.branch">
-                  {repo && (
-                    <TouchableOpacity testID="todo-editor.button.branch" accessibilityRole="button" style={styles.selector} onPress={goToBranchView}>
-                    <Text style={[styles.selectorLabel, { color: colors.textSecondary }]}>Branch</Text>
-                    <View style={[styles.selectorValue, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                      <Text
-                        style={
-                          branch
-                            ? [styles.valueText, { color: colors.text }]
-                            : [styles.placeholderText, { color: colors.textSecondary }]
-                        }
-                      >
-                        {branch || 'Select branch'}
-                      </Text>
-                      <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
-                    </View>
-                  </TouchableOpacity>
-                )}
-                </View>
-
                 <View testID="note-editor-form.picker.commit" />
-                {(repo || branch) && (
+                {repo && (
                   <TouchableOpacity style={styles.clearButton} accessibilityRole="button" onPress={handleClearContext}>
                     <Ionicons name="trash-outline" size={16} color={colors.error} />
                     <Text style={[styles.clearButtonText, { color: colors.error }]}>Clear Git Context</Text>
@@ -384,68 +262,6 @@ export default function GitContextPicker({
               </>
             )}
 
-            {view === 'branch' && (
-              <>
-                <View style={[styles.inputRow, { borderBottomColor: colors.border }]}>
-                  <TextInput
-                    style={[styles.textInput, { color: colors.text, borderColor: colors.border }]}
-                    placeholder="Type branch name (e.g. main)"
-                    placeholderTextColor={colors.textSecondary}
-                    value={branchInput}
-                    onChangeText={setBranchInput}
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                  />
-                  <TouchableOpacity
-                    style={[
-                      styles.useButton,
-                      { backgroundColor: colors.primary },
-                      !branchInput.trim() && styles.useButtonDisabled,
-                    ]}
-                    onPress={() => {
-                      if (!branchInput.trim()) return;
-                      handleBranchPick(branchInput.trim());
-                      setBranchInput('');
-                    }}
-                    disabled={!branchInput.trim()}
-                  >
-                    <Text style={styles.useButtonText}>Use</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity onPress={refreshBranches} style={styles.iconButton}>
-                    <Ionicons name="refresh" size={20} color={colors.primary} />
-                  </TouchableOpacity>
-                </View>
-                {isLoading ? (
-                  <ActivityIndicator size="large" color={colors.primary} style={styles.loader} />
-                ) : (
-                  <FlatList
-                    data={branches}
-                    keyExtractor={(item) => item.name}
-                    keyboardShouldPersistTaps="handled"
-                    style={styles.list}
-                    contentContainerStyle={styles.listContent}
-                    renderItem={({ item }) => (
-                      <TouchableOpacity
-                        accessibilityRole="button"
-                        style={[
-                          styles.listItem,
-                          { borderBottomColor: colors.border },
-                          item.isCurrent && { backgroundColor: colors.surfaceSecondary },
-                        ]}
-                        onPress={() => handleBranchPick(item.name)}
-                      >
-                        <Ionicons
-                          name={item.isCurrent ? 'checkmark-circle' : 'git-branch'}
-                          size={20}
-                          color={item.isCurrent ? '#34C759' : colors.textSecondary}
-                        />
-                        <Text style={[styles.listItemText, { color: colors.text }]}>{item.name}</Text>
-                      </TouchableOpacity>
-                    )}
-                  />
-                )}
-              </>
-            )}
         </SafeAreaView>
       </Modal>
     </View>
@@ -552,41 +368,6 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 15,
     paddingVertical: 4,
-  },
-  inputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    gap: 8,
-  },
-  textInput: {
-    flex: 1,
-    height: 40,
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    fontSize: 14,
-  },
-  useButton: {
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  useButtonDisabled: {
-    opacity: 0.4,
-  },
-  useButtonText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  iconButton: {
-    padding: 4,
-  },
-  loader: {
-    padding: 40,
   },
   emptyState: {
     padding: 40,

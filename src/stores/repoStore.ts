@@ -15,6 +15,7 @@ import {
   RepoAccessPreflightError,
 } from '../services/git/repoAccessPreflight';
 import { reposAffectedByRemovedHosts, type RemovedHostRef } from '../services/git/repoRemovalCascade';
+import { initializeForRepo, removeForRepo } from '../services/git/activeBranchStore';
 
 interface RepoState {
   repositories: GitRepository[];
@@ -109,12 +110,19 @@ export const useRepoStore = create<RepoState & RepoActions>()((set, get) => ({
       throw new Error(`Clone failed: ${msg}`);
     }
 
+    await initializeForRepo(repo);
+
     const updated = await StorageService.getSavedRepositories();
     set({ repositories: updated });
     return repo;
   },
 
   removeRepository: async (path, provider = 'github') => {
+    const repos = await StorageService.getSavedRepositories();
+    const repo = repos.find((r) => r.path === path && (r.provider ?? 'github') === provider);
+    if (repo) {
+      await removeForRepo(repo.id);
+    }
     await StorageService.removeRepository(path, provider);
     await StorageService.purgeRepoData(path);
 

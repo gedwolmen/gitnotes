@@ -488,7 +488,6 @@ export default function CanvasEditorContent() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const { activeAccountId } = useAuth();
   const [repo, setRepo] = useState<string | undefined>(existingCanvas?.repo);
-  const [branch, setBranch] = useState<string | undefined>(existingCanvas?.branch);
   const accountId = existingCanvas?.accountId ?? activeAccountId ?? undefined;
   const dragStartRef = useRef<Point | null>(null);
   const resizeHandleRef = useRef<'tl' | 'tr' | 'bl' | 'br' | null>(null);
@@ -1264,15 +1263,14 @@ export default function CanvasEditorContent() {
       : undefined;
 
     if (canvasId) {
-      await updateCanvas({ id: canvasId, title, scene, repo, branch, filePath: canvasFilePath, accountId });
+      await updateCanvas({ id: canvasId, title, scene, repo, filePath: canvasFilePath, accountId });
     } else {
-      await createCanvas({ title, scene, repo, branch, filePath: canvasFilePath, accountId });
+      await createCanvas({ title, scene, repo, filePath: canvasFilePath, accountId });
     }
 
     if (repo) {
       const syncResult = await syncCanvasToGitHub({
         repo,
-        branch,
         filePath: canvasFilePath,
         title: title.trim(),
         scene,
@@ -1287,7 +1285,7 @@ export default function CanvasEditorContent() {
     }
 
     navigation.goBack();
-  }, [canvasId, title, elements, canvasSize, cw, repo, branch, existingCanvas, updateCanvas, createCanvas, navigation, accountId]);
+  }, [canvasId, title, elements, canvasSize, cw, repo, existingCanvas, updateCanvas, createCanvas, navigation, accountId]);
 
   const handleExportPng = useCallback(async () => {
     if (exporting) return;
@@ -1614,11 +1612,7 @@ export default function CanvasEditorContent() {
       <View style={styles.gitContextContainer}>
         <GitContextPicker
           repo={repo}
-          branch={branch}
-          commit={undefined}
           onRepoChange={setRepo}
-          onBranchChange={setBranch}
-          onCommitChange={() => undefined}
         />
       </View>
 

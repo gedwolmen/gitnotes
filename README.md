@@ -22,6 +22,10 @@
   <img src="https://img.shields.io/badge/platform-iOS%20%7C%20Android-lightgrey.svg" alt="iOS | Android">
 </p>
 
+<p align="center">
+  <img src="assets/feature_graphic.png" alt="GitNotēs Feature Graphic" />
+</p>
+
 ---
 
 ## Why

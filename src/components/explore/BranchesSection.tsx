@@ -7,6 +7,7 @@ import { Input, InputField } from '@/components/ui/Input';
 import * as GitEngine from '@/services/git/engine/GitEngine';
 import type { BranchInfo } from '@/services/git/engine/GitEngine';
 import { GitFsService } from '@/services/git/GitFsService';
+import { GitBranchCoordinator } from '@/services/git/GitBranchCoordinator';
 import type { SectionProps } from './exploreShared';
 import { useTokens } from '@/contexts/ThemeContext';
 
@@ -14,7 +15,7 @@ type BranchRow =
   | { kind: 'header'; key: string; title: string; count: number }
   | { kind: 'branch'; key: string; branch: BranchInfo };
 
-export function BranchesSection({ repo, active, onChanged, chromeTopInset = 0 }: SectionProps) {
+export function BranchesSection({ repo, active, onChanged, chromeTopInset = 0, branchInvalidationKey: _branchInvalidationKey = 0 }: SectionProps) {
   const { colors } = useTokens();
   const [branches, setBranches] = useState<BranchInfo[] | null>(null);
   const [loading, setLoading] = useState(false);
@@ -86,7 +87,8 @@ export function BranchesSection({ repo, active, onChanged, chromeTopInset = 0 }:
     async (name: string) => {
       setBusy(`checkout:${name}`);
       try {
-        await GitEngine.checkoutBranch(repo.localPath, name);
+        const coordinator = GitBranchCoordinator;
+        await coordinator.checkout(repo.id, repo.localPath, name);
         onChanged();
         setVersion((value) => value + 1);
       } catch (caught) {
@@ -95,7 +97,7 @@ export function BranchesSection({ repo, active, onChanged, chromeTopInset = 0 }:
         setBusy(null);
       }
     },
-    [repo.localPath, onChanged],
+    [repo.id, repo.localPath, onChanged],
   );
 
   const remove = useCallback(
@@ -248,11 +250,22 @@ export function BranchesSection({ repo, active, onChanged, chromeTopInset = 0 }:
                 <ButtonText>Rename</ButtonText>
               </Button>
             )}
+            {item.isRemote && !branches?.some((b) => !b.isRemote && b.name === item.name) && (
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={busy !== null}
+                onPress={() => void checkout(item.name)}
+                testID={`explore.branch.checkout-locally.${item.name}`}
+              >
+                <ButtonText>Checkout locally</ButtonText>
+              </Button>
+            )}
           </View>
         </View>
       );
     },
-    [busy, checkout, remove, renaming, renameValue, saveRename],
+    [branches, busy, checkout, renaming, renameValue, saveRename],
   );
 
   const renderItem = useCallback(

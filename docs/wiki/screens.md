@@ -185,14 +185,25 @@ The canonical route param types are in `src/navigation/types.ts`:
 
 ### ExploreScreen
 
-**Purpose:** Git repository explorer — view commits, diffs, files, and pull requests.
+**Purpose:** Git repository explorer — view commits, diffs, files, branches, and pull requests. Branch-aware: shows the active checked-out branch from `activeBranchStore`, and all branch operations are routed through `GitBranchCoordinator` for checkout safety.
+
+**Wrapped by:** `CheckoutSafetyProvider` — gates mutation operations while checkout is running.
+
+**Git → Branches ownership:** The Explore tab (Git UI) is the sole authority for branch operations. The Git tab owns all branch state — no external UI (note editors, sync services, or other tabs) may trigger or control branch switches. Note editing never triggers implicit branch switches.
+
+**Branch UI:** Only the Explore screen exposes branch selection. No branch selector exists in the note editor or elsewhere. When checking out a remote branch, GitBranchCoordinator fetches the remote ref first and retries checkout locally.
 
 **Sections:**
-- `CommitsSection` — recent commits list
-- `ChangesSection` — unstaged/staged changes
 - `FilesSection` — repo file tree
-- `PullRequestsSection` — open PRs (GitHub only)
+- `ChangesSection` — unstaged/staged changes in working tree
+- `StagingSection` — staged files ready to commit
+- `CommitsSection` — recent commit history
+- `BranchesSection` — local and remote branches; checkout via `GitBranchCoordinator`
+- `RemotesSection` — configured remotes
 - `ConflictsSection` — unresolved merge conflicts
+- `PullRequestsSection` — open PRs (GitHub only)
+- `IssuesSection` — repo issues (GitHub only)
+- `RepoInfoSection` — repo metadata (name, URL, branch, ahead/behind)
 
 ---
 
@@ -218,9 +229,11 @@ The canonical route param types are in `src/navigation/types.ts`:
 
 ### ExploreFileScreen
 
-**Purpose:** View a file at a specific commit or branch state.
+**Purpose:** View and edit a text file from the local working tree. Binary files and LFS pointer files are read-only. Text files are editable as plain text via a multiline editor.
 
 **Route params:** `{ repoId: string; path: string }`
+
+**Save behavior:** Save writes raw UTF-8 content directly to the working tree without staging, committing, or pushing. The file appears as an unstaged modification in the Git workspace. User reviews, stages, commits, and pushes from the existing Git workspace.
 
 **Navigation:** Tapped from `ExploreScreen` file tree.
 

@@ -148,7 +148,7 @@ async function walkWorktree(
 }
 
 /** Normalize a repo-relative filepath and reject escapes from the worktree. */
-function normalizeWorktreeRelPath(filepath: string): string {
+export function normalizeWorktreeRelPath(filepath: string): string {
   const segments = filepath.replace(/^\/+/, '').split('/').filter((s) => s.length > 0);
   if (segments.length === 0 || segments.includes('..')) {
     throw Object.assign(new Error(`Invalid worktree filepath: ${filepath}`), {

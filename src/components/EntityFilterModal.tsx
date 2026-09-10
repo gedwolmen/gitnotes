@@ -32,17 +32,15 @@ export function EntityFilterModal<T extends FilterableItem>(props: Props<T>) {
   const {
     state,
     setSelectedRepo,
-    setSelectedBranch,
     setSelectedFolder,
     setSelectedAccountId,
     toggleTag,
     clearAll,
-    allBranches,
     allFolders,
     allTags,
     activeCount,
   } = filter;
-  const { selectedRepo, selectedBranch, selectedFolder, selectedTags, selectedAccountId } = state;
+  const { selectedRepo, selectedFolder, selectedTags, selectedAccountId } = state;
 
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
 
@@ -310,13 +308,6 @@ export function EntityFilterModal<T extends FilterableItem>(props: Props<T>) {
               );
             }}
           />
-
-          {selectedRepo && (
-            <>
-              <Text style={[styles.label, { color: colors.textSecondary }]}>Branch</Text>
-              {renderChipRow(allBranches, selectedBranch, setSelectedBranch, 'git-branch-outline')}
-            </>
-          )}
 
           {allFolders.length > 0 && (
             <>

@@ -15,14 +15,13 @@ export function ActiveFilterStrip<T extends FilterableItem>({ filter }: Props<T>
   const {
     state,
     setSelectedRepo,
-    setSelectedBranch,
     setSelectedFolder,
     setSelectedAccountId,
     toggleTag,
     clearAll,
     activeCount,
   } = filter;
-  const { selectedRepo, selectedBranch, selectedFolder, selectedTags, selectedAccountId } = state;
+  const { selectedRepo, selectedFolder, selectedTags, selectedAccountId } = state;
   const selectedAccount = selectedAccountId ? accounts.find((a) => a.id === selectedAccountId) : null;
 
   if (activeCount === 0) return null;
@@ -57,8 +56,6 @@ export function ActiveFilterStrip<T extends FilterableItem>({ filter }: Props<T>
           chip('account', 'person-outline', `@${selectedAccount.login}`, () => setSelectedAccountId(null))}
         {selectedRepo &&
           chip('repo', 'logo-github', selectedRepo.name, () => setSelectedRepo(null))}
-        {selectedBranch &&
-          chip('branch', 'git-branch-outline', selectedBranch, () => setSelectedBranch(null))}
         {selectedFolder &&
           chip('folder', 'folder-outline', selectedFolder, () => setSelectedFolder(null))}
         {selectedTags.map((tag) =>

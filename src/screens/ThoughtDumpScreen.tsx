@@ -26,6 +26,7 @@ import { SwipeableListItem } from '../components/list/SwipeableListItem';
 import { BulkActionBar } from '../components/list/BulkActionBar';
 import { useProScreenGuard } from '../hooks/useProScreenGuard';
 import { useSafeBack } from '../hooks/useSafeBack';
+import { getActiveBranch } from '../services/git/activeBranchStore';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -49,7 +50,6 @@ export default function ThoughtDumpScreen({ onDumpChange }: Props) {
   const [deleteTarget, setDeleteTarget] = useState<ThoughtDump | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
   const [repoPath, setRepoPath] = useState('');
-  const [branch, setBranch] = useState<string | undefined>();
   const [pickerVisible, setPickerVisible] = useState(false);
   const [savedRepos, setSavedRepos] = useState<GitRepository[]>([]);
   const [isAuthenticated, setIsAuthenticated] = useState(true);
@@ -79,25 +79,19 @@ export default function ThoughtDumpScreen({ onDumpChange }: Props) {
       const lastUsed = await LastUsedRepoService.get();
 
       let resolvedRepoPath = '';
-      let resolvedBranch: string | undefined;
 
       if (preference && repos.some((r) => r.path === preference.repoPath)) {
         resolvedRepoPath = preference.repoPath;
-        resolvedBranch =
-          preference.branch ?? repos.find((r) => r.path === preference.repoPath)?.branch;
       } else if (lastUsed && repos.some((r) => r.path === lastUsed)) {
         resolvedRepoPath = lastUsed;
-        resolvedBranch = repos.find((r) => r.path === lastUsed)?.branch;
       } else if (repos.length > 0) {
         resolvedRepoPath = repos[0].path;
-        resolvedBranch = repos[0].branch;
       }
 
       setRepoPath(resolvedRepoPath);
-      setBranch(resolvedBranch);
 
       const result = await ThoughtDumpService.list(
-        resolvedRepoPath ? { repoPath: resolvedRepoPath, branch: resolvedBranch } : undefined,
+        resolvedRepoPath ? { repoPath: resolvedRepoPath } : undefined,
       );
       setDumps(result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
     } catch {
@@ -131,6 +125,11 @@ export default function ThoughtDumpScreen({ onDumpChange }: Props) {
       setPickerVisible(true);
       return;
     }
+
+    const repo = savedRepos.find((r) => r.path === repoPath);
+    const repoId = repo?.id;
+    const activeBranchState = repoId ? await getActiveBranch(repoId) : null;
+    const branch = activeBranchState?.activeBranch ?? undefined;
 
     setIsSaving(true);
     try {
@@ -167,6 +166,11 @@ export default function ThoughtDumpScreen({ onDumpChange }: Props) {
     const target = deleteTarget;
     if (!target) return;
     setDeleteTarget(null);
+
+    const repo = savedRepos.find((r) => r.path === repoPath);
+    const repoId = repo?.id;
+    const activeBranchState = repoId ? await getActiveBranch(repoId) : null;
+    const branch = activeBranchState?.activeBranch ?? undefined;
 
     const opId = gitOperationRegistry.begin({
       kind: 'delete',
@@ -209,6 +213,10 @@ export default function ThoughtDumpScreen({ onDumpChange }: Props) {
           text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
+            const repo = savedRepos.find((r) => r.path === repoPath);
+            const repoId = repo?.id;
+            const activeBranchState = repoId ? await getActiveBranch(repoId) : null;
+            const branch = activeBranchState?.activeBranch ?? undefined;
             const toDelete = dumps.filter((d) => selectedIds.has(d.id));
             let anyFailed = false;
             for (const dump of toDelete) {
@@ -237,7 +245,7 @@ export default function ThoughtDumpScreen({ onDumpChange }: Props) {
         },
       ],
     );
-  }, [selectedIds, dumps, repoPath, branch, clearSelection, onDumpChange, removeDump, t]);
+  }, [selectedIds, dumps, repoPath, savedRepos, clearSelection, onDumpChange, removeDump, t]);
 
   const formatRelativeDate = (isoDate: string): string => {
     const now = Date.now();
@@ -365,7 +373,7 @@ export default function ThoughtDumpScreen({ onDumpChange }: Props) {
                 style={[styles.repoPickerValue, { color: colors.text }]}
                 numberOfLines={1}
               >
-                {repoPath ? (branch ? `${repoPath} · ${branch}` : repoPath) : t('thoughtDump.chooseRepo')}
+                {repoPath ? repoPath : t('thoughtDump.chooseRepo')}
               </Text>
               <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
             </View>
@@ -461,11 +469,10 @@ export default function ThoughtDumpScreen({ onDumpChange }: Props) {
       <ThoughtDumpRepoPickerModal
         visible={pickerVisible}
         onClose={() => setPickerVisible(false)}
-        onSelected={(rp, br) => {
+        onSelected={(rp) => {
           setRepoPath(rp);
-          setBranch(br);
           setPickerVisible(false);
-          loadDumps();
+          void loadDumps();
         }}
         onGoToSettings={() => {
           setPickerVisible(false);

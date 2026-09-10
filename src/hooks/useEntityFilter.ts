@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { GitRepository } from '../services/GitService';
+import { getActiveBranch, subscribe } from '../services/git/activeBranchStore';
 
 export interface FilterableItem {
   repo?: string;
@@ -13,22 +14,19 @@ export interface FilterableItem {
 
 export interface EntityFilterState {
   selectedRepo: GitRepository | null;
-  selectedBranch: string | null;
   selectedFolder: string | null;
   selectedTags: string[];
   selectedAccountId: string | null;
 }
 
 export interface UseEntityFilterReturn<T extends FilterableItem> {
-  state: EntityFilterState;
+  state: Omit<EntityFilterState, 'selectedBranch'> & { selectedBranch: string | null };
   setSelectedRepo: (repo: GitRepository | null) => void;
-  setSelectedBranch: (branch: string | null) => void;
   setSelectedFolder: (folder: string | null) => void;
   setSelectedAccountId: (accountId: string | null) => void;
   toggleTag: (tag: string) => void;
   clearAll: () => void;
   applyFilters: (input: T[]) => T[];
-  allBranches: string[];
   allFolders: string[];
   allTags: string[];
   activeCount: number;
@@ -49,11 +47,29 @@ export function useEntityFilter<T extends FilterableItem>(
   persistenceKey?: string,
 ): UseEntityFilterReturn<T> {
   const [selectedRepo, setSelectedRepoState] = useState<GitRepository | null>(null);
-  const [selectedBranch, setSelectedBranchState] = useState<string | null>(null);
   const [selectedFolder, setSelectedFolderState] = useState<string | null>(null);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [selectedAccountId, setSelectedAccountIdState] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(!persistenceKey);
+
+  const [branchFilter, setBranchFilter] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!selectedRepo) {
+      setBranchFilter(null);
+      return;
+    }
+
+    getActiveBranch(selectedRepo.id).then((state) => {
+      if (state) setBranchFilter(state.activeBranch);
+    });
+
+    const unsubscribe = subscribe(selectedRepo.id, (state) => {
+      if (state) setBranchFilter(state.activeBranch);
+    });
+
+    return unsubscribe;
+  }, [selectedRepo?.id]);
 
   useEffect(() => {
     if (!persistenceKey) return;
@@ -62,15 +78,13 @@ export function useEntityFilter<T extends FilterableItem>(
       .then((raw) => {
         if (!raw) return;
         try {
-          const persistedState: EntityFilterState = JSON.parse(raw);
-          setSelectedRepoState(persistedState.selectedRepo);
-          setSelectedBranchState(persistedState.selectedBranch);
-          setSelectedFolderState(persistedState.selectedFolder);
-          setSelectedTags(persistedState.selectedTags);
-          setSelectedAccountIdState(persistedState.selectedAccountId);
+          const persistedState = JSON.parse(raw);
+          setSelectedRepoState(persistedState.selectedRepo ?? null);
+          setSelectedFolderState(persistedState.selectedFolder ?? null);
+          setSelectedTags(persistedState.selectedTags ?? []);
+          setSelectedAccountIdState(persistedState.selectedAccountId ?? null);
         } catch {
           setSelectedRepoState(null);
-          setSelectedBranchState(null);
           setSelectedFolderState(null);
           setSelectedTags([]);
           setSelectedAccountIdState(null);
@@ -81,9 +95,8 @@ export function useEntityFilter<T extends FilterableItem>(
 
   useEffect(() => {
     if (!persistenceKey || !hydrated) return;
-    const state: EntityFilterState = {
+    const state = {
       selectedRepo,
-      selectedBranch,
       selectedFolder,
       selectedTags,
       selectedAccountId,
@@ -91,24 +104,11 @@ export function useEntityFilter<T extends FilterableItem>(
     AsyncStorage.setItem(persistenceKey, JSON.stringify(state)).catch(() => {
       // noop
     });
-  }, [
-    hydrated,
-    persistenceKey,
-    selectedAccountId,
-    selectedBranch,
-    selectedFolder,
-    selectedRepo,
-    selectedTags,
-  ]);
+  }, [hydrated, persistenceKey, selectedAccountId, selectedFolder, selectedRepo, selectedTags]);
 
   const setSelectedRepo = useCallback((repo: GitRepository | null) => {
     setSelectedRepoState(repo);
-    setSelectedBranchState(null);
     setSelectedFolderState(null);
-  }, []);
-
-  const setSelectedBranch = useCallback((branch: string | null) => {
-    setSelectedBranchState(branch);
   }, []);
 
   const setSelectedFolder = useCallback((folder: string | null) => {
@@ -125,20 +125,10 @@ export function useEntityFilter<T extends FilterableItem>(
 
   const clearAll = useCallback(() => {
     setSelectedRepoState(null);
-    setSelectedBranchState(null);
     setSelectedFolderState(null);
     setSelectedTags([]);
     setSelectedAccountIdState(null);
   }, []);
-
-  const allBranches = useMemo(() => {
-    if (!selectedRepo) return [];
-    const set = new Set<string>();
-    for (const item of items) {
-      if (item.repo === selectedRepo.path && item.branch) set.add(item.branch);
-    }
-    return Array.from(set).sort();
-  }, [items, selectedRepo]);
 
   const allFolders = useMemo(() => {
     const set = new Set<string>();
@@ -170,7 +160,7 @@ export function useEntityFilter<T extends FilterableItem>(
     (input: T[]): T[] => {
       return input.filter((item) => {
         if (selectedRepo && item.repo !== selectedRepo.path) return false;
-        if (selectedBranch && item.branch !== selectedBranch) return false;
+        if (branchFilter && item.branch !== branchFilter) return false;
         if (selectedAccountId && item.accountId !== selectedAccountId) return false;
         if (selectedFolder) {
           const cands = folderCandidates(item);
@@ -186,26 +176,23 @@ export function useEntityFilter<T extends FilterableItem>(
         return true;
       });
     },
-    [selectedRepo, selectedBranch, selectedFolder, selectedTags, selectedAccountId],
+    [selectedRepo, branchFilter, selectedFolder, selectedTags, selectedAccountId],
   );
 
   const activeCount =
     (selectedRepo ? 1 : 0) +
-    (selectedBranch ? 1 : 0) +
     (selectedFolder ? 1 : 0) +
     (selectedTags.length > 0 ? 1 : 0) +
     (selectedAccountId ? 1 : 0);
 
   return {
-    state: { selectedRepo, selectedBranch, selectedFolder, selectedTags, selectedAccountId },
+    state: { selectedRepo, selectedBranch: branchFilter, selectedFolder, selectedTags, selectedAccountId },
     setSelectedRepo,
-    setSelectedBranch,
     setSelectedFolder,
     setSelectedAccountId,
     toggleTag,
     clearAll,
     applyFilters,
-    allBranches,
     allFolders,
     allTags,
     activeCount,

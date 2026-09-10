@@ -19,7 +19,7 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 const PAGE_SIZE = 50;
 
-export function CommitsSection({ repo, active, chromeTopInset = 0, refreshStatus }: SectionProps) {
+export function CommitsSection({ repo, active, chromeTopInset = 0, refreshStatus, branchInvalidationKey = 0 }: SectionProps) {
   const navigation = useNavigation<NavigationProp>();
   const toast = useToast();
   const { colors } = useTokens();
@@ -52,6 +52,10 @@ export function CommitsSection({ repo, active, chromeTopInset = 0, refreshStatus
       setLoading(false);
     }
   }, [repo.localPath, repo.path]);
+
+  const branchAwareLoadInitial = useCallback(async () => {
+    await loadInitial();
+  }, [loadInitial, branchInvalidationKey]);
 
   const loadMore = useCallback(async () => {
     if (loadingMore || !hasMore.current) return;
@@ -129,8 +133,8 @@ export function CommitsSection({ repo, active, chromeTopInset = 0, refreshStatus
 
   useFocusEffect(
     useCallback(() => {
-      if (active) void loadInitial();
-    }, [active, loadInitial]),
+      if (active) void branchAwareLoadInitial();
+    }, [active, branchAwareLoadInitial]),
   );
 
   const renderItem = useCallback(
@@ -200,10 +204,7 @@ export function CommitsSection({ repo, active, chromeTopInset = 0, refreshStatus
         <RefreshControl refreshing={loading} onRefresh={() => void loadInitial()} tintColor={colors.accent} />
       }
       ListHeaderComponent={
-        <View className="flex-row items-center justify-between px-4 pb-2">
-          <Text className="text-xs" style={{ color: colors.textSecondary }} testID="explore.commits.count">
-            {loading ? 'Reading history…' : `${commits.length} commit${commits.length !== 1 ? 's' : ''}`}
-          </Text>
+        <View className="flex-row items-center justify-end px-4 pb-2">
           <View className="flex-row items-center gap-2">
             {loading || pushing ? (
               <ActivityIndicator size="small" color={colors.accent} />

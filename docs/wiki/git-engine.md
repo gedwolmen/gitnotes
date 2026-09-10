@@ -257,7 +257,9 @@ Creates a new branch.
 
 ### `GitEngine.checkoutBranch(repoPath: string, name: string, remoteName?: string): Promise<void>`
 
-Checks out a branch.
+Checks out a branch. If checkout fails because the remote tracking ref is missing, callers should fetch from the remote first and retry.
+
+> **Note:** For remote-to-local checkout, callers (e.g., `GitBranchCoordinator`) handle the fetch-and-retry logic. See `GitBranchCoordinator.checkout()` for the full remote branch checkout flow.
 
 ---
 

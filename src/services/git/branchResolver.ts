@@ -8,7 +8,12 @@ const GITHUB_API_BASE = 'https://api.github.com';
 const GITLAB_API_BASE = 'https://gitlab.com/api/v4';
 const FALLBACK_BRANCH = 'main';
 
-const sessionCache = new Map<string, string>();
+interface CacheEntry {
+  repoId?: string;
+  repoPath: string;
+  branch: string;
+}
+const sessionCache = new Map<string, CacheEntry>();
 
 async function resolveActiveProvider(): Promise<'github' | 'gitlab' | null> {
   try {
@@ -22,27 +27,29 @@ async function resolveActiveProvider(): Promise<'github' | 'gitlab' | null> {
 }
 
 /**
- * Best-effort resolution of the branch to use for a repo. Order:
- *   1. `hint` (caller-provided, usually `repo.branch` / `note.branch`)
- *   2. Local clone HEAD (clone-mode repos)
- *   3. GitHub API `default_branch`
- *   4. Hard fallback: 'main'
+ * Resolve the branch for a repo operation. Order:
+ *   1. Local clone HEAD (clone-mode repos) — verified against actual HEAD
+ *   2. GitHub API `default_branch`
+ *   3. Hard fallback: 'main'
  *
- * Fixes #543: hardcoded `branch || 'main'` literals broke clone-mode
- * delete + write + pull on repos whose default branch is not `main`.
+ * @param repoPath - The repository path
+ * @param _hint - Deprecated and ignored. Internal operations bind to HEAD directly.
+ * @param repoId - Optional repoId for cache key (preferred over repoPath)
  */
 export async function resolveBranch(
   repoPath: string,
-  hint?: string | null,
+  _hint?: string | null,
+  repoId?: string,
 ): Promise<string> {
-  if (hint) return hint;
+  // Internal branch identity is bound to HEAD; hint is ignored.
 
-  const cached = sessionCache.get(repoPath);
-  if (cached) return cached;
+  const cacheKey = repoId ?? repoPath;
+  const cached = sessionCache.get(cacheKey);
+  if (cached) return cached.branch;
 
   const local = await GitFsService.getCurrentBranch({ repoPath });
   if (local) {
-    sessionCache.set(repoPath, local);
+    sessionCache.set(cacheKey, { repoId, repoPath, branch: local });
     return local;
   }
 
@@ -52,7 +59,7 @@ export async function resolveBranch(
       ? await fetchGitLabDefaultBranch(repoPath)
       : await fetchGitHubDefaultBranch(repoPath);
   if (remote) {
-    sessionCache.set(repoPath, remote);
+    sessionCache.set(cacheKey, { repoId, repoPath, branch: remote });
     return remote;
   }
 
@@ -64,10 +71,30 @@ export function invalidateBranchCache(repoPath: string): void {
   sessionCache.delete(repoPath);
 }
 
+/**
+ * Invalidate branch cache for a specific repo or all repos.
+ * @param repoId - Optional repoId to invalidate specific repo cache.
+ *                 If not provided, clears entire branch cache.
+ */
+export function invalidateCache(repoId?: string): void {
+  if (repoId === undefined) {
+    sessionCache.clear();
+    return;
+  }
+  for (const key of sessionCache.keys()) {
+    const entry = sessionCache.get(key);
+    if (entry?.repoId === repoId || key === repoId) {
+      sessionCache.delete(key);
+    }
+  }
+}
+
 /** Test seam — clears the in-memory branch cache. */
 export function __resetBranchCacheForTests(): void {
   sessionCache.clear();
 }
+
+export { sessionCache };
 
 const FETCH_TIMEOUT_MS = 30_000;
 

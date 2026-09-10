@@ -328,7 +328,9 @@ export async function deleteNoteFromGitHub(params: {
     return { success: false, error: `Invalid repo path: ${repoPath}` };
   }
 
-  const targetBranch = await resolveBranch(repoPath, branch);
+  // Use the entity's stored branch for deletes (to target the correct branch
+  // where the file exists), falling back to HEAD only if not available.
+  const targetBranch = branch ?? (await resolveBranch(repoPath));
 
   const saveResult = await CloneSyncService.save({
     repoPath,
@@ -380,7 +382,12 @@ export async function syncNoteToGitHub(params: {
     return { success: false, error: `Invalid repo path: ${repoPath}` };
   }
 
-  const targetBranch = await resolveBranch(repoPath, branch);
+  // For updates (knownSha from conflict guard, or entity already has a filePath),
+  // use the entity's stored branch to preserve branch identity.
+  // For creates, resolve HEAD.
+  const isUpdate = !!(knownSha || filePath);
+  const targetBranch = isUpdate && branch ? branch : await resolveBranch(repoPath);
+
   const ext = getExtension(format);
   const opts = tokenOverride ? { tokenOverride } : undefined;
 

@@ -187,8 +187,6 @@ function NoteEditorScreenInner() {
             <View className="flex-1">
               <NoteEditorForm
                 repo={document.repo}
-                branch={document.branch}
-                commit={document.commit}
                 title={document.title}
                 folderPath={document.folderPath}
                 noteFormat={document.noteFormat}
@@ -197,8 +195,6 @@ function NoteEditorScreenInner() {
                 content={document.content}
                 placeholder={document.editorPlaceholder}
                 onRepoChange={document.handleRepoChange}
-                onBranchChange={document.handleBranchChange}
-                onCommitChange={document.handleCommitChange}
                 onTitleChange={document.handleTitleChange}
                 onOpenFolderDialog={() => setShowFolderDialog(true)}
                 onNoteFormatChange={document.handleNoteFormatChange}
@@ -232,8 +228,6 @@ function NoteEditorScreenInner() {
         ) : (
           <NoteEditorForm
             repo={document.repo}
-            branch={document.branch}
-            commit={document.commit}
             title={document.title}
             folderPath={document.folderPath}
             noteFormat={document.noteFormat}
@@ -242,8 +236,6 @@ function NoteEditorScreenInner() {
             content={document.content}
             placeholder={document.editorPlaceholder}
             onRepoChange={document.handleRepoChange}
-            onBranchChange={document.handleBranchChange}
-            onCommitChange={document.handleCommitChange}
             onTitleChange={document.handleTitleChange}
             onOpenFolderDialog={() => setShowFolderDialog(true)}
             onNoteFormatChange={document.handleNoteFormatChange}

@@ -80,17 +80,27 @@ yarn eslint . --ext .ts,.tsx  # Linting
 
 ## Git Discipline
 
+- **Never commit or push directly on `main`.** All agent changes must be made on a dedicated branch and submitted through a pull request. This remains mandatory even for small fixes or when `main` is otherwise clean.
 - Atomic commits with descriptive messages (imperative mood).
 - No `node_modules/`, `.DS_Store`, `.env`, or build artifacts.
 - Branch per feature, rebase before merging.
 - Worktrees are required — see the "Worktrees (ALWAYS)" section above. The old note that said "create git worktrees inside `.worktrees/`" was too soft; the requirement is unconditional.
 - `lint-staged` runs on pre-commit (ESLint + Prettier).
 
+## Git Tab Branch Ownership
+
+**Git → Branches.** The Explore tab (Git UI) is the sole authority for branch operations. No external UI (note editors, sync services, or other tabs) may trigger or control branch switches.
+
+- **No external branch UI.** Branch selection exists only in the Explore screen. Do not add branch selectors to note editors, settings screens, or other non-Git UI surfaces.
+- **Remote checkout via GitBranchCoordinator.** When checking out a remote tracking branch, `GitBranchCoordinator.checkout()` fetches the remote ref first if the local checkout fails with "ref not found", then retries. Do not implement separate fetch-and-retry logic elsewhere.
+- **Queue isolation on checkout.** When `GitBranchCoordinator.checkout()` succeeds, it calls `pauseAllExcept(activeRepoId, activeBranch)` to isolate the sync queue. Do not bypass this by calling `NoteSyncQueueService` directly for branch operations.
+- **Retained internal branch identity.** Every `QueueItem` stores `branch` as a required field. Do not allow mutations that strip or default this field.
+
 ## Sync Architecture (Git Services) — source of truth
 
 GitNotēs uses **clone mode** exclusively: local git commits with write-through push.
 
-- User changes are **committed locally** (local git commit via `CloneSyncService.save`) and pushed **immediately when online** (8s budget via `tryPushNow`). If offline, changes queue in `ClonePendingQueue` and push when connectivity returns. If a conflict is detected (409/non-fast-forward), the user is blocked on `ConflictResolverScreen` with editor-first UX — no separate push step needed.
+- User changes are **committed locally** (local git commit via `CloneSyncService.save`) and pushed **immediately when online** (8s budget via `tryPushNow`). If offline, changes queue in `NoteSyncQueueService` (branch-aware AsyncStorage queue) and push when connectivity returns. If a conflict is detected (409/non-fast-forward), the user is blocked on `ConflictResolverScreen` with editor-first UX — no separate push step needed.
   Push is triggered by: foreground-active (AppState → active), online-transition (NetInfo), 3-minute idle timer (`ClonePushTriggers`), and OS background task (up to 50 files).
   - Issues #925, #926, #927, #938 resolved.
 

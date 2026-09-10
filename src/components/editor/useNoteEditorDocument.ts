@@ -7,13 +7,14 @@ import { useTranslation } from 'react-i18next';
 import { RootStackParamList } from '../../navigation/types';
 import { Folder } from '../../models/Folder';
 import { Attachment, createAttachment } from '../../models/Attachment';
-import { Note, NoteFormat, NoteGitHubLink } from '../../models/Note';
+import { Note, NoteFormat, NoteGitHubLink, deriveFolderPath } from '../../models/Note';
 import { GitService } from '../../services/GitService';
 import { LastSelectionPreferenceService } from '../../services/LastSelectionPreferenceService';
 import { HapticService } from '../../utils/haptics';
 import { useUndo } from '../../utils/useUndo';
 import { NoteSyncQueueService } from '../../services/cloneSyncServiceImpl';
 import { classifyGitHubSyncError, isRetryableFailure, syncStatusForError } from '../../services/git/syncFailure';
+import { resolveDefaultFolder } from '../../services/git/defaultsPolicy';
 import { useNoteStore } from '../../stores/noteStore';
 import { githubActivity } from '../../stores/githubActivityStore';
 import { useGitOperationStore, gitOperationRegistry, GIT_OP_ALL_REPOS } from '../../stores/gitOperationStore';
@@ -137,7 +138,10 @@ export function useNoteEditorDocument({
   const [branch, setBranch] = useState<string | undefined>(initialBranch);
   const [commit, setCommit] = useState<string | undefined>();
   const [existingFilePath, setExistingFilePath] = useState<string | undefined>();
-  const [folderPath, setFolderPath] = useState<string | undefined>(initialFolderPath);
+  // Normalize the canonical default so it has no trailing slash (deriveFolderPath returns paths without trailing slash)
+  const resolvedDefault = resolveDefaultFolder('note');
+  const DEFAULT_NOTE_FOLDER = resolvedDefault.endsWith('/') ? resolvedDefault.slice(0, -1) : resolvedDefault;
+  const [folderPath, setFolderPath] = useState<string | undefined>(initialFolderPath ?? DEFAULT_NOTE_FOLDER);
   const [, setGithub] = useState<NoteGitHubLink | undefined>();
   const [accountId, setAccountId] = useState<string | undefined>(activeAccountId ?? undefined);
   const [noteFormat, setNoteFormat] = useState<NoteFormat>(initialFormat ?? 'markdown');
@@ -159,7 +163,6 @@ export function useNoteEditorDocument({
     if (initialRepo || initialBranch || initialFolderPath) return;
     void LastSelectionPreferenceService.get('note').then((sel) => {
       if (!repo && sel.repo) setRepo(sel.repo);
-      if (!branch && sel.branch) setBranch(sel.branch);
       if (!folderPath && sel.folder) setFolderPath(sel.folder);
     });
   }, [noteId, initialRepo, initialBranch, initialFolderPath]);
@@ -261,7 +264,7 @@ export function useNoteEditorDocument({
     setBranch(existingNote.branch);
     setCommit(existingNote.commit);
     setExistingFilePath(existingNote.filePath);
-    setFolderPath(existingNote.folderPath);
+    setFolderPath(existingNote.folderPath ?? deriveFolderPath(existingNote.filePath));
     setGithub(existingNote.github);
     setAccountId(existingNote.accountId ?? activeAccountId ?? undefined);
     setNoteFormat(existingNote.format ?? 'markdown');
@@ -301,9 +304,9 @@ export function useNoteEditorDocument({
     setFolderPath(folder?.path);
     setHasChanges(true);
     if (repo) {
-      void LastSelectionPreferenceService.set('note', { repo, branch, folder: folder?.path });
+      void LastSelectionPreferenceService.set('note', { repo, folder: folder?.path });
     }
-  }, [repo, branch]);
+  }, [repo]);
 
   const handleTagsChange = useCallback((newTags: string[]) => {
     setTags(newTags);
@@ -508,8 +511,8 @@ export function useNoteEditorDocument({
                 setRepo(existingNote.repo);
                 setBranch(existingNote.branch);
                 setCommit(existingNote.commit);
-                setFolderPath(existingNote.folderPath);
-                setNoteFormat(existingNote.format ?? 'markdown');
+    setFolderPath(existingNote.folderPath ?? deriveFolderPath(existingNote.filePath));
+    setNoteFormat(existingNote.format ?? 'markdown');
               }
               setHasChanges(false);
               setIsEditing(false);

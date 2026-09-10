@@ -161,12 +161,6 @@ function NoteCardImpl({
               <Text style={[styles.repoText, { color: colors.textSecondary }]}>{note.repo}</Text>
             </View>
           )}
-          {note.branch && (
-            <View style={styles.repoItem}>
-              <Ionicons name="git-branch-outline" size={14} color={colors.primary} />
-              <Text style={[styles.branchText, { color: colors.primary }]}>{note.branch}</Text>
-            </View>
-          )}
         </View>
       )}
     </TouchableOpacity>

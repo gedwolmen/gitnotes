@@ -14,6 +14,8 @@ import { useResponsive } from '../hooks/useResponsive';
 import { ScreenHeader, IconButton, useScreenHeaderHeight } from '../components/ui';
 import { SafeAreaView } from '../components/ui/SafeAreaView';
 import { useTemplateStore } from '../stores/templateStore';
+import { useRepoStore } from '../stores/repoStore';
+import { getActiveBranch } from '../services/git/activeBranchStore';
 import { NoteTemplate, NoteTemplateIcon } from '../services/TemplateService';
 import { HapticService } from '../utils/haptics';
 import { TemplateRepoPreferenceService, TemplateRepoPreference } from '../services/TemplateRepoPreferenceService';
@@ -46,6 +48,7 @@ export default function TemplateManagerScreen() {
   const deleteTemplate = useTemplateStore((s) => s.deleteTemplate);
   const togglePin = useTemplateStore((s) => s.togglePin);
   const getAllTemplates = useTemplateStore((s) => s.getAllTemplates);
+  const repositories = useRepoStore((s) => s.repositories);
 
   const [showEditor, setShowEditor] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -190,9 +193,12 @@ export default function TemplateManagerScreen() {
       }
 
       if (savedTemplate && templatesRepoPref) {
+        const repoId = repositories.find((r) => r.path === templatesRepoPref.repoPath)?.id;
+        const activeBranchState = repoId ? await getActiveBranch(repoId) : null;
+        const branch = activeBranchState?.activeBranch ?? 'main';
         await syncTemplateToGitHub({
           repoPath: templatesRepoPref.repoPath,
-          branch: templatesRepoPref.branch,
+          branch,
           template: savedTemplate,
         });
       }

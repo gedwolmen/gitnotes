@@ -31,7 +31,7 @@ export const EXPLORE_SECTIONS = [
   { id: 'conflicts', label: 'Conflicts' },
   { id: 'pulls', label: 'Pull Requests' },
   { id: 'issues', label: 'Issues' },
-  { id: 'info', label: 'Repo Info' },
+  { id: 'info', label: 'Repository', shortLabel: 'Repo' },
 ] as const;
 
 export type ExploreSection = (typeof EXPLORE_SECTIONS)[number]['id'];
@@ -39,11 +39,14 @@ export type ExploreSection = (typeof EXPLORE_SECTIONS)[number]['id'];
 export interface SectionProps {
   repo: RepoLike;
   status: RepoStatus | null;
-  active: boolean;
+  active?: boolean;
   onChanged: () => void;
   chromeTopInset?: number;
   onNavigate?: (section: ExploreSection) => void;
   refreshStatus?: () => Promise<void>;
+  /** Monotonic counter bumped by activeBranchStore on branch change.
+   *  Sections should include this in their key to reload on branch switch. */
+  branchInvalidationKey?: number;
 }
 
 export function relativeTime(timestamp: number | null): string {

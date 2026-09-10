@@ -24,6 +24,7 @@ import { NoteSyncQueueService } from '../services/cloneSyncServiceImpl';
 import { GitFsService } from '../services/git/GitFsService';
 import { cancelInflightGitHttp } from '../services/git/gitHttp';
 import { CloneMigrationService } from '../services/git/CloneMigrationService';
+import { getActiveBranch } from '../services/git/activeBranchStore';
 import { LfsService } from '../services/git/lfs';
 import { AuthService } from '../services/AuthService';
 import { OnboardingService } from '../services/OnboardingService';
@@ -242,7 +243,7 @@ export default function SettingsScreen() {
   }, [tokenInput]);
 
   const handlePickTemplatesRepo = useCallback(async (repo: GitRepository) => {
-    const next = { repoPath: repo.path, branch: repo.branch || 'main' };
+    const next = { repoPath: repo.path };
     await TemplateRepoPreferenceService.set(next);
     setTemplatesRepoPref(next);
     setShowTemplatesRepoPicker(false);
@@ -438,6 +439,9 @@ export default function SettingsScreen() {
       Alert.alert(t('settings.nothingToSyncTitle'), t('settings.nothingToSyncBody'));
       return;
     }
+    const repoId = repositories.find((r) => r.path === templatesRepoPref.repoPath)?.id;
+    const activeBranchState = repoId ? await getActiveBranch(repoId) : null;
+    const branch = activeBranchState?.activeBranch ?? 'main';
     setIsSyncingExistingTemplates(true);
     let synced = 0;
     let failed = 0;
@@ -447,7 +451,7 @@ export default function SettingsScreen() {
         try {
           await NoteSyncQueueService.enqueueNoteUpsert({
             repo: templatesRepoPref.repoPath,
-            branch: templatesRepoPref.branch,
+            branch,
             filePath,
             title: template.name,
             content: serializeTemplate({ ...template, filePath: undefined }),

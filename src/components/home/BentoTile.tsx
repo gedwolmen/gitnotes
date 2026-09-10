@@ -133,6 +133,10 @@ const TILE_WIDTH_HINT: Record<BentoSize, number> = { large: 320, medium: 160, sm
 const SNIPPET_LINES: Record<BentoSize, number> = { large: 3, medium: 2, small: 1, pinned: 2 };
 const COLOR_STRIPE_WIDTH = 4;
 
+export function getBentoMediumTileWidth(screenWidth: number, columnCount: number): number {
+  return (screenWidth - 40 - 12 * (columnCount - 1)) / columnCount;
+}
+
 export function BentoTile({ item, size, onPress, onLongPress, widthOverride, hidePinGlyph, testIDSlot }: Props) {
   const { colors } = useTheme();
   const isLarge = size === 'large';

@@ -1,4 +1,6 @@
 import { gitOperationRegistry, GIT_OP_ALL_REPOS } from '../../stores/gitOperationStore';
+import { GitFsService } from './GitFsService';
+import * as GitEngine from './engine/GitEngine';
 
 /**
  * App-wide concurrency gate for git sync. Two independent layers:
@@ -43,7 +45,19 @@ interface PushMarker {
   branch: string;
   since: number;
   registryOpId: string;
+  headOid: string;
 }
+
+export interface PreflightState {
+  repoId: string;
+  repoPath: string;
+  activeBranch: string;
+  headOid: string;
+}
+
+export type PostflightResult =
+  | { ok: true }
+  | { ok: false; reason: 'branch-changed' | 'head-changed' | 'error' };
 
 class GitSyncGateClass {
   private cycleHeld = false;
@@ -52,6 +66,8 @@ class GitSyncGateClass {
   private cycleWatchdog: ReturnType<typeof setTimeout> | null = null;
   private cycleWaiters: Array<{ source: CycleSource; grant: () => void }> = [];
   private pushMarkers = new Map<string, PushMarker>();
+  private preflightStates = new Map<string, PreflightState>();
+  private pushMarkerByRepo = new Map<string, string>();
 
   /**
    * Acquire the app-wide cycle mutex. Resolves immediately when free,
@@ -78,12 +94,13 @@ class GitSyncGateClass {
     return this.cycleHeld;
   }
 
-  markPushActive(repo: string, branch?: string): void {
+  markPushActive(repo: string, branch?: string, headOid?: string): void {
     this.sweepStuckMarkers();
     const key = this.markerKey(repo, branch);
     const existing = this.pushMarkers.get(key);
     if (existing) {
       existing.since = Date.now();
+      if (headOid) existing.headOid = headOid;
       return;
     }
     const normalizedBranch = branch || DEFAULT_MARKER_BRANCH;
@@ -95,12 +112,15 @@ class GitSyncGateClass {
       attempts: 0,
       status: 'running',
     });
+    const markerHeadOid = headOid ?? '';
     this.pushMarkers.set(key, {
       repo,
       branch: normalizedBranch,
       since: Date.now(),
       registryOpId,
+      headOid: markerHeadOid,
     });
+    this.pushMarkerByRepo.set(repo, key);
   }
 
   clearPushActive(repo: string, branch?: string): void {
@@ -109,6 +129,64 @@ class GitSyncGateClass {
     if (!marker) return;
     this.pushMarkers.delete(key);
     gitOperationRegistry.succeed(marker.registryOpId);
+    this.pushMarkerByRepo.delete(marker.repo);
+  }
+
+  releasePushMarker(repoId: string): void {
+    const key = this.pushMarkerByRepo.get(repoId);
+    if (!key) return;
+    const marker = this.pushMarkers.get(key);
+    if (marker) {
+      this.pushMarkers.delete(key);
+      gitOperationRegistry.fail(marker.registryOpId, 'Push cancelled or failed');
+      this.pushMarkerByRepo.delete(repoId);
+    }
+  }
+
+  async capturePreflight(repoId: string, localPath: string): Promise<PreflightState | null> {
+    try {
+      const repoInfo = await GitEngine.repoInfo(localPath);
+      const headOid = await GitFsService.getCommitOid({ repoPath: localPath, ref: `refs/heads/${repoInfo.currentBranch}` });
+      const state: PreflightState = {
+        repoId,
+        repoPath: localPath,
+        activeBranch: repoInfo.currentBranch,
+        headOid: headOid ?? '',
+      };
+      this.preflightStates.set(repoId, state);
+      return state;
+    } catch {
+      return null;
+    }
+  }
+
+  async verifyPostflight(preflight: PreflightState, registryOpId?: string): Promise<PostflightResult> {
+    try {
+      const repoInfo = await GitEngine.repoInfo(preflight.repoPath);
+      const currentOid = await GitFsService.getCommitOid({ repoPath: preflight.repoPath, ref: `refs/heads/${repoInfo.currentBranch}` });
+      if (repoInfo.currentBranch !== preflight.activeBranch) {
+        if (registryOpId) {
+          gitOperationRegistry.fail(registryOpId, 'Branch changed during operation (stale)');
+        }
+        return { ok: false, reason: 'branch-changed' };
+      }
+      if (currentOid !== preflight.headOid) {
+        if (registryOpId) {
+          gitOperationRegistry.fail(registryOpId, 'HEAD changed during operation (stale)');
+        }
+        return { ok: false, reason: 'head-changed' };
+      }
+      return { ok: true };
+    } catch {
+      if (registryOpId) {
+        gitOperationRegistry.fail(registryOpId, 'Postflight verification error');
+      }
+      return { ok: false, reason: 'error' };
+    }
+  }
+
+  clearPreflight(repoId: string): void {
+    this.preflightStates.delete(repoId);
   }
 
   /** True if any marker is held; with a repo arg, only that repo's markers count. */
@@ -141,6 +219,8 @@ class GitSyncGateClass {
       gitOperationRegistry.succeed(marker.registryOpId);
     }
     this.pushMarkers.clear();
+    this.preflightStates.clear();
+    this.pushMarkerByRepo.clear();
     this.cycleWaiters = [];
     this.cycleHeld = false;
     this.cycleToken += 1;
@@ -240,6 +320,7 @@ class GitSyncGateClass {
     for (const [key, marker] of this.pushMarkers) {
       if (now - marker.since <= MARKER_MAX_AGE_MS) continue;
       this.pushMarkers.delete(key);
+      this.pushMarkerByRepo.delete(marker.repo);
       console.warn(`[GitSyncGate] clearing stuck push marker ${key} after ${MARKER_MAX_AGE_MS}ms`);
       gitOperationRegistry.fail(marker.registryOpId, 'Push marker watchdog expired');
     }
