@@ -10,6 +10,14 @@ All notable fixes and feature changes to GitNotēs are documented here.
 
 ## 2026-09-10
 
+### fix(android): align recent commits pagination parameters
+
+**What:** The Android GitEngine bridge exposed `recentCommits` without the `skip` parameter already used by the TypeScript, iOS, and Rust layers.
+
+**Fix:** Forward both `skip` and `limit` so Android matches the shared native contract.
+
+**PR:** [#1511](https://github.com/gedwolmen/gitnotes/pull/1511)
+
 ### fix(ios): keep GitEngine module maps out of Sources
 
 **What:** Xcode 26 treated the UniFFI `GitNotesGit2FFI` module map as a source file, failing the iOS build before linking native modules.
