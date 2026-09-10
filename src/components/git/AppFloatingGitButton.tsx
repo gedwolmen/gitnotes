@@ -8,7 +8,6 @@ import { useGitButtonActionStore } from '@/stores/gitButtonActionStore';
 import { stageAllPending, commitAll, pushAll } from '@/services/git/multiRepoGitOps';
 import type { Author } from '@/services/git/engine/GitEngine';
 import { useAccounts } from '@/contexts/AccountsContext';
-import { githubActivity } from '@/stores/githubActivityStore';
 import { emitGitContentRefresh, emitGitRefresh } from '@/hooks/useGitRefreshEvent';
 import FloatingGitButton from './FloatingGitButton';
 import type { ReleaseSegment } from './useFloatingGitButtonAffordances';
@@ -95,9 +94,7 @@ export default function AppFloatingGitButton() {
       }
 
       console.log('[handleReleaseSegment] calling stageAllPending, repos =', repos.map(r => r.name));
-      githubActivity.begin('Staging...');
       const stageResult = await stageAllPending(repos);
-      githubActivity.end();
       console.log('[handleReleaseSegment] stageAllPending result =', JSON.stringify(stageResult));
       if (segment === 'stage') {
         toast.show({
@@ -116,9 +113,7 @@ export default function AppFloatingGitButton() {
       }
 
       const message = `Sync: stage ${stageResult.totalActed} file(s)`;
-      githubActivity.begin('Committing...');
       await commitAll(repos, message, author);
-      githubActivity.end();
       if (segment === 'commit') {
         toast.show({
           placement: 'top',
@@ -135,9 +130,7 @@ export default function AppFloatingGitButton() {
         return;
       }
 
-      githubActivity.begin('Pushing...');
       const pushResult = await pushAll(repos);
-      githubActivity.end();
       const failedCount = pushResult.failures.length;
       if (failedCount === repos.length) {
         toast.show({
