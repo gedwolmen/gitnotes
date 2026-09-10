@@ -31,7 +31,7 @@
 
 | File | Purpose |
 |------|---------|
-| `GitBranchCoordinator.ts` | State machine for checkout safety in Git-tab. Enforces idle-state invariant: no staged/modified files block checkout, mutations rejected during checkout-running state. Coordinates with `GitSyncGate` for cycle acquisition. |
+| `GitBranchCoordinator.ts` | State machine for checkout safety in Git-tab. Enforces idle-state invariant: no staged/modified files block checkout, mutations rejected during checkout-running state. Coordinates with `GitSyncGate` for cycle acquisition, pauses non-active queue items after checkout, and emits the branch content-refresh event. |
 | `activeBranchStore.ts` | Tracks the active checked-out branch per repository. Reconciles persisted state against local HEAD on every read; marks stale when HEAD differs from persisted value. Git-tab checkout is authoritative app-wide. |
 | `resolveBranch.ts` | Resolves which branch to sync to based on repo config, user preference, and conflict state. Re-exports from `branchResolver.ts`. |
 | `RepoRemovalCascade.ts` | Handles complete removal of a cloned repository — deletes files, clears caches, removes from store. |

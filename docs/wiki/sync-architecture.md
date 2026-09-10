@@ -129,6 +129,21 @@ manualSync / ForegroundSync
   → refresh stores
 ```
 
+### Branch Checkout Refresh
+
+`GitBranchCoordinator.checkout()` keeps branch-dependent app state aligned with
+the newly checked-out working tree. After the checkout succeeds, it updates
+`activeBranchStore`, pauses queued mutations for other repositories or
+branches through `NoteSyncQueueService.pauseAllExcept`, and emits a checkout
+content-refresh event. The note, todo, canvas, and folder providers reload
+their stores from that event. Note, canvas, and Explore file editors subscribe
+to the checkout event and navigate back to their list screen so they cannot
+continue displaying content from the previous branch.
+
+The event is distinct from the ordinary git-status refresh event. Status
+refreshes update git metadata, while checkout content refreshes invalidate
+branch-dependent UI and preserve queue branch isolation.
+
 ### Push Trigger Sources (code references)
 
 | Trigger | Location |
