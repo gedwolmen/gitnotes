@@ -61,6 +61,7 @@ import { AcceptDiscardBar } from './AcceptDiscardBar';
 import { useLongPressForVision } from '../../hooks/useLongPressForVision';
 import { useSafeBack } from '../../hooks/useSafeBack';
 import type { DraftCommand } from '../../stores/draftStore';
+import { subscribeGitContentRefresh } from '../../hooks/useGitRefreshEvent';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'CanvasEditor'>;
 type RouteType = RouteProp<RootStackParamList, 'CanvasEditor'>;
@@ -387,6 +388,14 @@ export default function CanvasEditorContent() {
   const safeBack = useSafeBack();
   const route = useRoute<RouteType>();
   const { canvasId, canvasWidth, canvasTitle } = route.params;
+
+  useEffect(() => {
+    return subscribeGitContentRefresh((event) => {
+      if (event.kind === 'checkout') {
+        navigation.navigate('MainTabs', { screen: 'CanvasList' });
+      }
+    });
+  }, [navigation]);
 
   useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {

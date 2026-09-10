@@ -4,6 +4,7 @@ import { StorageService } from '../services/StorageService';
 import { NotificationService } from '../services/NotificationService';
 import { useTodoStore } from '../stores/todoStore';
 import { syncTodoToGitHub } from '../services/TodoGitHubSyncService';
+import { useGitContentRefreshSignal } from '../hooks/useGitRefreshEvent';
 
 
 interface TodoContextValue {
@@ -18,11 +19,17 @@ interface TodoContextValue {
 
 export function TodoProvider({ children }: { children: React.ReactNode }) {
   const loadTodos = useTodoStore((s) => s.loadTodos);
+  const refreshTodos = useTodoStore((s) => s.refreshTodos);
   const needsLoad = useTodoStore((s) => s.isLoading && s.todos.length === 0);
+  const refreshSignal = useGitContentRefreshSignal();
 
   useEffect(() => {
     if (needsLoad) loadTodos();
   }, [needsLoad, loadTodos]);
+
+  useEffect(() => {
+    if (refreshSignal > 0) void refreshTodos();
+  }, [refreshSignal, refreshTodos]);
 
   return <>{children}</>;
 }

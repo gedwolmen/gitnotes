@@ -24,6 +24,7 @@ import { invalidateCache } from './branchResolver';
 import { setActiveBranchAfterCheckout } from './activeBranchStore';
 import * as GitEngine from './engine/GitEngine';
 import type { FileStatus } from './engine/GitEngine';
+import { NoteSyncQueueService } from './NoteSyncQueueService';
 
 export type CoordinatorState = 'idle' | 'checkout-running' | 'mutation-running' | 'failed';
 
@@ -163,7 +164,8 @@ class GitBranchCoordinatorClass {
         gitOperationRegistry.succeed(opId);
         invalidateCache(repoId);
         await setActiveBranchAfterCheckout(repoId, localPath, branchName);
-        emitGitContentRefresh();
+        await NoteSyncQueueService.pauseAllExcept(repoId, branchName);
+        emitGitContentRefresh({ kind: 'checkout', repoId, branch: branchName });
         this.setState('idle');
       } catch (error) {
         this.clearWatchdog();

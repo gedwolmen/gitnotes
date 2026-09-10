@@ -28,6 +28,7 @@ import { useNoteEditorPreview } from '../components/editor/useNoteEditorPreview'
 import { ErrorBoundary } from '../components/ui/ErrorBoundary';
 import { useTranslation } from 'react-i18next';
 import { useSafeBack } from '../hooks/useSafeBack';
+import { subscribeGitContentRefresh } from '../hooks/useGitRefreshEvent';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'NoteEditor'>;
 type NoteEditorRouteProp = RouteProp<RootStackParamList, 'NoteEditor'>;
@@ -49,6 +50,13 @@ function NoteEditorScreenInner() {
   const { authState, activeAccountId } = useAuth();
   const { sideBySide } = useResponsive();
   const { noteId, format: initialFormat, initialTitle, initialContent, initialTags, repo: initialRepo, branch: initialBranch, folderPath: initialFolderPath, anchor: initialAnchor } = route.params || {};
+
+  React.useEffect(() => {
+    return subscribeGitContentRefresh((event) => {
+      if (event.kind !== 'checkout') return;
+      navigation.navigate('MainTabs', { screen: 'NotesTab' });
+    });
+  }, [navigation]);
 
   const { notes, getNoteById, createNote, updateNote } = useNotes();
   const { canvases } = useCanvases();

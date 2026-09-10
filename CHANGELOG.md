@@ -18,6 +18,14 @@ All notable fixes and feature changes to GitNotēs are documented here.
 
 **PR:** TBD
 
+### fix(git): refresh branch-backed app state after checkout
+
+**What:** Checkout refreshed Explore sections but left branch-backed stores, queued mutations, and open editors able to show or process previous-branch state.
+
+**Fix:** Reload branch-backed providers, pause non-active queue items, and return open note, canvas, and file editors to their list screens after checkout.
+
+**PR:** [#1524](https://github.com/gedwolmen/gitnotes/pull/1524)
+
 ### fix(android): align recent commits pagination parameters
 
 **What:** The Android GitEngine bridge exposed `recentCommits` without the `skip` parameter already used by the TypeScript, iOS, and Rust layers.

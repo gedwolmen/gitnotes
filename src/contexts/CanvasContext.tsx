@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Canvas, CanvasCreateInput, CanvasUpdateInput, filterCanvasesBySearch } from '../models/Canvas';
 import { useCanvasStore } from '../stores/canvasStore';
+import { useGitContentRefreshSignal } from '../hooks/useGitRefreshEvent';
 
 interface CanvasContextType {
   canvases: Canvas[];
@@ -19,11 +20,17 @@ interface CanvasContextType {
 
 export function CanvasProvider({ children }: { children: React.ReactNode }) {
   const loadCanvases = useCanvasStore((s) => s.loadCanvases);
+  const refreshCanvases = useCanvasStore((s) => s.refreshCanvases);
   const needsLoad = useCanvasStore((s) => s.isLoading && s.canvases.length === 0);
+  const refreshSignal = useGitContentRefreshSignal();
 
   useEffect(() => {
     if (needsLoad) loadCanvases();
   }, [needsLoad, loadCanvases]);
+
+  useEffect(() => {
+    if (refreshSignal > 0) void refreshCanvases();
+  }, [refreshCanvases, refreshSignal]);
 
   return <>{children}</>;
 }

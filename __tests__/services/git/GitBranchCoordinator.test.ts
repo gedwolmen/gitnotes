@@ -38,6 +38,12 @@ jest.mock('@/services/git/GitSyncGate', () => ({
   },
 }));
 
+jest.mock('@/services/git/NoteSyncQueueService', () => ({
+  NoteSyncQueueService: {
+    pauseAllExcept: jest.fn(),
+  },
+}));
+
 // Mock the native module for isRepoLocked
 jest.mock('expo-modules-core', () => ({
   requireNativeModule: jest.fn(() => ({
@@ -48,10 +54,12 @@ jest.mock('expo-modules-core', () => ({
 // Import types after mocks are set up
 import * as GitEngine from '@/services/git/engine/GitEngine';
 import { GitSyncGate } from '@/services/git/GitSyncGate';
+import { NoteSyncQueueService } from '@/services/git/NoteSyncQueueService';
 import { GitBranchCoordinator } from '@/services/git/GitBranchCoordinator';
 
 const GitEngineMock = GitEngine as jest.Mocked<typeof GitEngine>;
 const GitSyncGateMock = GitSyncGate as jest.Mocked<typeof GitSyncGate>;
+const NoteSyncQueueServiceMock = NoteSyncQueueService as jest.Mocked<typeof NoteSyncQueueService>;
 
 const TEST_REPO_PATH = '/mock/repo';
 const TEST_REPO_ID = 'test-repo-id';
@@ -64,6 +72,7 @@ describe('GitBranchCoordinator', () => {
     MOCK_RELEASE_CYCLE.mockReturnValue(undefined);
     GitSyncGateMock.acquireCycle.mockResolvedValue(MOCK_RELEASE_CYCLE);
     GitSyncGateMock.verifyCheckoutPostflight.mockResolvedValue({ ok: true });
+    NoteSyncQueueServiceMock.pauseAllExcept.mockResolvedValue(undefined);
     GitSyncGateMock.isCycleHeld.mockReturnValue(false);
     GitBranchCoordinator.__resetForTests();
   });
@@ -151,6 +160,10 @@ describe('GitBranchCoordinator', () => {
         TEST_REPO_PATH,
         'feature-branch',
         expect.any(String),
+      );
+      expect(NoteSyncQueueServiceMock.pauseAllExcept).toHaveBeenCalledWith(
+        TEST_REPO_ID,
+        'feature-branch',
       );
     });
 
@@ -361,9 +374,9 @@ describe('GitBranchCoordinator', () => {
       expect(GitBranchCoordinator.getState()).toBe('mutation-running');
 
       // Try to checkout - should be rejected
-      await expect(
+      expect(() =>
         GitBranchCoordinator.checkout(TEST_REPO_ID, TEST_REPO_PATH, 'feature-branch')
-      ).rejects.toThrow(/mutation|running/i);
+      ).toThrow(/mutation|running/i);
 
       GitBranchCoordinator.endMutation();
     });
@@ -396,22 +409,19 @@ describe('GitBranchCoordinator', () => {
       const { GitBranchCoordinator } = await import('@/services/git/GitBranchCoordinator');
       GitEngineMock.statuses.mockResolvedValue([]);
       GitEngineMock.checkoutBranch.mockImplementation(
-        () => new Promise(() => {}) // Never resolves - simulates leak
+        () => new Promise<void>(() => { /* intentionally unresolved */ })
       );
 
       const watchdogMs = 10 * 60 * 1_000; // 10 minutes
 
       // Start checkout but never complete
-      const checkoutPromise = GitBranchCoordinator.checkout(TEST_REPO_ID, TEST_REPO_PATH, 'feature-branch');
+      void GitBranchCoordinator.checkout(TEST_REPO_ID, TEST_REPO_PATH, 'feature-branch');
 
       // Advance time past watchdog
-      jest.advanceTimersByTime(watchdogMs + 1);
+      await jest.advanceTimersByTimeAsync(watchdogMs + 1);
 
-      await expect(checkoutPromise).rejects.toThrow();
-
-      // Should have recovered to idle state
-      expect(GitBranchCoordinator.getState()).toBe('idle');
-      expect(MOCK_RELEASE_CYCLE).toHaveBeenCalled();
+      expect(GitBranchCoordinator.getState()).toBe('failed');
+      expect(GitSyncGateMock.forceReleaseCycle).toHaveBeenCalled();
     });
 
     it('clears watchdog on successful checkout', async () => {
