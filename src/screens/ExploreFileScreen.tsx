@@ -17,6 +17,7 @@ import { parseLfsPointer } from '@/services/git/lfs';
 import { WorkingTreeDocumentService, workingTreeDocument } from '@/services/documents/WorkingTreeDocumentService';
 import { useCheckoutSafety } from '@/contexts/CheckoutSafetyContext';
 import { GitBranchCoordinator } from '@/services/git/GitBranchCoordinator';
+import { subscribeGitContentRefresh } from '@/hooks/useGitRefreshEvent';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 type Route = RouteProp<RootStackParamList, 'ExploreFile'>;
@@ -29,6 +30,14 @@ export default function ExploreFileScreen() {
   const route = useRoute<Route>();
   const { colors } = useTokens();
   const { repoId, path: filePath } = route.params;
+
+  useEffect(() => {
+    return subscribeGitContentRefresh((event) => {
+      if (event.kind === 'checkout') {
+        navigation.navigate('MainTabs', { screen: 'ExploreTab' });
+      }
+    });
+  }, [navigation]);
 
   const storedRepo = useRepoStore((state) =>
     state.repositories.find((candidate) => candidate.id === repoId),
