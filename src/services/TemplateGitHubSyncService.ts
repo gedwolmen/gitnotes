@@ -1,7 +1,7 @@
 import { GitHubService } from './GitHubService';
 import { serializeTemplate, templateSlug } from './TemplateMarkdownService';
 import type { NoteTemplate } from './TemplateService';
-import { CloneSyncService } from './cloneSyncServiceImpl';
+import { CommitService } from './git/CommitService';
 import { resolveDefaultFolder } from './git/defaultsPolicy';
 import { resolveDefaultRepo } from './git/defaultsPolicy';
 
@@ -33,16 +33,15 @@ export async function syncTemplateToGitHub(params: {
   const message = `${isUpdate ? 'Update' : 'Add'} template ${template.name}`;
   const body = serializeTemplate({ ...template, filePath: undefined });
 
-  const saveResult = await CloneSyncService.save({
-    repoPath,
+  const commitResult = await CommitService.commit({
+    repo: repoPath,
     branch,
     filePath: targetPath,
     content: body,
     message,
-    intent: 'upsert',
   });
-  if (saveResult.success) return { success: true, filePath: targetPath };
-  return { success: false, error: saveResult.error };
+  if (commitResult.success) return { success: true, filePath: targetPath };
+  return { success: false, error: commitResult.error };
 }
 
 export async function deleteTemplateFromGitHub(params: {
@@ -58,13 +57,13 @@ export async function deleteTemplateFromGitHub(params: {
     return { success: false, error: 'GitHub not authenticated' };
   }
 
-  const saveResult = await CloneSyncService.save({
-    repoPath,
+  const commitResult = await CommitService.commit({
+    repo: repoPath,
     branch,
     filePath,
     message: `Delete template ${name}`,
-    intent: 'delete',
+    delete: true,
   });
-  if (saveResult.success) return { success: true, filePath };
-  return { success: false, error: saveResult.error };
+  if (commitResult.success) return { success: true, filePath };
+  return { success: false, error: commitResult.error };
 }

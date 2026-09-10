@@ -2,6 +2,46 @@ import { create } from 'zustand';
 import { NoteTemplate, NOTE_TEMPLATES } from '../services/TemplateService';
 import { StorageService } from '../services/StorageService';
 import { generateId } from '../utils/ids';
+import { syncTemplateToGitHub, deleteTemplateFromGitHub } from '../services/TemplateGitHubSyncService';
+import { TemplateRepoPreferenceService } from '../services/TemplateRepoPreferenceService';
+import { getActiveBranch } from '../services/git/activeBranchStore';
+import { useRepoStore } from './repoStore';
+
+async function syncTemplateToGitHubIfConfigured(template: NoteTemplate): Promise<void> {
+  try {
+    const templatesRepoPref = await TemplateRepoPreferenceService.get();
+    if (!templatesRepoPref) return;
+
+    const repositories = useRepoStore.getState().repositories;
+    const repoId = repositories.find((r) => r.path === templatesRepoPref.repoPath)?.id;
+    if (!repoId) return;
+
+    const activeBranchState = await getActiveBranch(repoId);
+    const branch = activeBranchState?.activeBranch ?? 'main';
+
+    await syncTemplateToGitHub({ repoPath: templatesRepoPref.repoPath, branch, template });
+  } catch (error) {
+    console.warn('[templateStore] GitHub sync failed:', error);
+  }
+}
+
+async function deleteTemplateFromGitHubIfConfigured(filePath: string, name: string): Promise<void> {
+  try {
+    const templatesRepoPref = await TemplateRepoPreferenceService.get();
+    if (!templatesRepoPref) return;
+
+    const repositories = useRepoStore.getState().repositories;
+    const repoId = repositories.find((r) => r.path === templatesRepoPref.repoPath)?.id;
+    if (!repoId) return;
+
+    const activeBranchState = await getActiveBranch(repoId);
+    const branch = activeBranchState?.activeBranch ?? 'main';
+
+    await deleteTemplateFromGitHub({ repoPath: templatesRepoPref.repoPath, branch, filePath, name });
+  } catch (error) {
+    console.warn('[templateStore] GitHub template deletion sync failed:', error);
+  }
+}
 
 interface TemplateState {
   customTemplates: NoteTemplate[];
@@ -38,12 +78,13 @@ export const useTemplateStore = create<TemplateState>()((set, get) => ({
       updatedAt: Date.now(),
     };
 
-    const synced = template;
-
-    const next = [...get().customTemplates, synced];
+    const next = [...get().customTemplates, template];
     await StorageService.saveCustomTemplates(next);
     set({ customTemplates: next });
-    return synced;
+
+    await syncTemplateToGitHubIfConfigured(template);
+
+    return template;
   },
 
   updateTemplate: async (id, updates) => {
@@ -55,6 +96,8 @@ export const useTemplateStore = create<TemplateState>()((set, get) => ({
     const next = get().customTemplates.map((t) => (t.id === id ? merged : t));
     await StorageService.saveCustomTemplates(next);
     set({ customTemplates: next });
+
+    await syncTemplateToGitHubIfConfigured(merged);
   },
 
   deleteTemplate: async (id) => {
@@ -64,6 +107,10 @@ export const useTemplateStore = create<TemplateState>()((set, get) => ({
     const next = get().customTemplates.filter((t) => t.id !== id);
     await StorageService.saveCustomTemplates(next);
     set({ customTemplates: next });
+
+    if (template.filePath) {
+      await deleteTemplateFromGitHubIfConfigured(template.filePath, template.name);
+    }
   },
 
   togglePin: async (id) => {
