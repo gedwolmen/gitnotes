@@ -25,6 +25,7 @@ import { setActiveBranchAfterCheckout } from './activeBranchStore';
 import * as GitEngine from './engine/GitEngine';
 import type { FileStatus } from './engine/GitEngine';
 import { NoteSyncQueueService } from './NoteSyncQueueService';
+import { pullFromSingleRepo } from '../RepoPullService';
 
 export type CoordinatorState = 'idle' | 'checkout-running' | 'mutation-running' | 'failed';
 
@@ -166,6 +167,9 @@ class GitBranchCoordinatorClass {
         await setActiveBranchAfterCheckout(repoId, localPath, branchName);
         await NoteSyncQueueService.pauseAllExcept(repoId, branchName);
         emitGitContentRefresh({ kind: 'checkout', repoId, branch: branchName });
+        // Sync the new branch's working tree files into AsyncStorage so
+        // note/todo/canvas providers reload the correct content on refresh.
+        void pullFromSingleRepo(localPath);
         this.setState('idle');
       } catch (error) {
         this.clearWatchdog();
