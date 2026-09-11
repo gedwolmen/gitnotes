@@ -230,7 +230,7 @@ GitNotēs Pro is powered by **RevenueCat** with **StoreKit 2** on iOS.
 - Entitlement ID: `GitNotēs Pro`
 - Packages: Monthly, Yearly, Lifetime (configurable in RevenueCat dashboard)
 - Feature gates: `useProGate()`, `useProScreenGuard()`
-- Simulator override: `FORCE_ENABLE_PRO_ON_SIMULATOR` env var
+- Simulator override: `EXPO_PUBLIC_FORCE_ENABLE_PRO_ON_SIMULATOR` env var
 
 See [Paywall & Pro Tier](./paywall.md) for full details.
 

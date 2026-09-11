@@ -125,7 +125,7 @@
 - `markInterstitialShown`
 - `bindAccount`, `unbindAccount`
 
-**DEV_FORCE_PRO:** In `__DEV__` on iOS Simulator, Pro gate is forced open via `FORCE_ENABLE_PRO_ON_SIMULATOR` env var for QA testing without real IAP.
+**DEV_FORCE_PRO:** In `__DEV__` on iOS Simulator, Pro gate is forced open via `EXPO_PUBLIC_FORCE_ENABLE_PRO_ON_SIMULATOR` env var for QA testing without real IAP.
 
 ---
 
