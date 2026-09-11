@@ -458,7 +458,6 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
   },
   input: {
-    flex: 1,
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderRadius: 8,
