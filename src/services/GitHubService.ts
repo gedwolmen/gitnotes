@@ -353,7 +353,14 @@ class GitHubServiceClass {
       return null;
     }
     this.user = resolvedUser;
-    await AuthService.connectHost({ provider: 'github', token });
+    const connResult = await AuthService.connectHost({ provider: 'github', token });
+    if (!connResult.ok) {
+      // Token was valid for /user but rejected by connectHost — clear it
+      this.token = null;
+      setAuthToken('');
+      await AsyncStorage.removeItem(USER_KEY);
+      return null;
+    }
     await AsyncStorage.setItem(USER_KEY, JSON.stringify(resolvedUser));
     return resolvedUser;
   }
