@@ -15,7 +15,8 @@ import { useBackgroundSync } from '../hooks/useBackgroundSync';
 import { useForegroundSyncSettings } from '../hooks/useForegroundSyncSettings';
 import { useForegroundSyncHealth } from '../hooks/useForegroundSyncHealth';
 import type { RootStackParamList } from '../navigation/types';
-import { GitHubService, type GitHubRepository } from '../services/GitHubService';
+import { GitHubService } from '../services/GitHubService';
+import { type GitHostRepository, type GitHostRepositoryResult } from '../services/git/GitHost';
 import { RepoFileSyncService } from '../services/RepoFileSyncService';
 import { TemplateRepoPreferenceService, type TemplateRepoPreference } from '../services/TemplateRepoPreferenceService';
 import { serializeTemplate, templateSlug } from '../services/TemplateMarkdownService';
@@ -26,7 +27,7 @@ import { cancelInflightGitHttp } from '../services/git/gitHttp';
 import { CloneMigrationService } from '../services/git/CloneMigrationService';
 import { getActiveBranch } from '../services/git/activeBranchStore';
 import { LfsService } from '../services/git/lfs';
-import { AuthService } from '../services/AuthService';
+import { AuthService, type HostConnectionSummary } from '../services/AuthService';
 import { OnboardingService } from '../services/OnboardingService';
 import { HapticService } from '../utils/haptics';
 import { createThrottledEmitter } from '../utils/progressThrottle';
@@ -34,6 +35,7 @@ import { useTemplateStore } from '../stores/templateStore';
 import { useAIStore } from '../stores/aiStore';
 import type { AIProviderConfig } from '../models/AIProvider';
 import { GIT_HOST_LABELS, type GitHostProvider } from '../services/git/GitHost';
+import { getGitHostService } from '../services/git/gitHostFactory';
 import { ModelSelector } from '../components/ai/ModelSelector';
 import { ProviderConfigModal } from '../components/ai/ProviderConfigModal';
 import { ChatRepoPickerModal } from '../components/ai/ChatRepoPickerModal';
@@ -142,8 +144,8 @@ export default function SettingsScreen() {
   const setActionMode = useAIStore((state) => state.setActionMode);
 
   const [showRepoPickerModal, setShowRepoPickerModal] = useState(false);
-  const [githubRepos, setGithubRepos] = useState<GitHubRepository[]>([]);
-  const [isLoadingGithubRepos, setIsLoadingGithubRepos] = useState(false);
+  const [discoverableRepos, setDiscoverableRepos] = useState<GitHostRepositoryResult[]>([]);
+  const [isLoadingDiscoverableRepos, setIsLoadingDiscoverableRepos] = useState(false);
   const [manualRepoInput, setManualRepoInput] = useState('');
   const [isAddingRepoPath, setIsAddingRepoPath] = useState<string | null>(null);
   const [repoSearchQuery, setRepoSearchQuery] = useState('');
@@ -573,46 +575,67 @@ export default function SettingsScreen() {
 
   const openRepoPicker = useCallback(async () => {
     setRepoSearchQuery('');
+    setDiscoverableRepos([]);
     setShowRepoPickerModal(true);
-    if (authState.isAuthenticated && GitHubService.isAuthenticated()) {
-      setIsLoadingGithubRepos(true);
-      try {
-        setGithubRepos(await GitHubService.getRepositories());
-      } catch (error) {
-        console.warn('[SettingsScreen] getRepositories failed:', error);
-        setGithubRepos([]);
-      } finally {
-        setIsLoadingGithubRepos(false);
-      }
+    setIsLoadingDiscoverableRepos(true);
+    try {
+      const allRepos: GitHostRepositoryResult[] = [];
+      const hostsWithTokens = await Promise.all(
+        accountSummaries.flatMap((summary) =>
+          summary.hosts.map(async (host) => {
+            const token = await AccountStorage.getHostToken(host.id);
+            return token ? { host, token } : null;
+          }),
+        ),
+      );
+      const validHosts = hostsWithTokens.filter((h): h is { host: HostConnectionSummary; token: string } => h !== null);
+      await Promise.all(
+        validHosts.map(async ({ host }) => {
+          try {
+            const service = getGitHostService(host.provider);
+            const repos = await service.listRepositories();
+            allRepos.push(...repos);
+          } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            allRepos.push({ kind: 'unavailable', provider: host.provider, reason: message });
+          }
+        }),
+      );
+      setDiscoverableRepos(allRepos);
+    } catch (error) {
+      console.warn('[SettingsScreen] openRepoPicker failed:', error);
+      setDiscoverableRepos([]);
+    } finally {
+      setIsLoadingDiscoverableRepos(false);
     }
-  }, [authState.isAuthenticated]);
+  }, [accountSummaries]);
 
-  const handleSelectGithubRepo = useCallback(async (repo: GitHubRepository) => {
+  const handleSelectRepo = useCallback(async (repo: GitHostRepository) => {
     if (isAddingRepoPath !== null) return;
     if (repositories.length >= FREE_TIER_MAX_REPOS && !isPro) {
       promptProUpgrade(t, openPaywall);
       return;
     }
-    if (repositories.some((item) => item.path === repo.full_name)) {
+    if (repositories.some((item) => item.path === repo.fullName)) {
       setShowRepoPickerModal(false);
       return;
     }
     const attemptAdd = async (allowUnverifiedWrite: boolean): Promise<void> => {
-      setIsAddingRepoPath(repo.full_name);
+      setIsAddingRepoPath(repo.fullName);
       try {
         if (allowUnverifiedWrite) {
-          await addRepo(repo.full_name, repo.name, 'github', { allowUnverifiedWrite: true });
+          await addRepo(repo.fullName, repo.name, repo.provider, { allowUnverifiedWrite: true });
         } else {
-          await addRepo(repo.full_name, repo.name);
+          await addRepo(repo.fullName, repo.name, repo.provider);
         }
         HapticService.success();
-        await importRepoAfterAdd(repo.full_name, repo.name, repo.size);
+        await importRepoAfterAdd(repo.fullName, repo.name, repo.sizeKb);
       } catch (error) {
         if (error instanceof RepoAccessPreflightError && error.canRetry && !allowUnverifiedWrite) {
           confirmUnverifiedWrite(t, () => void attemptAdd(true));
           return;
         }
-        console.warn('[SettingsScreen] handleSelectGithubRepo failed:', error);
+        console.warn('[SettingsScreen] handleSelectRepo failed:', error);
         HapticService.error();
         if (error instanceof RepoAccessPreflightError) {
           Alert.alert(t('settings.repositoryAccessTitle'), error.message);
@@ -1114,7 +1137,7 @@ export default function SettingsScreen() {
         colors={colors}
         authState={authState}
         repositories={repositories}
-        githubRepos={githubRepos}
+        discoverableRepos={discoverableRepos}
         templatesRepoPref={templatesRepoPref}
         showRepoPickerModal={showRepoPickerModal}
         showTemplatesRepoPicker={showTemplatesRepoPicker}
@@ -1122,7 +1145,7 @@ export default function SettingsScreen() {
         repoSearchQuery={repoSearchQuery}
         manualRepoInput={manualRepoInput}
         isAddingRepoPath={isAddingRepoPath}
-        isLoadingGithubRepos={isLoadingGithubRepos}
+        isLoadingDiscoverableRepos={isLoadingDiscoverableRepos}
         cloneProgress={cloneProgress}
         onCancelClone={handleCancelClone}
         onRetryClone={handleRetryClone}
@@ -1135,7 +1158,7 @@ export default function SettingsScreen() {
         onSetRepoSearchQuery={setRepoSearchQuery}
         onSetManualRepoInput={setManualRepoInput}
         onAddManualRepo={() => void handleAddManualRepo()}
-        onSelectGithubRepo={(repo) => void handleSelectGithubRepo(repo)}
+        onSelectRepo={(repo) => void handleSelectRepo(repo)}
         onCloseTemplatesRepoPicker={() => setShowTemplatesRepoPicker(false)}
         onPickTemplatesRepo={(repo) => void handlePickTemplatesRepo(repo)}
         onCloseTokenModal={() => { setShowTokenModal(false); setTokenVisible(false); }}

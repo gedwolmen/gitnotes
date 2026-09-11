@@ -12,6 +12,9 @@ import type {
   GitHostIssue,
   GitHostItemState,
   GitHostPullRequest,
+  GitHostRepository,
+  GitHostRepositoryResult,
+  GitHostRepositoryUnavailable,
   GitHostService,
   GitHostShaResult,
   GitHostTreeEntry,
@@ -180,6 +183,27 @@ export class GitHubHostService implements GitHostService, GitHostWriteService {
         updatedAt: i.updated_at,
       }),
     );
+  }
+
+  async listRepositories(): Promise<GitHostRepositoryResult[]> {
+    try {
+      const repos = await GitHubService.getRepositories();
+      return repos.map(
+        (r): GitHostRepository => ({
+          provider: 'github',
+          owner: r.owner.login,
+          repo: r.name,
+          fullName: r.full_name,
+          name: r.name,
+          description: r.description ?? null,
+          isPrivate: r.private,
+          sizeKb: r.size,
+        }),
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return [{ kind: 'unavailable', provider: 'github', reason: message }];
+    }
   }
 
   // ── Write operations (GitHostWriteService) ──────────────────────

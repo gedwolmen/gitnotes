@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import SearchBar from '../SearchBar';
 import { Modal, Input, Button } from '../ui';
 import type { GitRepository } from '../../services/GitService';
-import type { GitHubRepository } from '../../services/GitHubService';
+import { GIT_HOST_LABELS, type GitHostRepository, type GitHostRepositoryResult, type GitHostRepositoryUnavailable } from '../../services/git/GitHost';
 import type { TemplateRepoPreference } from '../../services/TemplateRepoPreferenceService';
 import { CloneProgressContent, type CloneProgress } from './CloneProgressModal';
 
@@ -112,7 +112,7 @@ type SettingsModalsProps = {
   colors: ThemeColors;
   authState: AuthState;
   repositories: GitRepository[];
-  githubRepos: GitHubRepository[];
+  discoverableRepos: GitHostRepositoryResult[];
   templatesRepoPref: TemplateRepoPreference | null;
   showRepoPickerModal: boolean;
   showTemplatesRepoPicker: boolean;
@@ -120,7 +120,7 @@ type SettingsModalsProps = {
   repoSearchQuery: string;
   manualRepoInput: string;
   isAddingRepoPath: string | null;
-  isLoadingGithubRepos: boolean;
+  isLoadingDiscoverableRepos: boolean;
   cloneProgress: CloneProgress | null;
   onCancelClone: () => void;
   onRetryClone: () => void;
@@ -133,7 +133,7 @@ type SettingsModalsProps = {
   onSetRepoSearchQuery: (value: string) => void;
   onSetManualRepoInput: (value: string) => void;
   onAddManualRepo: () => void;
-  onSelectGithubRepo: (repo: GitHubRepository) => void;
+  onSelectRepo: (repo: GitHostRepository) => void;
   onCloseTemplatesRepoPicker: () => void;
   onPickTemplatesRepo: (repo: GitRepository) => void;
   onCloseTokenModal: () => void;
@@ -149,44 +149,51 @@ type SettingsModalsProps = {
 };
 
 type RepoPickerListProps = {
-  githubRepos: GitHubRepository[];
+  discoverableRepos: GitHostRepositoryResult[];
   repositories: GitRepository[];
   searchQuery: string;
   isLoading: boolean;
   isAddingRepoPath: string | null;
-  onSelectGithubRepo: (repo: GitHubRepository) => void;
+  onSelectRepo: (repo: GitHostRepository) => void;
   onSetRepoSearchQuery: (value: string) => void;
+  onAddManualRepo?: () => void;
   colors: ThemeColors;
   __onRender?: () => void;
 };
 
 const RepoPickerList = memo(function RepoPickerList({
-  githubRepos,
+  discoverableRepos,
   repositories,
   searchQuery,
   isLoading,
   isAddingRepoPath,
-  onSelectGithubRepo,
+  onSelectRepo,
   onSetRepoSearchQuery,
+  onAddManualRepo,
   colors,
   __onRender,
 }: RepoPickerListProps) {
   __onRender?.();
   const { t } = useTranslation();
+  const availableRepos = discoverableRepos.filter(
+    (r): r is GitHostRepository => 'kind' in r && r.kind === 'unavailable' ? false : true,
+  );
   const filteredRepos = searchQuery
-    ? githubRepos.filter(
+    ? availableRepos.filter(
         (repo) =>
-          repo.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          repo.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          repo.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          repo.owner.toLowerCase().includes(searchQuery.toLowerCase()) ||
           (repo.description ?? '').toLowerCase().includes(searchQuery.toLowerCase()),
       )
-    : githubRepos;
+    : availableRepos;
   return (
     <>
       <View className="px-4 py-2">
         <SearchBar value={searchQuery} onChangeText={onSetRepoSearchQuery} placeholder={t('explore.searchRepos')} />
       </View>
       <Text className="text-xs font-semibold uppercase tracking-wide px-4 py-2.5 border-b" style={{ color: colors.textSecondary, borderColor: colors.border }}>
-        {t('settings.yourGithubRepositories')}
+        {t('settings.yourRepositories')}
       </Text>
       {isLoading ? (
         <ActivityIndicator size="large" color={colors.primary} style={{ padding: 32 }} />
@@ -196,21 +203,21 @@ const RepoPickerList = memo(function RepoPickerList({
         </Text>
       ) : (
         filteredRepos.map((repo) => {
-          const alreadyAdded = repositories.some((item) => item.path === repo.full_name);
-          const isAddingThis = isAddingRepoPath === repo.full_name;
+          const alreadyAdded = repositories.some((item) => item.path === repo.fullName);
+          const isAddingThis = isAddingRepoPath === repo.fullName;
           const disabled = alreadyAdded || isAddingRepoPath !== null;
           return (
             <TouchableOpacity
-              key={repo.id}
-              testID="settings-modals.button.select-github-repo"
+              key={repo.fullName}
+              testID="settings-modals.button.select-repo"
               className="flex-row items-center px-4 py-3.5 border-b gap-3"
               style={[{ borderColor: colors.border }, disabled && !isAddingThis && { opacity: 0.5 }]}
-              onPress={() => onSelectGithubRepo(repo)}
+              onPress={() => onSelectRepo(repo)}
               disabled={disabled}
             >
-              <Ionicons name={repo.private ? 'lock-closed-outline' : 'git-branch-outline'} size={18} color={colors.primary} />
+              <Ionicons name={repo.isPrivate ? 'lock-closed-outline' : 'git-branch-outline'} size={18} color={colors.primary} />
               <View className="flex-1">
-                <Text style={{ color: colors.text, fontSize: 15, fontWeight: '500' }}>{repo.full_name}</Text>
+                <Text style={{ color: colors.text, fontSize: 15, fontWeight: '500' }}>{repo.fullName}</Text>
                 {repo.description ? (
                   <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 2 }} numberOfLines={1}>
                     {repo.description}
@@ -226,6 +233,35 @@ const RepoPickerList = memo(function RepoPickerList({
           );
         })
       )}
+      {(() => {
+        const unavailableRepos = discoverableRepos.filter(
+          (r): r is GitHostRepositoryUnavailable =>
+            'kind' in r && r.kind === 'unavailable',
+        );
+        const manualEntryLink = onAddManualRepo ? (
+          <TouchableOpacity onPress={onAddManualRepo} className="flex-row items-center justify-center gap-1.5 py-3 border-t" style={{ borderColor: colors.border }}>
+            <Ionicons name="add-circle-outline" size={16} color={colors.primary} />
+            <Text style={{ color: colors.primary, fontSize: 14 }}>{t('settings.addRepositoryManually')}</Text>
+          </TouchableOpacity>
+        ) : null;
+
+        return unavailableRepos.length > 0 && !isLoading ? (
+          <View>
+            {unavailableRepos.map((unavailable) => (
+              <View key={unavailable.provider} className="px-4 py-3 border-b gap-1" style={{ borderColor: colors.border }}>
+                <View className="flex-row items-center gap-2">
+                  <Ionicons name="warning-outline" size={16} color={colors.textSecondary} />
+                  <Text style={{ color: colors.textSecondary, fontSize: 13, fontWeight: '500' }}>
+                    {GIT_HOST_LABELS[unavailable.provider]}
+                  </Text>
+                </View>
+                <Text style={{ color: colors.textSecondary, fontSize: 12 }}>{unavailable.reason}</Text>
+              </View>
+            ))}
+            {manualEntryLink}
+          </View>
+        ) : null;
+      })()}
     </>
   );
 });
@@ -238,7 +274,7 @@ export function SettingsModals(props: SettingsModalsProps) {
     colors,
     authState,
     repositories,
-    githubRepos,
+    discoverableRepos,
     templatesRepoPref,
     showRepoPickerModal,
     showTemplatesRepoPicker,
@@ -246,7 +282,7 @@ export function SettingsModals(props: SettingsModalsProps) {
     repoSearchQuery,
     manualRepoInput,
     isAddingRepoPath,
-    isLoadingGithubRepos,
+    isLoadingDiscoverableRepos,
     cloneProgress,
     onCancelClone,
     onRetryClone,
@@ -259,7 +295,7 @@ export function SettingsModals(props: SettingsModalsProps) {
     onSetRepoSearchQuery,
     onSetManualRepoInput,
     onAddManualRepo,
-    onSelectGithubRepo,
+    onSelectRepo,
     onCloseTemplatesRepoPicker,
     onPickTemplatesRepo,
     onCloseTokenModal,
@@ -322,13 +358,14 @@ export function SettingsModals(props: SettingsModalsProps) {
 
           {authState.isAuthenticated ? (
             <RepoPickerList
-              githubRepos={githubRepos}
+              discoverableRepos={discoverableRepos}
               repositories={repositories}
               searchQuery={repoSearchQuery}
-              isLoading={isLoadingGithubRepos}
+              isLoading={isLoadingDiscoverableRepos}
               isAddingRepoPath={isAddingRepoPath}
-              onSelectGithubRepo={onSelectGithubRepo}
+              onSelectRepo={onSelectRepo}
               onSetRepoSearchQuery={onSetRepoSearchQuery}
+              onAddManualRepo={onAddManualRepo}
               colors={colors}
               __onRender={__onRepoPickerListRender}
             />

@@ -5,6 +5,8 @@ import type {
   GitHostIssue,
   GitHostItemState,
   GitHostPullRequest,
+  GitHostRepositoryResult,
+  GitHostRepositoryUnavailable,
   GitHostService,
   GitHostShaResult,
   GitHostTreeEntry,
@@ -363,6 +365,17 @@ export class GiteaLikeHostService implements GitHostService, GitHostWriteService
         createdAt: i.created_at,
         updatedAt: i.updated_at,
       }));
+  }
+
+  async listRepositories(): Promise<GitHostRepositoryResult[]> {
+    const reason =
+      'Repository listing is not supported for Gitea and Forgejo. You can add a repository manually.';
+    const unavailable: GitHostRepositoryUnavailable = {
+      kind: 'unavailable',
+      provider: this.provider,
+      reason,
+    };
+    return [unavailable];
   }
 
   // ── Write operations (GitHostWriteService) ──────────────────────
