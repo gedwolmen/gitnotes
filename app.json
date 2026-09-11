@@ -3,7 +3,7 @@
     "name": "GitNot\u0113s",
     "slug": "gitnotes",
     "version": "1.6.0",
-    "orientation": "portrait",
+    "orientation": "default",
     "icon": "./assets/generated/icon.png",
     "userInterfaceStyle": "automatic",
     "assetBundlePatterns": [
@@ -113,6 +113,16 @@
         {
           "microphonePermission": "GitNot\u0113s needs access to your microphone for voice-to-text note input.",
           "speechRecognitionPermission": "GitNot\u0113s uses on-device speech recognition to convert your voice into note text. Audio stays on your device."
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "enableMinifyInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true,
+            "extraProguardRules": "-dontwarn java.awt.Component"
+          }
         }
       ]
     ],

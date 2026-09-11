@@ -1,13 +1,12 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal } from 'react-native';
+import { useWindowDimensions } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import SvgImage from './SvgImage';
 import ImageCaption from './ImageCaption';
 import ImageZoomRotate from './ImageZoomRotate';
-
-const { width: screenWidth } = Dimensions.get('window');
 
 interface NoteImageProps {
   uri: string;
@@ -17,6 +16,7 @@ interface NoteImageProps {
 
 export default function NoteImage({ uri, alt = '', caption }: NoteImageProps) {
   const { colors, isDark } = useTheme();
+  const { width } = useWindowDimensions();
   const [showFullscreen, setShowFullscreen] = useState(false);
   const [imageError, setImageError] = useState(false);
   const isSvg = /\.svg$/i.test(uri);
@@ -49,7 +49,7 @@ export default function NoteImage({ uri, alt = '', caption }: NoteImageProps) {
         ) : (
           <Image
             source={{ uri }}
-            style={styles.image}
+            style={[styles.image, { width: width - 32 }]}
             contentFit="cover"
             onError={() => setImageError(true)}
             accessibilityLabel={alt || undefined}
@@ -66,11 +66,11 @@ export default function NoteImage({ uri, alt = '', caption }: NoteImageProps) {
           </TouchableOpacity>
           <ImageZoomRotate>
             {isSvg ? (
-              <SvgImage uri={uri} isDark={isDark} width={screenWidth} height={screenWidth * 0.8} />
+              <SvgImage uri={uri} isDark={isDark} width={width} height={width * 0.8} />
             ) : (
               <Image
                 source={{ uri }}
-                style={styles.fullscreenImage}
+                style={{ width: width, height: '80%' }}
                 contentFit="contain"
                 accessibilityLabel={alt || undefined}
               />
@@ -88,7 +88,6 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   image: {
-    width: screenWidth - 32,
     height: 200,
     borderRadius: 8,
   },
@@ -113,10 +112,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.95)',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  fullscreenImage: {
-    width: screenWidth,
-    height: '80%',
   },
   closeButton: {
     position: 'absolute',

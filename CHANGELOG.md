@@ -18,6 +18,51 @@ All notable fixes and feature changes to GitNotēs are documented here.
 
 **PR:** [#1563](https://github.com/gedwolmen/gitnotes/pull/1563)
 
+### fix(android): allow system-default orientation
+
+**What:** Android manifest contained `android:screenOrientation="portrait"`, forcing portrait-only on all devices including tablets, blocking landscape use on large screens and foldables.
+
+**Fix:** Changed `app.json` `orientation` from `"portrait"` to `"default"` (system-default). Expo's prebuild regenerates `android:screenOrientation="unspecified"` in the manifest, reverting to the OS orientation policy.
+
+**PR:** [#1567](https://github.com/gedwolmen/gitnotes/pull/1567)
+
+### fix(ui): recompute layout dimensions on resize
+
+**What:** `NoteImage` and `GraphViewScreen` used module-level `Dimensions.get('window')` (a static, non-reactive call) for layout calculations, causing stale viewport dimensions after orientation changes and bottom-sheet/image sizing issues on tablets and foldables.
+
+**Fix:** Replaced all `Dimensions.get('window')` with `useWindowDimensions()` hook in both components. `NoteImage` now computes image width reactively from the current viewport. `GraphViewScreen.centerGraph()` depends on `screenWidth` via `useWindowDimensions()` so graph centering recalculates on orientation change. `getNodeDimensions` (a function, not a dimension read) is unaffected.
+
+**PR:** [#1567](https://github.com/gedwolmen/gitnotes/pull/1567)
+
+### test(android): cover responsive and build configuration fixes
+
+**What:** Added deterministic regression tests for the Android build configuration and responsive dimension fixes so future prebuild or orientation changes fail clearly.
+
+**Fix:** Added `__tests__/plugins/androidBuildConfig.test.ts` validating R8 minification config, JNA rule, orientation setting, and no deprecated keys. Added `__tests__/utils/responsiveDimensions.test.ts` validating that `NoteImage` and `GraphViewScreen` use `useWindowDimensions()` hook and that `GraphViewScreen.centerGraph()` lists `screenWidth` in its dependency array.
+
+**PR:** [#1567](https://github.com/gedwolmen/gitnotes/pull/1567)
+
+### fix(android): migrate app-owned edge-to-edge handling
+
+**What:** Audited all app-owned status-bar/navigation-bar call sites for Android 15 edge-to-edge compatibility.
+
+**Fix:** No app-owned deprecated calls found. `Modal.tsx` uses React Native's current `statusBarTranslucent` JS API (not deprecated at JS layer), required for bottom-sheet content to render correctly under the translucent status bar. `App.tsx` uses Expo's `StatusBar` `style` prop (not deprecated). React Native's `@file:Suppress("DEPRECATION")` on native `setStatusBarTranslucency` is upstream-owned (`react-native@0.85.3`) and requires no app action. Edge-to-edge is already enabled via `edgeToEdgeEnabled=true` in `gradle.properties` and React Native's built-in `WindowUtil.enableEdgeToEdge()`.
+
+**Dependency-owned call sites (no app action required):**
+
+- `react-native@0.85.3` `ReactModalHostView.kt` — `@Suppress("DEPRECATION")` on native status-bar API; version-locked to RN 0.85.
+- `react-native-screens@4.26.2` — `statusBarTranslucent` in library type definitions only; no app code affected.
+
+**PR:** [#1567](https://github.com/gedwolmen/gitnotes/pull/1567)
+
+### fix(android): enable R8 minification and resource shrinking for release builds
+
+**What:** Android release builds had no code obfuscation or dead-code elimination, leaving DEX and resources fully uncompressed.
+
+**Fix:** Install `expo-build-properties@56.0.27` and configure `enableMinifyInReleaseBuilds` and `enableShrinkResourcesInReleaseBuilds` via the Expo config plugin; add a targeted `-dontwarn java.awt.Component` rule for a JNA desktop-only reference so R8 completes without fatal missing-class errors.
+
+**PR:** [#1567](https://github.com/gedwolmen/gitnotes/pull/1567)
+
 ### fix(sync): preserve repository host during clone recovery
 
 **What:** Repository clones and corruption recovery could fall back to the active host or GitHub defaults, breaking GitLab and self-hosted repositories when their saved host context differed.
