@@ -10,6 +10,14 @@ All notable fixes and feature changes to GitNotēs are documented here.
 
 ## 2026-09-11
 
+### fix(ios): generate valid Swift flags in CocoaPods Podfile
+
+**What:** Production iOS archives failed because the Expo config plugin emitted escaped Ruby interpolation, leaving `#{swift_flags}` as a literal input path for Swift pod targets.
+
+**Fix:** Preserve Ruby interpolation when generating `OTHER_SWIFT_FLAGS` and remove the temporary Podfile sanitizer workaround.
+
+**PR:** [#1563](https://github.com/gedwolmen/gitnotes/pull/1563)
+
 ### fix(sync): preserve repository host during clone recovery
 
 **What:** Repository clones and corruption recovery could fall back to the active host or GitHub defaults, breaking GitLab and self-hosted repositories when their saved host context differed.
