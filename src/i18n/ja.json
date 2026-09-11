@@ -610,7 +610,7 @@
       "tokenRequired": "Please enter a token.",
       "invalidUrl": "Please enter a valid URL.",
       "invalidToken": "Token rejected",
-      "invalidTokenBody": "トークンが拒否されました。無効、有効期限切れ、取り消し、または必要なリポジトリ権限欠如の可能性があります。GitHub設定でトークンを確認し、必要に応じて更新または再生成してください。",
+      "invalidTokenBody": "トークンが拒否されました。無効、有効期限切れ、取り消し、または必要なリポジトリ権限欠如の可能性があります。プロバイダーの設定でトークンを確認し、必要に応じて更新または再生成してください。",
       "networkTitle": "Connection failed",
       "networkBody": "Could not reach the host."
     }
