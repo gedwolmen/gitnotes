@@ -18,6 +18,14 @@ All notable fixes and feature changes to GitNotēs are documented here.
 
 **PR:** TBD
 
+### fix(sync): pass local worktree paths to native pulls
+
+**What:** Repository pulls failed with `No such file or directory` after cloning because native fetch and pull received the logical `owner/repo` identifier instead of the on-disk clone path.
+
+**Fix:** Resolve the repository through `GitFsService.workingTreeUri` before calling the native Git engine.
+
+**PR:** TBD
+
 ### fix(sync): route repository pulls through the native Git engine
 
 **What:** Automatic foreground sync and pull-to-refresh reported success without fetching remote changes because the clone pull path used no-op JavaScript git adapter methods.
