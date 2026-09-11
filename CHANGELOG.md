@@ -26,6 +26,14 @@ All notable fixes and feature changes to GitNotēs are documented here.
 
 **PR:** TBD
 
+### fix(ui): recompute layout dimensions on resize
+
+**What:** `NoteImage` and `GraphViewScreen` used module-level `Dimensions.get('window')` (a static, non-reactive call) for layout calculations, causing stale viewport dimensions after orientation changes and bottom-sheet/image sizing issues on tablets and foldables.
+
+**Fix:** Replaced all `Dimensions.get('window')` with `useWindowDimensions()` hook in both components. `NoteImage` now computes image width reactively from the current viewport. `GraphViewScreen.centerGraph()` depends on `screenWidth` via `useWindowDimensions()` so graph centering recalculates on orientation change. `getNodeDimensions` (a function, not a dimension read) is unaffected.
+
+**PR:** TBD
+
 ### fix(android): migrate app-owned edge-to-edge handling
 
 **What:** Audited all app-owned status-bar/navigation-bar call sites for Android 15 edge-to-edge compatibility.
