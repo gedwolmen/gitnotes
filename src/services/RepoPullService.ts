@@ -17,6 +17,7 @@ import type { GitHostProvider } from './git/GitHost';
 import type { CloneProgressCallback } from './RepoImportService';
 import { getActiveBranch } from './git/activeBranchStore';
 import { useRepoStore } from '../stores/repoStore';
+import { isGitCorruptionError } from './git/corruptionErrors';
 
 // Paths of todo files already reported as unparseable, per repo. Without this
 // cache the same malformed remote files re-warn on every pull (#1161); a file
@@ -61,8 +62,7 @@ async function handleCorruptionErrors<T>(fn: () => Promise<T>, repoPath: string,
     return await fn();
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
-    const isMissingObject = /Could not find object|not foundobject|NotFoundError|Packfile trailer mismatch/i.test(errorMsg);
-    if (isMissingObject) {
+    if (isGitCorruptionError(errorMsg)) {
       console.warn(`[RepoPullService] corruption detected during operation, re-cloning...`);
       const hasLocalCommits = await hasUnpushedCommits(repoPath, branch);
       if (hasLocalCommits) {
@@ -113,8 +113,7 @@ async function getRepoReader(
         };
       }
       const errorMsg = result.error ?? '';
-      const isMissingObject = /Could not find object|not foundobject|NotFoundError|Packfile trailer mismatch/i.test(errorMsg);
-      if (isMissingObject) {
+      if (isGitCorruptionError(errorMsg)) {
         console.warn(`[RepoPullService] clone appears corrupted (${errorMsg}), re-cloning...`);
         const hasLocalCommits = await hasUnpushedCommits(repoPath, branch);
         if (hasLocalCommits) {

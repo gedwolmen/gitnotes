@@ -5,6 +5,7 @@ import * as GitEngine from './engine/GitEngine';
 import { makeGitFs, type PromiseFsClient } from './gitFs';
 import { gitHttp } from './gitHttp';
 import { LfsService } from './lfs';
+import { isGitCorruptionError } from './corruptionErrors';
 
 const CLONES_SUBDIR = 'GitNotes/';
 
@@ -383,7 +384,7 @@ export class GitFsService {
         lastError = cloneError;
         await GitFsService.removeRepo({ repoPath: opts.repoPath }).catch(() => undefined);
         const msg = cloneError instanceof Error ? cloneError.message : String(cloneError);
-        const isCorruption = /Packfile trailer mismatch|Could not find object|not foundobject|NotFoundError|internal error caused this command to fail/i.test(msg);
+        const isCorruption = isGitCorruptionError(msg) || /internal error caused this command to fail/i.test(msg);
         if (looksLikeOutOfMemory(cloneError)) {
           throw new CloneOutOfMemoryError(
             `Out of memory while cloning ${opts.repoPath}. The repo is too large for this device — try a shallow clone or free up storage.`,
@@ -445,7 +446,7 @@ export class GitFsService {
       await GitEngine.fetch(GitFsService.workingTreeUri({ repoPath: opts.repoPath }), 'origin', opts.repoId);
     } catch (fetchError) {
       const msg = fetchError instanceof Error ? fetchError.message : String(fetchError);
-      if (/Packfile trailer mismatch|Could not find object|not foundobject|NotFoundError/i.test(msg)) {
+      if (isGitCorruptionError(msg)) {
         await cleanCorruptedPackfiles(opts.repoPath);
       }
       throw fetchError;
@@ -637,7 +638,7 @@ export class GitFsService {
       const code = (e as { code?: string }).code;
       const msg = e instanceof Error ? e.message : String(e);
       if (code === 'NotFoundError' || code === 'ENOENT') {
-        if (/Could not find object|not foundobject|NotFoundError/i.test(msg)) {
+        if (isGitCorruptionError(msg)) {
           throw e;
         }
         return null;

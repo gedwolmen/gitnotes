@@ -10,6 +10,14 @@ All notable fixes and feature changes to GitNotēs are documented here.
 
 ## 2026-09-11
 
+### fix(sync): stabilize activity labels and recover missing Git objects
+
+**What:** Sync activity briefly switched to a generic label while hiding, and native `object not found` pull failures were not recognized by the corruption recovery path.
+
+**Fix:** Preserve the active label through the hide delay and centralize corruption matching for the native missing-object error.
+
+**PR:** Follow-up to #1533
+
 ### fix(sync): alert when foreground sync fails
 
 **What:** Foreground pull failures were only visible later in Settings as sync-health text, so users could miss failed automatic syncs.
