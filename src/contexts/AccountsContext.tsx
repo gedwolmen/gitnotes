@@ -18,6 +18,7 @@ interface ConnectHostResult {
   ok: boolean;
   error?: string;
   host?: HostConnectionSummary;
+  reason?: 'invalid' | 'missing_repo_scope' | 'missing_contents_permission' | 'saml' | 'no_repository_access' | 'network';
 }
 
 interface AccountsContextValue {
@@ -194,7 +195,7 @@ export function AccountsProvider({ children }: { children: ReactNode }) {
     async (input: ConnectHostInput): Promise<ConnectHostResult> => {
       const result = await AuthService.connectHost(input);
       await refreshAccounts();
-      if (!result) return { ok: false, error: 'Invalid token' };
+      if (!result.ok) return { ok: false, error: 'Invalid token', reason: result.reason };
       // Keep the legacy GitHubService singleton in sync so repo listing /
       // preflight checks (which gate on GitHubService.isAuthenticated) work
       // immediately after connecting a host, not just after an app restart.
@@ -297,7 +298,7 @@ export function AccountsProvider({ children }: { children: ReactNode }) {
     async (token: string): Promise<boolean> => {
       const result = await AuthService.connectHost({ provider: 'github', token });
       await refreshAccounts();
-      if (!result) {
+      if (!result.ok) {
         setAuthState(EMPTY_AUTH);
         return false;
       }
@@ -334,7 +335,7 @@ export function AccountsProvider({ children }: { children: ReactNode }) {
     async (token: string): Promise<StoredAccount | null> => {
       const result = await AuthService.connectHost({ provider: 'github', token });
       await refreshAccounts();
-      if (result) {
+      if (result.ok) {
         // Keep the legacy GitHubService singleton in sync so repo listing /
         // preflight checks (which gate on GitHubService.isAuthenticated) work
         // immediately after adding an account, not just after an app restart.
@@ -346,7 +347,7 @@ export function AccountsProvider({ children }: { children: ReactNode }) {
           avatar_url: result.host.avatarUrl ?? '',
         } as unknown as GhSetTokenUser).catch(() => undefined);
       }
-      return result?.account ?? null;
+      return result.ok ? result.account : null;
     },
     [refreshAccounts],
   );

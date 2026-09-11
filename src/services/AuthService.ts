@@ -135,10 +135,9 @@ export interface ConnectHostInput {
   accountId?: string;
 }
 
-export interface ConnectHostResult {
-  account: StoredAccount;
-  host: HostConnectionSummary;
-}
+export type ConnectHostResult =
+  | { ok: true; account: StoredAccount; host: HostConnectionSummary }
+  | { ok: false; reason: 'invalid' | 'missing_repo_scope' | 'missing_contents_permission' | 'saml' | 'no_repository_access' | 'network' };
 
 /**
  * Verifies a token against the chosen host's API. Returns the resolved
@@ -200,7 +199,7 @@ export class AuthService {
    */
   static async setToken(token: string): Promise<AuthState> {
     const result = await this.connectHost({ provider: 'github', token });
-    if (!result) return { isAuthenticated: false, user: null, token: null };
+    if (!result.ok) return { isAuthenticated: false, user: null, token: null };
     const summary = await this.getActiveSummary();
     const isAuth = !!summary;
     const activeToken = await AccountStorage.getActiveToken();
@@ -222,7 +221,8 @@ export class AuthService {
    */
   static async addAccount(token: string): Promise<StoredAccount | null> {
     const result = await this.connectHost({ provider: 'github', token });
-    return result?.account ?? null;
+    if (!result.ok) return null;
+    return result.account;
   }
 
   static async clearToken(): Promise<void> {
@@ -386,13 +386,13 @@ export class AuthService {
 
   // ── Multi-host flow ────────────────────────────────────────────────
 
-  static async connectHost(input: ConnectHostInput): Promise<ConnectHostResult | null> {
+  static async connectHost(input: ConnectHostInput): Promise<ConnectHostResult> {
     const verification = await validateHostToken(
       input.provider,
       input.token,
       input.instanceBaseUrl ?? null,
     );
-    if (!verification.ok) return null;
+    if (!verification.ok) return { ok: false, reason: verification.reason };
     const verified = verification.user;
 
     let account: StoredAccount | null = null;
@@ -436,7 +436,7 @@ export class AuthService {
       await AccountStorage.setActiveHostId(host.id);
     }
 
-    return { account, host: toHostSummary(host) };
+    return { ok: true, account, host: toHostSummary(host) };
   }
 
   static async disconnectHost(hostId: string): Promise<void> {
