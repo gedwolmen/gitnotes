@@ -30,4 +30,25 @@ describe('responsive dimension invariants', () => {
       expect(dimensionReadIndex).toBeGreaterThan(fnDeclIndex);
     });
   });
+
+  describe('GraphViewScreen reads dimensions during render', () => {
+    test('does not import useWindowDimensions', () => {
+      const source = require('fs').readFileSync(
+        require('path').join(__dirname, '../../src/screens/GraphViewScreen.tsx'),
+        'utf-8',
+      );
+      expect(source).not.toMatch(/useWindowDimensions/);
+    });
+
+    test('reads window dimensions inside the component function', () => {
+      const source = require('fs').readFileSync(
+        require('path').join(__dirname, '../../src/screens/GraphViewScreen.tsx'),
+        'utf-8',
+      );
+      const fnDeclIndex = source.indexOf('export default function GraphViewScreen');
+      const dimensionReadIndex = source.indexOf("Dimensions.get('window')");
+      expect(fnDeclIndex).toBeGreaterThanOrEqual(0);
+      expect(dimensionReadIndex).toBeGreaterThan(fnDeclIndex);
+    });
+  });
 });
