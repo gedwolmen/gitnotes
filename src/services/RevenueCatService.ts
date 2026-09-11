@@ -9,6 +9,8 @@ import type {
 
 export interface ConfigureResult {
   configured: boolean;
+  /** The appUserID that was used during configure, or null if anonymous. */
+  appUserID: string | null;
 }
 
 export interface Packages {
@@ -28,34 +30,40 @@ function isPlaceholderKey(apiKey: string | undefined): boolean {
 }
 
 let configured = false;
+let configuredAppUserID: string | null = null;
 
-export async function configureRevenueCat(): Promise<ConfigureResult> {
+export async function configureRevenueCat(appUserID?: string | null): Promise<ConfigureResult> {
   if (configured) {
-    return { configured: true };
+    return { configured: true, appUserID: configuredAppUserID };
   }
   const apiKey =
     Platform.OS === 'ios'
       ? process.env.EXPO_PUBLIC_REVENUECAT_API_KEY_IOS
       : process.env.EXPO_PUBLIC_REVENUECAT_API_KEY_ANDROID;
   if (isPlaceholderKey(apiKey)) {
-    return { configured: false };
+    return { configured: false, appUserID: null };
   }
   Purchases.setLogLevel(Purchases.LOG_LEVEL.WARN);
-  await Purchases.configure({
-    apiKey,
+  const finalAppUserID = appUserID ?? null;
+  const configureOptions: Parameters<typeof Purchases.configure>[0] = {
+    apiKey: apiKey!,
     ...(Platform.OS === 'ios' ? { storeKitVersion: STOREKIT_VERSION.STOREKIT_2 } : {}),
-  });
+    ...(finalAppUserID !== null ? { appUserID: finalAppUserID } : {}),
+  };
+  await Purchases.configure(configureOptions);
   configured = true;
-  return { configured: true };
+  configuredAppUserID = finalAppUserID;
+  return { configured: true, appUserID: finalAppUserID };
 }
 
 export function isConfigured(): boolean {
   return configured;
 }
 
-/** Test-only seam: clear the module-level configured flag (#1162). */
+/** Test-only seam: clear the module-level configured flag and appUserID (#1162). */
 export function __resetConfiguredFlagForTests(): void {
   configured = false;
+  configuredAppUserID = null;
 }
 
 const matchIdentifier =
@@ -111,9 +119,37 @@ export async function restorePurchases(): Promise<PurchaseResult> {
   });
 }
 
-export function getCustomerInfo(): Promise<CustomerInfo> {
-  return Purchases.getCustomerInfo();
+const CUSTOMER_INFO_MAX_RETRIES = 3;
+const CUSTOMER_INFO_BASE_DELAY_MS = 100;
+
+async function delay(ms: number): Promise<void> {
+  if (_delayForTests) return _delayForTests(ms);
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
+
+let _delayForTests: ((ms: number) => Promise<void>) | null = null;
+export function __setDelayForTests(fn: ((ms: number) => Promise<void>) | null): void {
+  _delayForTests = fn;
+}
+
+export async function getCustomerInfo(): Promise<CustomerInfo> {
+  let lastError: Error | null = null;
+  for (let attempt = 0; attempt < CUSTOMER_INFO_MAX_RETRIES; attempt++) {
+    try {
+      return await Purchases.getCustomerInfo();
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      if (attempt < CUSTOMER_INFO_MAX_RETRIES - 1) {
+        const backoffMs = CUSTOMER_INFO_BASE_DELAY_MS * Math.pow(2, attempt);
+        await delay(backoffMs);
+      }
+    }
+  }
+  throw lastError ?? new Error('Failed to get customer info after retries');
+}
+
+const LOGIN_MAX_RETRIES = 3;
+const LOGIN_BASE_DELAY_MS = 100;
 
 /**
  * Bind the current (anonymous) RevenueCat identity to a stable app user ID so
@@ -122,12 +158,21 @@ export function getCustomerInfo(): Promise<CustomerInfo> {
  */
 export async function logInAppUser(appUserID: string): Promise<CustomerInfo | null> {
   if (!configured) return null;
-  try {
-    const result = await Purchases.logIn(appUserID);
-    return result.customerInfo;
-  } catch {
-    return null;
+  let lastError: Error | null = null;
+  for (let attempt = 0; attempt < LOGIN_MAX_RETRIES; attempt++) {
+    try {
+      const result = await Purchases.logIn(appUserID);
+      return result.customerInfo;
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      if (attempt < LOGIN_MAX_RETRIES - 1) {
+        const backoffMs = LOGIN_BASE_DELAY_MS * Math.pow(2, attempt);
+        await delay(backoffMs);
+      }
+    }
   }
+  console.warn('[RevenueCat] logInAppUser failed after retries:', lastError?.message);
+  return null;
 }
 
 /** Detach the current RevenueCat identity back to anonymous. */
