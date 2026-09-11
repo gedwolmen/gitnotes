@@ -104,6 +104,8 @@ export const useRepoStore = create<RepoState & RepoActions>()((set, get) => ({
         branch: repo.branch ?? 'main',
         token: activeHost.token,
         repoId: repo?.id,
+        provider: repo.provider,
+        instanceBaseUrl: activeHost.instanceBaseUrl,
       });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);

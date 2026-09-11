@@ -21,6 +21,8 @@ export interface ActiveGitHost {
   host: GitHostFullService;
   /** Host connection id this active host was resolved from. */
   hostId: string;
+  /** Self-hosted instance base URL. `null` for SaaS defaults (github.com / gitlab.com / gitea.com / codeberg.org). */
+  instanceBaseUrl: string | null;
 }
 
 /** Scratch cache so two callers in the same tick don't re-instantiate services. */
@@ -69,6 +71,7 @@ export async function getActiveGitHost(): Promise<ActiveGitHost | null> {
     token,
     host,
     hostId: hostSummary.id,
+    instanceBaseUrl: hostSummary.instanceBaseUrl,
   };
   cache = { key, value };
   return value;
