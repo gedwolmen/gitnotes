@@ -25,7 +25,7 @@ const SWIFTUICORE_WORKAROUND = `    installer.aggregate_targets.each do |aggrega
           swift_flags = build_configuration.build_settings['OTHER_SWIFT_FLAGS'] || '$(inherited)'
           swift_flags = swift_flags.join(' ') if swift_flags.is_a?(Array)
           unless swift_flags.include?('${SWIFTUI_PRIVATE_AUTOLINK_FLAGS}')
-            build_configuration.build_settings['OTHER_SWIFT_FLAGS'] = "\\#{swift_flags} ${SWIFTUI_PRIVATE_AUTOLINK_FLAGS}"
+            build_configuration.build_settings['OTHER_SWIFT_FLAGS'] = "#{swift_flags} ${SWIFTUI_PRIVATE_AUTOLINK_FLAGS}"
           end
         end
       end
@@ -38,7 +38,7 @@ const SWIFTUICORE_WORKAROUND = `    installer.aggregate_targets.each do |aggrega
         swift_flags = build_configuration.build_settings['OTHER_SWIFT_FLAGS'] || '$(inherited)'
         swift_flags = swift_flags.join(' ') if swift_flags.is_a?(Array)
         unless swift_flags.include?('${SWIFTUI_PRIVATE_AUTOLINK_FLAGS}')
-          build_configuration.build_settings['OTHER_SWIFT_FLAGS'] = "\\#{swift_flags} ${SWIFTUI_PRIVATE_AUTOLINK_FLAGS}"
+          build_configuration.build_settings['OTHER_SWIFT_FLAGS'] = "#{swift_flags} ${SWIFTUI_PRIVATE_AUTOLINK_FLAGS}"
         end
       end
     end
@@ -51,7 +51,7 @@ const INCLUDE_PATH_WORKAROUND = `    installer.pods_project.targets.each do |tar
         existing_swift_include_paths = build_configuration.build_settings['SWIFT_INCLUDE_PATHS'] || '$(inherited)'
         unless existing_swift_include_paths.include?('$(PODS_TARGET_SRCROOT)')
           build_configuration.build_settings['SWIFT_INCLUDE_PATHS'] =
-            "\\#{existing_swift_include_paths} $(PODS_TARGET_SRCROOT)".strip
+            "#{existing_swift_include_paths} $(PODS_TARGET_SRCROOT)".strip
         end
       end
     end
@@ -110,3 +110,4 @@ function withExpoSqliteXcode26(config) {
 }
 
 module.exports = withExpoSqliteXcode26;
+module.exports.SWIFTUICORE_WORKAROUND = SWIFTUICORE_WORKAROUND;
