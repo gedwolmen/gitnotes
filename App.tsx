@@ -160,7 +160,7 @@ export default function App() {
   if (showOnboarding === null) {
     const isDark = systemColorScheme === 'dark';
     return (
-      <View style={[styles.loadingContainer, { backgroundColor: isDark ? '#000000' : '#ffffff' }]}>
+      <View style={[styles.loadingContainer, { backgroundColor: isDark ? '#0E0E0E' : '#ffffff' }]}>
         <StatusBar style={isDark ? 'light' : 'dark'} />
       </View>
     );
