@@ -18,6 +18,19 @@ All notable fixes and feature changes to GitNotēs are documented here.
 
 **PR:** [#1563](https://github.com/gedwolmen/gitnotes/pull/1563)
 
+### fix(android): migrate app-owned edge-to-edge handling
+
+**What:** Audited all app-owned status-bar/navigation-bar call sites for Android 15 edge-to-edge compatibility.
+
+**Fix:** No app-owned deprecated calls found. `Modal.tsx` uses React Native's current `statusBarTranslucent` JS API (not deprecated at JS layer), required for bottom-sheet content to render correctly under the translucent status bar. `App.tsx` uses Expo's `StatusBar` `style` prop (not deprecated). React Native's `@file:Suppress("DEPRECATION")` on native `setStatusBarTranslucency` is upstream-owned (`react-native@0.85.3`) and requires no app action. Edge-to-edge is already enabled via `edgeToEdgeEnabled=true` in `gradle.properties` and React Native's built-in `WindowUtil.enableEdgeToEdge()`.
+
+**Dependency-owned call sites (no app action required):**
+
+- `react-native@0.85.3` `ReactModalHostView.kt` — `@Suppress("DEPRECATION")` on native status-bar API; version-locked to RN 0.85.
+- `react-native-screens@4.26.2` — `statusBarTranslucent` in library type definitions only; no app code affected.
+
+**PR:** TBD
+
 ### fix(android): enable R8 minification and resource shrinking for release builds
 
 **What:** Android release builds had no code obfuscation or dead-code elimination, leaving DEX and resources fully uncompressed.
