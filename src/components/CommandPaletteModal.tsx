@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet } from 'react-native';
 import { Modal } from './ui/Modal';
 import { searchCommands, Command } from '../services/CommandRegistry';
 import { Ionicons } from '@expo/vector-icons';
@@ -54,40 +54,40 @@ export default function CommandPaletteModal({ visible, onClose }: CommandPalette
       onRequestClose={onClose}
       bottomSheet
       dismissOnBackdrop
+      contentStyle={{ padding: 16, paddingBottom: 34, maxHeight: '70%' }}
     >
-      <View style={styles.container}>
-        <Text style={[styles.title, { color: colors.text }]}>Command Palette</Text>
-        <TextInput
-          value={query}
-          onChangeText={handleQueryChange}
-          placeholder="Search commands..."
-          placeholderTextColor={colors.textSecondary}
-          style={[
-            styles.input,
-            { backgroundColor: colors.surface, color: colors.text, borderColor: colors.border },
-          ]}
-          autoFocus
-        />
-        <View style={styles.list}>
-          {results.map(cmd => (
-            <CommandRow key={cmd.id} command={cmd} onPress={() => handleCommandPress(cmd)} />
-          ))}
-          {results.length === 0 && (
-            <Text style={{ color: colors.textSecondary, textAlign: 'center', padding: 20 }}>
-              No commands found
-            </Text>
-          )}
-        </View>
-      </View>
+      <Text style={[styles.title, { color: colors.text }]}>Command Palette</Text>
+      <TextInput
+        value={query}
+        onChangeText={handleQueryChange}
+        placeholder="Search commands..."
+        placeholderTextColor={colors.textSecondary}
+        style={[
+          styles.input,
+          { backgroundColor: colors.surface, color: colors.text, borderColor: colors.border },
+        ]}
+        autoFocus
+      />
+      <FlatList
+        data={results}
+        keyExtractor={(item) => item.id}
+        style={{ flex: 1 }}
+        ListEmptyComponent={
+          <Text style={{ color: colors.textSecondary, textAlign: 'center', paddingVertical: 20 }}>
+            No commands found
+          </Text>
+        }
+        renderItem={({ item }) => (
+          <CommandRow command={item} onPress={() => handleCommandPress(item)} />
+        )}
+      />
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16 },
   title: { fontSize: 18, fontWeight: '600', marginBottom: 12 },
   input: { borderWidth: 1, borderRadius: 8, padding: 10, fontSize: 16, marginBottom: 12 },
-  list: { flex: 1 },
   row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth },
   categoryBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4 },
 });
