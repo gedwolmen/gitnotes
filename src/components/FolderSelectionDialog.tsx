@@ -262,7 +262,12 @@ export default function FolderSelectionDialog({
             Select Folder
           </Text>
           <View style={styles.headerSideRight}>
-            <TouchableOpacity onPress={toggleCreateMode} hitSlop={8} style={styles.headerActionButton}>
+             <TouchableOpacity
+               testID="folder-selection.button.create"
+               onPress={toggleCreateMode}
+               hitSlop={8}
+               style={styles.headerActionButton}
+             >
             <Ionicons
               name={isCreateMode ? 'close' : 'add'}
               size={24}
@@ -272,9 +277,43 @@ export default function FolderSelectionDialog({
           </View>
         </View>
 
-        {isCreateMode && (
-          <View style={[styles.createContainer, { backgroundColor: colors.surface }]}>
-            <TextInput
+         {isCreateMode && (
+           <View style={[styles.createContainer, { backgroundColor: colors.surface }]}>
+             <Text style={[styles.parentLabel, { color: colors.textSecondary }]}>Create inside</Text>
+             <ScrollView
+               horizontal
+               showsHorizontalScrollIndicator={false}
+               contentContainerStyle={styles.parentList}
+             >
+               <TouchableOpacity
+                 testID="folder-selection.button.parent.root"
+                 style={[
+                   styles.parentButton,
+                   { borderColor: selectedParentId === null ? colors.primary : colors.border },
+                 ]}
+                 onPress={() => setSelectedParentId(null)}
+               >
+                 <Text style={{ color: selectedParentId === null ? colors.primary : colors.text }}>
+                   Root
+                 </Text>
+               </TouchableOpacity>
+               {folders.map((folder) => (
+                 <TouchableOpacity
+                   key={folder.id}
+                   testID={`folder-selection.button.parent.${folder.id}`}
+                   style={[
+                     styles.parentButton,
+                     { borderColor: selectedParentId === folder.id ? colors.primary : colors.border },
+                   ]}
+                   onPress={() => setSelectedParentId(folder.id)}
+                 >
+                   <Text style={{ color: selectedParentId === folder.id ? colors.primary : colors.text }}>
+                     {folder.path}
+                   </Text>
+                 </TouchableOpacity>
+               ))}
+             </ScrollView>
+             <TextInput
               style={[styles.input, { backgroundColor: colors.surfaceSecondary, color: colors.text }]}
               placeholder="Folder name"
               placeholderTextColor={colors.textSecondary}
@@ -401,13 +440,24 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   createContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
     padding: 16,
     gap: 12,
   },
+  parentLabel: {
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  parentList: {
+    gap: 8,
+    paddingBottom: 4,
+  },
+  parentButton: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
   input: {
-    flex: 1,
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderRadius: 8,
