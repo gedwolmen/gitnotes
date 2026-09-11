@@ -66,7 +66,7 @@ export function GitHubActivityIndicator() {
   const progress = useGitHubActivityStore((s) => s.progress);
   const [pendingCount, setPendingCount] = useState(0);
 
-  const safeLabel = (label ?? 'Syncing with GitHub').replace(/…+$/, '');
+  const safeLabel = (label ?? 'Syncing…').replace(/…+$/, '');
 
   const opacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(-12)).current;
