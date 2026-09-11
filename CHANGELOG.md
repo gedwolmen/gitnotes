@@ -10,6 +10,14 @@ All notable fixes and feature changes to GitNotēs are documented here.
 
 ## 2026-09-11
 
+### fix(sync): alert when foreground sync fails
+
+**What:** Foreground pull failures were only visible later in Settings as sync-health text, so users could miss failed automatic syncs.
+
+**Fix:** Show one alert for each foreground sync failure streak, including timeouts, and reset alerting after a successful sync.
+
+**PR:** TBD
+
 ### fix(sync): route repository pulls through the native Git engine
 
 **What:** Automatic foreground sync and pull-to-refresh reported success without fetching remote changes because the clone pull path used no-op JavaScript git adapter methods.
