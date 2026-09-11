@@ -8,6 +8,16 @@ All notable fixes and feature changes to GitNotēs are documented here.
 >
 > **History**: prior fixes (pre-2026-08) lived in single-PR wiki pages. Those pages were retired in [#1047](https://github.com/gedwolmen/gitnotes/pull/1047); their full diagnostic content is preserved in git history via `git log -p -- docs/wiki/<file>.md`.
 
+## 2026-09-11
+
+### fix(sync): route repository pulls through the native Git engine
+
+**What:** Automatic foreground sync and pull-to-refresh reported success without fetching remote changes because the clone pull path used no-op JavaScript git adapter methods.
+
+**Fix:** Use the native `GitEngine.pull` bridge, map its structured result to the JavaScript facade contract, and preserve repository identity for credential lookup.
+
+**PR:** TBD
+
 ## 2026-09-10
 
 ### fix(git): accept intentional branch changes during checkout
