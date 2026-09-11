@@ -16,7 +16,7 @@ All notable fixes and feature changes to GitNotēs are documented here.
 
 **Fix:** Read each file's GitHub commit history during import and preserve its oldest and newest commit dates through note creation.
 
-**PR:** TBD
+**PR:** #1543
 
 ### fix(sync): stabilize activity labels and recover missing Git objects
 
