@@ -141,7 +141,7 @@ export const DEV_FORCE_PRO =
   __DEV__ &&
   Platform.OS === 'ios' &&
   isSimulator() &&
-  process.env.FORCE_ENABLE_PRO_ON_SIMULATOR !== 'false';
+  process.env.EXPO_PUBLIC_FORCE_ENABLE_PRO_ON_SIMULATOR !== 'false';
 ```
 
 The gate quad: `__DEV__ && iOS && simulator && env !== 'false'`

@@ -30,17 +30,17 @@ function isSimulator(): boolean {
  * NOT a payment bypass — RevenueCat calls (initialize/refresh/purchase/restore) run unchanged.
  * Only the derived gate (`selectIsPro` + `status`) is forced to `true` / `'pro'` in this path.
  *
- * Gate quad: `__DEV__ && Platform.OS === 'ios' && !Device.isDevice && FORCE_ENABLE_PRO_ON_SIMULATOR !== 'false'`
+ * Gate quad: `__DEV__ && Platform.OS === 'ios' && !Device.isDevice && EXPO_PUBLIC_FORCE_ENABLE_PRO_ON_SIMULATOR !== 'false'`
  * - `__DEV__`: compiled out in production builds.
  * - `Platform.OS === 'ios'`: Android and web are unaffected.
  * - `!Device.isDevice`: only true in the iOS simulator (not on a real device).
- * - `FORCE_ENABLE_PRO_ON_SIMULATOR !== 'false'`: defaults true, set to 'false' to test paywalls on simulator.
+ * - `EXPO_PUBLIC_FORCE_ENABLE_PRO_ON_SIMULATOR !== 'false'`: defaults true, set to 'false' to test paywalls on simulator.
  */
 export const DEV_FORCE_PRO =
   __DEV__ &&
   Platform.OS === 'ios' &&
   isSimulator() &&
-  process.env.FORCE_ENABLE_PRO_ON_SIMULATOR !== 'false';
+  process.env.EXPO_PUBLIC_FORCE_ENABLE_PRO_ON_SIMULATOR !== 'false';
 
 const TRIAL_WAS_ACTIVE_KEY = '@gitnotes:trial_was_active';
 const TRIAL_EXPIRED_AT_KEY = '@gitnotes:trial_expired_at';
