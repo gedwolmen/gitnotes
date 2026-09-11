@@ -612,7 +612,7 @@
       "tokenRequired": "Please enter a token.",
       "invalidUrl": "Please enter a valid URL.",
       "invalidToken": "Token rejected",
-      "invalidTokenBody": "The host did not accept this token.",
+      "invalidTokenBody": "El token fue rechazado. Puede ser inválido, haber expirado o estar revocado, o carecer de los permisos necesarios del repositorio. Revisa el token en GitHub Settings y actualízalo o regenerate si es necesario.",
       "networkTitle": "Connection failed",
       "networkBody": "Could not reach the host."
     }

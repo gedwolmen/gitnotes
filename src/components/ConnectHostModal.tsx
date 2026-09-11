@@ -42,6 +42,28 @@ const ALL_PROVIDERS: { provider: GitHostProvider; helpTextKey: string }[] = [
   { provider: 'forgejo', helpTextKey: 'connectHost.help.forgejo' },
 ];
 
+type TokenReason = 'invalid' | 'missing_repo_scope' | 'missing_contents_permission' | 'saml' | 'no_repository_access' | 'network';
+
+const getTokenErrorKey = (reason: TokenReason | undefined, provider: string): string => {
+  if (provider === 'github' && reason) {
+    switch (reason) {
+      case 'missing_repo_scope':
+        return 'settings.tokenMissingRepoScope';
+      case 'missing_contents_permission':
+        return 'settings.tokenMissingContentsPermission';
+      case 'saml':
+        return 'settings.tokenSamlError';
+      case 'no_repository_access':
+        return 'settings.tokenNoRepoAccess';
+      case 'invalid':
+        return 'settings.tokenTestInvalid';
+      case 'network':
+        return 'settings.tokenTestNetwork';
+    }
+  }
+  return 'connectHost.error.invalidTokenBody';
+};
+
 /**
  * Modal that lets a user add a new host connection (or replace a token for
  * an existing one). Operates in 3 conceptual steps:
@@ -119,7 +141,8 @@ export function ConnectHostModal({
       if (result.ok) {
         Alert.alert(t('connectHost.success.testTitle'), t('connectHost.success.testBody'));
       } else {
-        Alert.alert(t('connectHost.error.invalidToken'), t('connectHost.error.invalidTokenBody'));
+        const errorKey = getTokenErrorKey(result.reason, provider);
+        Alert.alert(t('connectHost.error.invalidToken'), t(errorKey));
       }
     } catch (err) {
       Alert.alert(
@@ -145,10 +168,8 @@ export function ConnectHostModal({
         accountId,
       });
       if (!result.ok) {
-        Alert.alert(
-          t('connectHost.error.invalidToken'),
-          t('connectHost.error.invalidTokenBody'),
-        );
+        const errorKey = getTokenErrorKey(result.reason, provider);
+        Alert.alert(t('connectHost.error.invalidToken'), t(errorKey));
         return;
       }
       onClose();
