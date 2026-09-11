@@ -10,6 +10,14 @@ All notable fixes and feature changes to GitNotēs are documented here.
 
 ## 2026-09-11
 
+### fix(auth): clarify provider token failures
+
+**What:** GitLab and other non-GitHub token failures could show GitHub-specific wording, while sync errors gave too little guidance to recover.
+
+**Fix:** Use provider-neutral token and sync messages that point users to token validity, repository access, write permissions, and pulling remote changes.
+
+**PR:** TBD
+
 ### fix(notes): preserve repository modification dates
 
 **What:** Imported Notes and other supported repository files displayed the import date instead of their historical last-modified date, which also made date sorting inaccurate.
