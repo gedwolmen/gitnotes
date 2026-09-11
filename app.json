@@ -103,12 +103,11 @@
           "backgroundColor": "#ffffff",
           "dark": {
             "image": "./assets/generated/splash-icon.png",
-            "imageWidth": 300,
-            "resizeMode": "contain",
             "backgroundColor": "#0E0E0E"
           }
         }
       ],
+      "./plugins/withSplashScreenDarkMode",
       [
         "expo-speech-recognition",
         {
