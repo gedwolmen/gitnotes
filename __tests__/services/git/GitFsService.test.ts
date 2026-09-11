@@ -6,6 +6,7 @@ jest.mock('expo-file-system/legacy', () => ({
 }));
 
 jest.mock('@/services/git/engine/GitEngine', () => ({
+  fetch: jest.fn(),
   pull: jest.fn(),
 }));
 
@@ -34,7 +35,7 @@ describe('GitFsService.pullWithFastForward', () => {
     });
 
     expect(result).toEqual({ ok: true });
-    expect(pull).toHaveBeenCalledWith('owner/repo', 'origin', 'repo-id');
+    expect(pull).toHaveBeenCalledWith('file:///documents/GitNotes/owner/repo', 'origin', 'repo-id');
   });
 
   it('surfaces native pull conflicts instead of reporting success', async () => {
@@ -52,5 +53,25 @@ describe('GitFsService.pullWithFastForward', () => {
       reason: 'diverged',
       error: 'merge conflict in notes/example.md',
     });
+  });
+});
+
+describe('GitFsService.fetch', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('passes the absolute worktree path to the native GitEngine bridge', async () => {
+    const fetch = GitEngine.fetch as jest.MockedFunction<typeof GitEngine.fetch>;
+    fetch.mockResolvedValue(undefined);
+
+    await GitFsService.fetch({
+      repoPath: 'owner/repo',
+      branch: 'main',
+      token: 'token',
+      repoId: 'repo-id',
+    });
+
+    expect(fetch).toHaveBeenCalledWith('file:///documents/GitNotes/owner/repo', 'origin', 'repo-id');
   });
 });
