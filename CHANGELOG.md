@@ -16,7 +16,7 @@ All notable fixes and feature changes to GitNotēs are documented here.
 
 **Fix:** Read the current window dimensions during render instead of adding `useWindowDimensions()` to these components, preserving responsive sizing without changing their hook count.
 
-**PR:** TBD
+**PR:** [#1568](https://github.com/gedwolmen/gitnotes/pull/1568)
 
 ### fix(ios): generate valid Swift flags in CocoaPods Podfile
 
