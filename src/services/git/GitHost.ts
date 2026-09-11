@@ -157,7 +157,36 @@ export interface GitHostService {
     repo: string,
     state?: GitHostItemState,
   ): Promise<GitHostIssue[]>;
+
+  /** Lists all repositories accessible to the authenticated user. */
+  listRepositories(): Promise<GitHostRepositoryResult[]>;
+
 }
+
+/** Normalized repository shape returned by `GitHostService.listRepositories()`. */
+export interface GitHostRepository {
+  provider: GitHostProvider;
+  owner: string;
+  repo: string;
+  fullName: string;
+  name: string;
+  description: string | null;
+  isPrivate: boolean;
+  defaultBranch?: string;
+  sizeKb?: number;
+}
+
+/** Indicates a repository is unavailable (not found, permission denied, etc.). */
+export interface GitHostRepositoryUnavailable {
+  kind: 'unavailable';
+  provider: GitHostProvider;
+  reason: string;
+}
+
+/** Discriminated union of repository results. */
+export type GitHostRepositoryResult =
+  | GitHostRepository
+  | GitHostRepositoryUnavailable;
 
 // ── Write operations ────────────────────────────────────────────────
 

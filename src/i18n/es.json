@@ -283,6 +283,8 @@
     "syncTimeAgo": "hace {{time}}",
     "credits": "Hecho con amor por Vidwa De Seram en colaboración con Xaventra",
     "yourGithubRepositories": "Tus repositorios de GitHub",
+    "yourRepositories": "Tus repositorios",
+    "addRepositoryManually": "Añadir repositorio manualmente",
     "noMatchingRepositories": "No hay repositorios que coincidan",
     "noRepositoriesFound": "No se encontraron repositorios",
     "branch": "Rama: {{branch}}",

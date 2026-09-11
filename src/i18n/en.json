@@ -382,6 +382,8 @@
     "syncTimeAgo": "{{time}} ago",
     "credits": "Made with love by Vidwa De Seram in collaboration with Xaventra",
     "yourGithubRepositories": "Your GitHub Repositories",
+    "yourRepositories": "Your Repositories",
+    "addRepositoryManually": "Add repository manually",
     "noMatchingRepositories": "No matching repositories",
     "noRepositoriesFound": "No repositories found",
     "branch": "Branch: {{branch}}",

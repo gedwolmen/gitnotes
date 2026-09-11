@@ -57,7 +57,7 @@ async function hasUnpushedCommits(repoPath: string, branch: string): Promise<boo
   }
 }
 
-async function handleCorruptionErrors<T>(fn: () => Promise<T>, repoPath: string, branch: string, token?: string): Promise<T> {
+async function handleCorruptionErrors<T>(fn: () => Promise<T>, repoPath: string, branch: string, token?: string, repoId?: string, provider?: GitHostProvider): Promise<T> {
   try {
     return await fn();
   } catch (error) {
@@ -72,7 +72,9 @@ async function handleCorruptionErrors<T>(fn: () => Promise<T>, repoPath: string,
         );
       }
       await GitFsService.removeRepo({ repoPath });
-      await GitFsService.cloneExclusive({ repoPath, branch, token: token ?? undefined });
+      const savedRepos = await StorageService.getSavedRepositories();
+      const savedRepo = savedRepos.find((r) => r.path === repoPath);
+      await GitFsService.cloneExclusive({ repoPath, branch, token: token ?? undefined, repoId, provider: provider ?? savedRepo?.provider });
       return fn();
     }
     throw error;
@@ -93,23 +95,25 @@ async function getRepoReader(
   owner: string,
   repo: string,
   branch: string,
-  _provider?: GitHostProvider,
+  provider?: GitHostProvider,
 ): Promise<RepoReader> {
   const token = (await AuthService.getToken()) ?? undefined;
   const savedRepos = await StorageService.getSavedRepositories();
-  const repoId = savedRepos.find((r) => r.path === repoPath)?.id;
+  const savedRepo = savedRepos.find((r) => r.path === repoPath);
+  const repoId = savedRepo?.id;
+  const resolvedProvider = provider ?? savedRepo?.provider;
   const cloned = await GitFsService.isCloned({ repoPath });
   if (!cloned) {
-    await GitFsService.cloneExclusive({ repoPath, branch, token, repoId });
+    await GitFsService.cloneExclusive({ repoPath, branch, token, repoId, provider: resolvedProvider });
   } else {
     const result = await GitFsService.pullWithFastForward({ repoPath, branch, token, repoId });
     if (!result.ok) {
       if (result.reason === 'diverged') {
         const remoteRefName = `refs/remotes/origin/${branch}`;
         return {
-          listTree: () => handleCorruptionErrors(() => GitFsService.listTree({ repoPath, ref: remoteRefName }), repoPath, branch, token),
+          listTree: () => handleCorruptionErrors(() => GitFsService.listTree({ repoPath, ref: remoteRefName }), repoPath, branch, token, repoId, resolvedProvider),
           readFile: (path: string) =>
-            handleCorruptionErrors(() => GitFsService.readFile({ repoPath, ref: remoteRefName, filepath: path }), repoPath, branch, token),
+            handleCorruptionErrors(() => GitFsService.readFile({ repoPath, ref: remoteRefName, filepath: path }), repoPath, branch, token, repoId, resolvedProvider),
         };
       }
       const errorMsg = result.error ?? '';
@@ -123,7 +127,7 @@ async function getRepoReader(
           );
         }
         await GitFsService.removeRepo({ repoPath });
-        await GitFsService.cloneExclusive({ repoPath, branch, token, repoId });
+        await GitFsService.cloneExclusive({ repoPath, branch, token, repoId, provider: resolvedProvider });
         return {
           listTree: () => GitFsService.listTree({ repoPath, ref: branch }),
           readFile: (path: string) =>

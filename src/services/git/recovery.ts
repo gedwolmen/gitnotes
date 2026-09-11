@@ -185,6 +185,7 @@ export interface PushWithRecoveryOptions {
   repoPath: string;
   branch: string;
   token?: string;
+  repoId?: string;
   onProgress?: (progress: { phase: string; loaded: number; total: number }) => void;
 }
 
@@ -201,7 +202,7 @@ export interface PushWithRecoveryResult {
 export async function pushWithRecovery(
   opts: PushWithRecoveryOptions,
 ): Promise<PushWithRecoveryResult> {
-  const { repoPath, branch, token } = opts;
+  const { repoPath, branch, token, repoId } = opts;
   const info = parseRepoPath(repoPath);
   if (!info) return { success: false, error: `Invalid repo path: ${repoPath}` };
 
@@ -223,7 +224,7 @@ export async function pushWithRecovery(
         return { success: false, error: `Clone corruption with unpushed commits in ${repoPath}@${branch}. Please push or reset.` };
       }
       await GitFsService.removeRepo({ repoPath });
-      await GitFsService.clone({ repoPath, branch, token });
+      await GitFsService.clone({ repoPath, branch, token, repoId });
       try {
         const result = await GitEngine.pushWithIntegrate(repoDirFs(repoPath), 'origin', undefined);
         if (!result.ok) {
@@ -251,7 +252,7 @@ export async function pushWithRecovery(
             return { success: false, error: `Clone corruption with unpushed commits in ${repoPath}@${branch}. Please push or reset.` };
           }
           await GitFsService.removeRepo({ repoPath });
-          await GitFsService.clone({ repoPath, branch, token });
+          await GitFsService.clone({ repoPath, branch, token, repoId });
           try {
             const result = await GitEngine.pushWithIntegrate(repoDirFs(repoPath), 'origin', undefined);
             if (!result.ok) {
@@ -343,9 +344,10 @@ export async function repairCloneAfterCorruption(opts: {
   repoPath: string;
   branch: string;
   token?: string;
+  repoId?: string;
   filePathForRecoveryCheck?: string;
 }): Promise<void> {
-  const { repoPath, branch, token, filePathForRecoveryCheck } = opts;
+  const { repoPath, branch, token, repoId, filePathForRecoveryCheck } = opts;
 
   const fsPath = repoDirFs(repoPath);
 
@@ -378,5 +380,5 @@ export async function repairCloneAfterCorruption(opts: {
   }
 
   await GitFsService.removeRepo({ repoPath });
-  await GitFsService.clone({ repoPath, branch, token: token ?? undefined });
+  await GitFsService.clone({ repoPath, branch, token: token ?? undefined, repoId });
 }

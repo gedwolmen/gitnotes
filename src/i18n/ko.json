@@ -283,6 +283,8 @@
     "syncTimeAgo": "{{time}} 전",
     "credits": "Vidwa De Seram이(가) Xaventra와 함께 사랑을 담아 제작",
     "yourGithubRepositories": "내 GitHub 저장소",
+    "yourRepositories": "내 저장소",
+    "addRepositoryManually": "저장소 수동으로 추가",
     "noMatchingRepositories": "일치하는 저장소가 없습니다",
     "noRepositoriesFound": "저장소를 찾을 수 없습니다",
     "branch": "브랜치: {{branch}}",

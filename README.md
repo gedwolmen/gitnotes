@@ -11,7 +11,7 @@
 <h1 align="center">GitNotēs</h1>
 
 <p align="center">
-  Mobile notes, todos, and canvases backed by a GitHub repo.<br>
+  Mobile notes, todos, and canvases backed by a Git repo.<br>
   Your data lives as plain Markdown, Neorg, Org, or JSON — yours to read, edit, and version anywhere.
 </p>
 
