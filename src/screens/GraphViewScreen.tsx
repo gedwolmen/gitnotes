@@ -1,5 +1,5 @@
 import React, { useMemo, useCallback, useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, useWindowDimensions, Pressable, LayoutChangeEvent } from 'react-native';
+import { View, Text, TouchableOpacity, Dimensions, Pressable, LayoutChangeEvent } from 'react-native';
 import { Canvas, Skia, Path } from '@shopify/react-native-skia';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -50,7 +50,7 @@ export default function GraphViewScreen() {
   const { notes } = useNotes();
   const { setViewMode } = useViewMode();
   const setChatRepo = useAIStore((s) => s.setChatRepo);
-  const { width: screenWidth } = useWindowDimensions();
+  const { width: screenWidth } = Dimensions.get('window');
 
   const canvasWidth = CANVAS_SIZE;
   const canvasHeight = CANVAS_SIZE;

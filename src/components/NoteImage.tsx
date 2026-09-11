@@ -1,6 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal } from 'react-native';
-import { useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, Dimensions } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
@@ -16,7 +15,7 @@ interface NoteImageProps {
 
 export default function NoteImage({ uri, alt = '', caption }: NoteImageProps) {
   const { colors, isDark } = useTheme();
-  const { width } = useWindowDimensions();
+  const { width } = Dimensions.get('window');
   const [showFullscreen, setShowFullscreen] = useState(false);
   const [imageError, setImageError] = useState(false);
   const isSvg = /\.svg$/i.test(uri);
