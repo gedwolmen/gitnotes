@@ -1,6 +1,7 @@
 import { GitHubService } from './GitHubService';
 import { GitService } from './GitService';
 import { StorageService } from './StorageService';
+import { AccountStorage } from './AccountStorage';
 import { createNote, isNoteColor, NoteColor } from '../models/Note';
 import { createCanvas, updateCanvas, CanvasScene } from '../models/Canvas';
 import { createTodoItem, applyTodoUpdate, reorderTodos } from '../models/Todo';
@@ -57,7 +58,7 @@ async function hasUnpushedCommits(repoPath: string, branch: string): Promise<boo
   }
 }
 
-async function handleCorruptionErrors<T>(fn: () => Promise<T>, repoPath: string, branch: string, token?: string, repoId?: string, provider?: GitHostProvider): Promise<T> {
+async function handleCorruptionErrors<T>(fn: () => Promise<T>, repoPath: string, branch: string, token?: string, repoId?: string, provider?: GitHostProvider, instanceBaseUrl?: string | null): Promise<T> {
   try {
     return await fn();
   } catch (error) {
@@ -74,7 +75,17 @@ async function handleCorruptionErrors<T>(fn: () => Promise<T>, repoPath: string,
       await GitFsService.removeRepo({ repoPath });
       const savedRepos = await StorageService.getSavedRepositories();
       const savedRepo = savedRepos.find((r) => r.path === repoPath);
-      await GitFsService.cloneExclusive({ repoPath, branch, token: token ?? undefined, repoId, provider: provider ?? savedRepo?.provider });
+      const hostConnection =
+        (savedRepo?.hostId ? await AccountStorage.getHostConnection(savedRepo.hostId) : null) ??
+        (await AccountStorage.getActiveHostConnection());
+      await GitFsService.cloneExclusive({
+        repoPath,
+        branch,
+        token: token ?? undefined,
+        repoId,
+        provider: provider ?? savedRepo?.provider ?? hostConnection?.provider,
+        instanceBaseUrl: instanceBaseUrl ?? hostConnection?.instanceBaseUrl,
+      });
       return fn();
     }
     throw error;
@@ -101,19 +112,23 @@ async function getRepoReader(
   const savedRepos = await StorageService.getSavedRepositories();
   const savedRepo = savedRepos.find((r) => r.path === repoPath);
   const repoId = savedRepo?.id;
-  const resolvedProvider = provider ?? savedRepo?.provider;
+  const hostConnection =
+    (savedRepo?.hostId ? await AccountStorage.getHostConnection(savedRepo.hostId) : null) ??
+    (await AccountStorage.getActiveHostConnection());
+  const resolvedProvider = provider ?? savedRepo?.provider ?? hostConnection?.provider;
+  const instanceBaseUrl = hostConnection?.instanceBaseUrl;
   const cloned = await GitFsService.isCloned({ repoPath });
   if (!cloned) {
-    await GitFsService.cloneExclusive({ repoPath, branch, token, repoId, provider: resolvedProvider });
+    await GitFsService.cloneExclusive({ repoPath, branch, token, repoId, provider: resolvedProvider, instanceBaseUrl });
   } else {
     const result = await GitFsService.pullWithFastForward({ repoPath, branch, token, repoId });
     if (!result.ok) {
       if (result.reason === 'diverged') {
         const remoteRefName = `refs/remotes/origin/${branch}`;
         return {
-          listTree: () => handleCorruptionErrors(() => GitFsService.listTree({ repoPath, ref: remoteRefName }), repoPath, branch, token, repoId, resolvedProvider),
+          listTree: () => handleCorruptionErrors(() => GitFsService.listTree({ repoPath, ref: remoteRefName }), repoPath, branch, token, repoId, resolvedProvider, instanceBaseUrl),
           readFile: (path: string) =>
-            handleCorruptionErrors(() => GitFsService.readFile({ repoPath, ref: remoteRefName, filepath: path }), repoPath, branch, token, repoId, resolvedProvider),
+            handleCorruptionErrors(() => GitFsService.readFile({ repoPath, ref: remoteRefName, filepath: path }), repoPath, branch, token, repoId, resolvedProvider, instanceBaseUrl),
         };
       }
       const errorMsg = result.error ?? '';
@@ -127,7 +142,7 @@ async function getRepoReader(
           );
         }
         await GitFsService.removeRepo({ repoPath });
-        await GitFsService.cloneExclusive({ repoPath, branch, token, repoId, provider: resolvedProvider });
+        await GitFsService.cloneExclusive({ repoPath, branch, token, repoId, provider: resolvedProvider, instanceBaseUrl });
         return {
           listTree: () => GitFsService.listTree({ repoPath, ref: branch }),
           readFile: (path: string) =>

@@ -10,6 +10,14 @@ All notable fixes and feature changes to GitNotēs are documented here.
 
 ## 2026-09-11
 
+### fix(sync): preserve repository host during clone recovery
+
+**What:** Repository clones and corruption recovery could fall back to the active host or GitHub defaults, breaking GitLab and self-hosted repositories when their saved host context differed.
+
+**Fix:** Resolve the repository's stored host connection first and preserve its provider and instance URL through add-time clones, lazy pulls, and recovery re-clones.
+
+**PR:** [#1555](https://github.com/gedwolmen/gitnotes/pull/1555)
+
 ### fix(auth): clarify provider token failures
 
 **What:** GitLab and other non-GitHub token failures could show GitHub-specific wording, while sync errors gave too little guidance to recover.
