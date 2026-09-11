@@ -66,4 +66,21 @@ describe('useForegroundSyncAlert', () => {
 
     expect(alert).toHaveBeenCalledWith('settings.autoSyncFailedTitle:', 'settings.autoSyncFailedBody:GitHub');
   });
+
+  it.each(['idle', 'syncing'] as const)('does not alert while sync is %s', (status) => {
+    setHealth(status, 0);
+    renderHook(() => useForegroundSyncAlert());
+
+    expect(alert).not.toHaveBeenCalled();
+  });
+
+  it('alerts again when remounted during a failed sync', () => {
+    setHealth('failed', 1, 100);
+    const rendered = renderHook(() => useForegroundSyncAlert());
+
+    rendered.unmount();
+    renderHook(() => useForegroundSyncAlert());
+
+    expect(alert).toHaveBeenCalledTimes(2);
+  });
 });
