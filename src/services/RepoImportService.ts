@@ -95,7 +95,9 @@ async function runImport(
 
     if (!(await GitFsService.isCloned({ repoPath }))) {
       let remoteUrlOverride: string | undefined;
-      const hostConnection = await AccountStorage.getActiveHostConnection();
+      const hostConnection =
+        (repo?.hostId ? await AccountStorage.getHostConnection(repo.hostId) : null) ??
+        (await AccountStorage.getActiveHostConnection());
       if (hostConnection) {
         const useSsh = await AccountStorage.getHostUseSsh(hostConnection.id);
         if (useSsh && repo?.id) {
@@ -126,7 +128,7 @@ async function runImport(
         onProgress,
         repoId: repo?.id,
         remoteUrlOverride,
-        provider: hostConnection?.provider,
+        provider: repo?.provider ?? hostConnection?.provider,
         instanceBaseUrl: hostConnection?.instanceBaseUrl,
       });
     }
