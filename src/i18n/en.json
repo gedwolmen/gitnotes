@@ -549,7 +549,7 @@
       "tokenRequired": "Please enter a token.",
       "invalidUrl": "Please enter a valid http(s) URL.",
       "invalidToken": "Token rejected",
-      "invalidTokenBody": "The token was rejected. It may be invalid, expired, or revoked — or lack the required repository permissions. Check your token in GitHub Settings and update or regenerate it if needed.",
+      "invalidTokenBody": "The token was rejected. It may be invalid, expired, or revoked — or lack the required repository permissions. Check the token in your provider's settings and update or regenerate it if needed.",
       "networkTitle": "Connection failed",
       "networkBody": "Could not reach the host. Check your network and try again."
     }

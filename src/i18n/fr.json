@@ -614,7 +614,7 @@
       "tokenRequired": "Please enter a token.",
       "invalidUrl": "Please enter a valid URL.",
       "invalidToken": "Token rejected",
-      "invalidTokenBody": "Le jeton a été rejeté. Il peut être invalide, expiré ou révoqué, ou manquer des autorisations de dépôt requises. Vérifiez votre jeton dans GitHub Settings et mettez-le à jour ou régénérez-le si nécessaire.",
+      "invalidTokenBody": "Le jeton a été rejeté. Il peut être invalide, expiré ou révoqué, ou manquer des autorisations de dépôt requises. Vérifiez le jeton dans les paramètres de votre fournisseur et mettez-le à jour ou régénérez-le si nécessaire.",
       "networkTitle": "Connection failed",
       "networkBody": "Could not reach the host."
     }

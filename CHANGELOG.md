@@ -10,6 +10,14 @@ All notable fixes and feature changes to GitNotēs are documented here.
 
 ## 2026-09-11
 
+### fix(auth): clarify provider token failures
+
+**What:** GitLab and other non-GitHub token failures could show GitHub-specific wording, while sync errors gave too little guidance to recover.
+
+**Fix:** Use provider-neutral token and sync messages that point users to token validity, repository access, write permissions, and pulling remote changes.
+
+**PR:** TBD
+
 ### fix(sync): preserve repository identity during clone recovery
 
 **What:** Corruption recovery re-clones could omit the repository ID, so the native Git engine could not recover the registered HTTPS or SSH credential and libgit2 reported authentication replay failures.
