@@ -20,7 +20,7 @@ import { RootStackParamList } from '../navigation/types';
 import { useTheme } from '../contexts/ThemeContext';
 import { useNotes } from '../contexts/NoteContext';
 import { SafeAreaView } from '../components/ui/SafeAreaView';
-import { ScreenHeader } from '../components/ui/ScreenHeader';
+import { ScreenHeader, useScreenHeaderHeight } from '../components/ui/ScreenHeader';
 import {
   getJournalEntries,
   findJournalEntry,
@@ -40,6 +40,7 @@ export default function CalendarScreen() {
   const route = useRoute<CalendarRouteProp>();
   const { colors } = useTheme();
   const { notes } = useNotes();
+  const headerHeight = useScreenHeaderHeight();
 
   const initialDate = route.params?.selectedDate
     ? new Date(route.params.selectedDate)
@@ -154,7 +155,7 @@ export default function CalendarScreen() {
         onBack={() => navigation.goBack()}
       />
 
-      <View style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
+      <View style={{ paddingHorizontal: 16, paddingVertical: 12, paddingTop: headerHeight }}>
         {/* Month Navigation Header */}
         <View
           style={{
