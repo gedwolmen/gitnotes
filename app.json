@@ -120,8 +120,7 @@
         {
           "android": {
             "enableMinifyInReleaseBuilds": true,
-            "enableShrinkResourcesInReleaseBuilds": true,
-            "extraProguardRules": "-dontwarn java.awt.Component"
+            "enableShrinkResourcesInReleaseBuilds": true
           }
         }
       ]
