@@ -13,6 +13,8 @@ import {
   restorePurchases,
 } from '../services/RevenueCatService';
 import * as PaywallAnalytics from '../services/PaywallAnalytics';
+import { AuthService } from '../services/AuthService';
+import type { HostConnectionSummary } from '../services/AuthService';
 
 let _isDevice: boolean | null = null;
 let _customerInfoCleanup: (() => void) | null = null;
@@ -95,6 +97,11 @@ interface CustomerInfoLike {
   originalApplicationVersion?: string | null;
 }
 
+function rcAppUserIdFor(host: HostConnectionSummary | null): string | null {
+  if (!host) return null;
+  return `gitnotes:${host.provider}:${host.hostUserId}`;
+}
+
 function deriveTrialInfo(customerInfo: CustomerInfoLike | null): {
   entitlementActive: boolean;
   trialActive: boolean;
@@ -159,8 +166,20 @@ export const useProStore = create<ProState & ProActions>()((set, get) => ({
   initialize: async () => {
     let customerInfo: CustomerInfoLike | null = null;
     let rcError: string | null = null;
+
+    let appUserID: string | null = null;
     try {
-      const { configured } = await configureRevenueCat();
+      const activeSummary = await AuthService.getActiveSummary();
+      const activeHost = activeSummary?.hosts.find((h) => h.id === activeSummary.activeHostId)
+        ?? activeSummary?.hosts[0]
+        ?? null;
+      appUserID = rcAppUserIdFor(activeHost);
+    } catch {
+      // AuthService unavailable — configure anonymously
+    }
+
+    try {
+      const { configured } = await configureRevenueCat(appUserID);
       set({ configured });
       if (configured) {
         customerInfo = await getCustomerInfo();

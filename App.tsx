@@ -20,7 +20,7 @@ import { ThemeProvider } from './src/contexts/ThemeContext';
 import { NativeWindThemeProvider } from './src/theme/nativewind';
 import { FolderProvider } from './src/contexts/FolderContext';
 import { ViewModeProvider } from './src/contexts/ViewModeContext';
-import { AccountsProvider, rebindRevenueCatToActiveAccount } from './src/contexts/AccountsContext';
+import { AccountsProvider } from './src/contexts/AccountsContext';
 import { HostAuthProvider } from './src/contexts/HostAuthContext';
 import { TodoProvider } from './src/contexts/TodoContext';
 import { CanvasProvider } from './src/contexts/CanvasContext';
@@ -47,9 +47,8 @@ import { useForegroundSyncAlert } from './src/hooks/useForegroundSyncAlert';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { reconcileThoughtDumps } from './src/services/ai/thoughtDumpIndexing';
 import { LastSelectionPreferenceService } from './src/services/LastSelectionPreferenceService';
-import { useProStore } from './src/stores/proStore';
-import { enforceTierLimits } from './src/services/TierLimits';
 import * as PushNotificationService from './src/services/PushNotificationService';
+import { bootstrapEntitlement } from './src/bootstrap/bootstrapEntitlement';
 import { hideDevMenuFloatingActionButton } from './src/utils/devMenuFab';
 
 const queryClient = new QueryClient({
@@ -83,9 +82,7 @@ export default function App() {
     // repo/account caps can be enforced on data brought back by Android backup
     // restore (#1233) — before the stores render it, not after.
     try {
-      await useProStore.getState().initialize();
-      await enforceTierLimits();
-      await rebindRevenueCatToActiveAccount();
+      await bootstrapEntitlement();
     } catch (error) {
       console.warn('[App] tier-limit enforcement failed:', error);
     }
