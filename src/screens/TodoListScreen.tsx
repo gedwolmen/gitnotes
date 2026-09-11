@@ -39,6 +39,7 @@ import { useProGate } from '../hooks/useProGate';
 import KanbanBoard from '../components/todos/KanbanBoard';
 
 const FILTER_COMPLETED_PERSISTENCE_KEY = '@gitnotes:filters:todo-completed';
+const VIEW_MODE_PERSISTENCE_KEY = '@gitnotes:todo:view-mode';
 
 export default function TodoListScreen() {
   const { t } = useTranslation();
@@ -77,6 +78,7 @@ export default function TodoListScreen() {
   const [showFilterModal, setShowFilterModal] = useState(false);
   const isDeletingRef = useRef(false);
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
+  const [viewModeHydrated, setViewModeHydrated] = useState(false);
   const { isPro, openPaywall } = useProGate();
 
   useEffect(() => {
@@ -124,6 +126,19 @@ export default function TodoListScreen() {
     if (!filterCompletedHydrated) return;
     AsyncStorage.setItem(FILTER_COMPLETED_PERSISTENCE_KEY, String(filterCompleted)).catch(() => {/* noop */});
   }, [filterCompleted, filterCompletedHydrated]);
+
+  useEffect(() => {
+    AsyncStorage.getItem(VIEW_MODE_PERSISTENCE_KEY)
+      .then((raw) => {
+        if (raw === 'kanban' || raw === 'list') setViewMode(raw);
+      })
+      .finally(() => setViewModeHydrated(true));
+  }, []);
+
+  useEffect(() => {
+    if (!viewModeHydrated) return;
+    AsyncStorage.setItem(VIEW_MODE_PERSISTENCE_KEY, viewMode).catch(() => {/* noop */});
+  }, [viewMode, viewModeHydrated]);
 
   useEffect(() => {
     if (inflight > 0) {
