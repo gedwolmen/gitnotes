@@ -24,7 +24,7 @@ All notable fixes and feature changes to GitNotēs are documented here.
 
 **Fix:** Changed `app.json` `orientation` from `"portrait"` to `"default"` (system-default). Expo's prebuild regenerates `android:screenOrientation="unspecified"` in the manifest, reverting to the OS orientation policy.
 
-**PR:** TBD
+**PR:** [#1567](https://github.com/gedwolmen/gitnotes/pull/1567)
 
 ### fix(ui): recompute layout dimensions on resize
 
@@ -32,7 +32,7 @@ All notable fixes and feature changes to GitNotēs are documented here.
 
 **Fix:** Replaced all `Dimensions.get('window')` with `useWindowDimensions()` hook in both components. `NoteImage` now computes image width reactively from the current viewport. `GraphViewScreen.centerGraph()` depends on `screenWidth` via `useWindowDimensions()` so graph centering recalculates on orientation change. `getNodeDimensions` (a function, not a dimension read) is unaffected.
 
-**PR:** TBD
+**PR:** [#1567](https://github.com/gedwolmen/gitnotes/pull/1567)
 
 ### test(android): cover responsive and build configuration fixes
 
@@ -40,7 +40,7 @@ All notable fixes and feature changes to GitNotēs are documented here.
 
 **Fix:** Added `__tests__/plugins/androidBuildConfig.test.ts` validating R8 minification config, JNA rule, orientation setting, and no deprecated keys. Added `__tests__/utils/responsiveDimensions.test.ts` validating that `NoteImage` and `GraphViewScreen` use `useWindowDimensions()` hook and that `GraphViewScreen.centerGraph()` lists `screenWidth` in its dependency array.
 
-**PR:** TBD
+**PR:** [#1567](https://github.com/gedwolmen/gitnotes/pull/1567)
 
 ### fix(android): migrate app-owned edge-to-edge handling
 
@@ -53,7 +53,7 @@ All notable fixes and feature changes to GitNotēs are documented here.
 - `react-native@0.85.3` `ReactModalHostView.kt` — `@Suppress("DEPRECATION")` on native status-bar API; version-locked to RN 0.85.
 - `react-native-screens@4.26.2` — `statusBarTranslucent` in library type definitions only; no app code affected.
 
-**PR:** TBD
+**PR:** [#1567](https://github.com/gedwolmen/gitnotes/pull/1567)
 
 ### fix(android): enable R8 minification and resource shrinking for release builds
 
@@ -61,7 +61,7 @@ All notable fixes and feature changes to GitNotēs are documented here.
 
 **Fix:** Install `expo-build-properties@56.0.27` and configure `enableMinifyInReleaseBuilds` and `enableShrinkResourcesInReleaseBuilds` via the Expo config plugin; add a targeted `-dontwarn java.awt.Component` rule for a JNA desktop-only reference so R8 completes without fatal missing-class errors.
 
-**PR:** TBD
+**PR:** [#1567](https://github.com/gedwolmen/gitnotes/pull/1567)
 
 ### fix(sync): preserve repository host during clone recovery
 
