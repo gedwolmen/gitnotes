@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { Alert, Platform, RefreshControl, LayoutChangeEvent } from 'react-native';
-import { FlatList } from 'react-native';
+import { FlatList, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -500,7 +500,9 @@ export default function TodoListScreen() {
       />
 
       {viewMode === 'kanban' ? (
-        <KanbanBoard onSelect={openEditModal} />
+        <View style={{ paddingTop: headerBlurHeight, paddingHorizontal: 16, flex: 1 }}>
+          <KanbanBoard onSelect={openEditModal} />
+        </View>
       ) : (
         <FlatList
           data={filteredTodos}
