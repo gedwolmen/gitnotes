@@ -71,7 +71,7 @@ export const useGitHubActivityStore = create<GitHubActivityState & GitHubActivit
       const timer = setTimeout(() => {
         set({ inflight: 0, label: null, hideTimer: null, visible: false, pendingVisibilityChange: false, progress: null });
       }, MINIMUM_DISPLAY_MS);
-      set({ inflight: 0, label: null, hideTimer: timer, visibilityChangeTimer: null, progress: null });
+      set({ inflight: 0, label: get().label, hideTimer: timer, visibilityChangeTimer: null, progress: null });
     }
   },
 
