@@ -5,6 +5,9 @@ import type {
   GitHostIssue,
   GitHostItemState,
   GitHostPullRequest,
+  GitHostRepository,
+  GitHostRepositoryResult,
+  GitHostRepositoryUnavailable,
   GitHostService,
   GitHostShaResult,
   GitHostTreeEntry,
@@ -29,8 +32,11 @@ interface GitLabProject {
   id: number;
   path_with_namespace: string;
   name: string;
+  description?: string;
+  visibility: 'public' | 'internal' | 'private';
   default_branch?: string;
   web_url?: string;
+  size?: number; // size is in bytes
 }
 
 interface GitLabTreeEntry {
@@ -363,6 +369,33 @@ export class GitLabService implements GitHostService, GitHostWriteService {
       createdAt: i.created_at,
       updatedAt: i.updated_at,
     }));
+  }
+
+  async listRepositories(): Promise<GitHostRepositoryResult[]> {
+    try {
+      const projects = await this.listOwnedProjects();
+      return projects.map(
+        (p): GitHostRepository => {
+          const parts = p.path_with_namespace.split('/');
+          const owner = parts[0] ?? '';
+          const repo = parts.slice(1).join('/') || p.path_with_namespace;
+          return {
+            provider: 'gitlab',
+            owner,
+            repo,
+            fullName: p.path_with_namespace,
+            name: p.name,
+            description: p.description ?? null,
+            isPrivate: p.visibility === 'private',
+            sizeKb: p.size ? Math.round(p.size / 1024) : undefined,
+            defaultBranch: p.default_branch,
+          };
+        },
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return [{ kind: 'unavailable', provider: 'gitlab' as const, reason: message }];
+    }
   }
 
   // ── Write operations (GitHostWriteService) ──────────────────────
