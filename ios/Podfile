@@ -1,9 +1,6 @@
 require File.join(File.dirname(`node --print "require.resolve('expo/package.json')"`), "scripts/autolinking")
 require File.join(File.dirname(`node --print "require.resolve('react-native/package.json')"`), "scripts/react_native_pods")
 
-# Disable input/output paths to work around Ruby 3.x #{swift_flags} interpolation bug in CocoaPods
-install! 'cocoapods', :disable_input_output_paths => true
-
 require 'json'
 podfile_properties = JSON.parse(File.read(File.join(__dir__, 'Podfile.properties.json'))) rescue {}
 
@@ -132,18 +129,6 @@ target 'GitNots' do
           build_configuration.build_settings['SWIFT_INCLUDE_PATHS'] =
             "#{existing_swift_include_paths} $(PODS_TARGET_SRCROOT)".strip
         end
-      end
-    end
-
-    # Workaround: Remove any Ruby interpolation literals (#{...}) from the Pods.xcodeproj
-    # that may have been generated due to Ruby 3.x + CocoaPods 1.17 interpolation bugs
-    pods_pbxproj = installer.sandbox.root.join('Pods.xcodeproj', 'project.pbxproj')
-    if File.exist?(pods_pbxproj)
-      content = File.read(pods_pbxproj)
-      sanitized = content.gsub(/#\{[^}]+\}/, '')
-      if content != sanitized
-        File.write(pods_pbxproj, sanitized)
-        puts "CocoaPods workaround: removed Ruby interpolation literals from #{pods_pbxproj}"
       end
     end
   end
