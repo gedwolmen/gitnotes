@@ -60,14 +60,8 @@ describe('responsive dimension invariants', () => {
         require('path').join(__dirname, '../../src/screens/GraphViewScreen.tsx'),
         'utf-8',
       );
-      // Dimensions as a type import is fine; Dimensions.get at module level is the bug.
-      // We specifically match module-scope .get('window') calls (not hook calls).
-      // The pattern captures: any `= Dimensions.get('window')` that is NOT inside a function.
-      const moduleLevelDimensions = source.match(
-        /^(?:const|let|var)\s+\{[^}]*\}\s*=\s*Dimensions\.get\(['"]window['"]\)/m,
-      );
-      // If it exists, it must be inside a function (useWindowDimensions is a hook call,
-      // not Dimensions.get). Check that the only Dimensions.get call is useWindowDimensions.
+      // Dimensions.get('window') at module scope is the stale-pattern regression.
+      // useWindowDimensions() is a hook call (not Dimensions.get) and is fine.
       const nonHookDimensionsGet = /Dimensions\.get\(['"]window['"]\)(?!\s*\))/.test(source);
       expect(nonHookDimensionsGet).toBe(false);
     });
