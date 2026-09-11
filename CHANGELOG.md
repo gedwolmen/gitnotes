@@ -16,7 +16,7 @@ All notable fixes and feature changes to GitNotēs are documented here.
 
 **Fix:** Resolve the repository's stored host connection first and preserve its provider and instance URL through add-time clones, lazy pulls, and recovery re-clones.
 
-**PR:** TBD
+**PR:** [#1555](https://github.com/gedwolmen/gitnotes/pull/1555)
 
 ### fix(auth): clarify provider token failures
 
