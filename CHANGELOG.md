@@ -10,6 +10,14 @@ All notable fixes and feature changes to GitNotēs are documented here.
 
 ## 2026-09-11
 
+### fix(android): avoid dimension hooks in affected render paths
+
+**What:** Android could report `Rendered fewer hooks than expected` after the responsive dimension hook migration in `NoteImage` and `GraphViewScreen`.
+
+**Fix:** Read the current window dimensions during render instead of adding `useWindowDimensions()` to these components, preserving responsive sizing without changing their hook count.
+
+**PR:** TBD
+
 ### fix(ios): generate valid Swift flags in CocoaPods Podfile
 
 **What:** Production iOS archives failed because the Expo config plugin emitted escaped Ruby interpolation, leaving `#{swift_flags}` as a literal input path for Swift pod targets.
