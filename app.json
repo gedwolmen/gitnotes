@@ -114,6 +114,15 @@
           "microphonePermission": "GitNot\u0113s needs access to your microphone for voice-to-text note input.",
           "speechRecognitionPermission": "GitNot\u0113s uses on-device speech recognition to convert your voice into note text. Audio stays on your device."
         }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "enableMinifyInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true
+          }
+        }
       ]
     ],
     "owner": "vidwa",
