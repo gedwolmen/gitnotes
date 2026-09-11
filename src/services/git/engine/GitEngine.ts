@@ -48,7 +48,7 @@ type NativeGitEngineModule = {
   getConflictBlobs(path: string, filePath: string): Promise<ConflictBlobs>;
   markConflictResolved(path: string, filePath: string): Promise<void>;
   fetch(path: string, remoteName: string, repoId?: string | null): Promise<void>;
-  pull(path: string, remoteName: string, repoId?: string | null): Promise<PullResult>;
+  pull(path: string, remoteName: string, repoId?: string | null): Promise<NativePullResult>;
   push(path: string, remoteName: string, repoId?: string | null, force?: boolean): Promise<PushResult>;
   pushWithIntegrate(path: string, remoteName: string, repoId?: string | null): Promise<PushIntegrateResult>;
   listBranches(path: string, remoteName: string): Promise<BranchInfo[]>;
@@ -103,6 +103,7 @@ type BranchInfo = { name: string; isCurrent: boolean; isRemote?: boolean; upstre
 type CommitInfo = { id: string; message: string; author: Author; timestamp: number; shortId?: string; summary?: string; parentCount: number; authorTime: number; authorName?: string; authorEmail?: string };
 type ConflictBlobs = { ours: string; theirs: string; base: string };
 type ConflictEntry = { path: string; kind: string };
+type NativePullConflict = { path: string; ours: string | null; theirs: string | null; ancestor: string | null; status: string };
 type ConflictFile = { path: string; status: string };
 type DiffLine = { content: string; type: string; origin?: string; index: number; newLineno: number; oldLineno: number };
 type DiffLineOrigin = string;
@@ -116,6 +117,7 @@ type GitProgressKind = string;
 type HunkSelection = { lineIndices: number[] };
 type NativeCredential = { kind: string; username?: string; privateKey?: string; publicKey?: string | null; passphrase?: string | null; password?: string };
 type PullKind = string;
+type NativePullResult = { kind: PullKind; message: string; conflicts: NativePullConflict[] };
 type PullResult = { ok: boolean; error?: string };
 type PushIntegrateKind = string;
 type PushIntegrateResult = { ok: boolean; error?: string; kind?: string; message: string; conflicts: { path: string }[]; pushed: number; integrate?: string; integrated?: string };
@@ -477,7 +479,12 @@ export async function pull(
     return { ok: false, error: 'GitEngine native module unavailable' };
   }
   await ensureCredentialForOp(repoId);
-  return run(() => GitEngineModule!.pull(repoPath, remoteName, repoId ?? null), { ok: false, error: 'unavailable' });
+  const native = await run(
+    () => GitEngineModule!.pull(repoPath, remoteName, repoId ?? null),
+    { kind: 'Unknown', message: 'unavailable', conflicts: [] },
+  );
+  const ok = native.kind === 'FastForward' || native.kind === 'UpToDate' || native.kind === 'Merged';
+  return ok ? { ok: true } : { ok: false, error: native.message || 'pull failed' };
 }
 
 /**
