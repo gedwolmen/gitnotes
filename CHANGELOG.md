@@ -16,7 +16,7 @@ All notable fixes and feature changes to GitNotēs are documented here.
 
 **Fix:** Preserve Ruby interpolation when generating `OTHER_SWIFT_FLAGS` and remove the temporary Podfile sanitizer workaround.
 
-**PR:** TBD
+**PR:** [#1563](https://github.com/gedwolmen/gitnotes/pull/1563)
 
 ### fix(sync): preserve repository host during clone recovery
 
