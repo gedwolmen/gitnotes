@@ -18,6 +18,14 @@ All notable fixes and feature changes to GitNotēs are documented here.
 
 **PR:** [#1563](https://github.com/gedwolmen/gitnotes/pull/1563)
 
+### fix(android): allow system-default orientation
+
+**What:** Android manifest contained `android:screenOrientation="portrait"`, forcing portrait-only on all devices including tablets, blocking landscape use on large screens and foldables.
+
+**Fix:** Changed `app.json` `orientation` from `"portrait"` to `"default"` (system-default). Expo's prebuild regenerates `android:screenOrientation="unspecified"` in the manifest, reverting to the OS orientation policy.
+
+**PR:** TBD
+
 ### fix(android): migrate app-owned edge-to-edge handling
 
 **What:** Audited all app-owned status-bar/navigation-bar call sites for Android 15 edge-to-edge compatibility.
