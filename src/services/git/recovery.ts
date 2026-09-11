@@ -17,6 +17,7 @@ import { parseRepoPath } from '../../utils/gitPathParser';
 import { makeGitFs as buildGitFs } from './gitFs';
 import { GitFsService, repairHeadRef } from './GitFsService';
 import * as GitEngine from './engine/GitEngine';
+import { isGitCorruptionError } from './corruptionErrors';
 
 const CLONES_SUBDIR = 'GitNotes/';
 
@@ -89,7 +90,7 @@ export function classifyPushError(raw: string): string {
 
 /** Returns true when the error message indicates git object / packfile corruption. */
 export function isCorruptionError(errorMsg: string): boolean {
-  return /Could not find|NotFoundError|Packfile trailer mismatch/i.test(errorMsg);
+  return isGitCorruptionError(errorMsg) || /Could not find/i.test(errorMsg);
 }
 
 // ---------------------------------------------------------------------------
