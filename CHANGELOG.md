@@ -16,7 +16,7 @@ All notable fixes and feature changes to GitNotēs are documented here.
 
 **Fix:** Thread `repoId` through push, pull, lazy-reader, and direct clone-repair recovery paths, resolving it from saved repository metadata when needed.
 
-**PR:** TBD
+**PR:** #1545
 
 ### fix(notes): preserve repository modification dates
 
