@@ -225,7 +225,7 @@ Fetches from a remote.
 
 ### `GitEngine.pull(repoPath: string, remoteName?: string, repoId?: string | null): Promise<PullResult>`
 
-Pulls changes from the remote. Returns `{ ok: boolean; error?: string }`.
+Pulls changes from the remote. The native module returns `{ kind, message, conflicts }`; the facade maps `FastForward`, `UpToDate`, and `Merged` to `{ ok: true }` and all other pull kinds to `{ ok: false, error }`.
 
 ---
 

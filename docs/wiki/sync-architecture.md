@@ -125,7 +125,7 @@ Single-repo syncs wait only on that repo's markers; all-repos syncs wait app-wid
 ```
 manualSync / ForegroundSync
   → waitForIdle(repo)         # preflight: wait for in-flight pushes to clear
-  → pullFromSingleRepo(repo)  # safe to read origin
+  → pullFromSingleRepo(repo)  # native GitEngine pull reads origin and updates the worktree
   → refresh stores
 ```
 
