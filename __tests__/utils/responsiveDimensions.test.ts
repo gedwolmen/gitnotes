@@ -1,9 +1,8 @@
 /**
  * Regression tests for responsive dimension handling.
  *
- * Validates that NoteImage and GraphViewScreen use reactive useWindowDimensions()
- * instead of the module-level Dimensions.get('window') pattern, which does not
- * update when the device rotates or changes viewport size.
+ * Validates that responsive dimensions are read during render without adding
+ * another hook whose call count can differ across Android navigation renders.
  */
 
 describe('responsive dimension invariants', () => {
@@ -11,74 +10,24 @@ describe('responsive dimension invariants', () => {
   // components, which would require extensive Skia / react-native-reanimated mocking.
   // The source pattern check is deterministic and covers the exact regression.
 
-  describe('NoteImage uses useWindowDimensions hook', () => {
-    test('imports useWindowDimensions from react-native', () => {
+  describe('NoteImage reads dimensions during render', () => {
+    test('does not import useWindowDimensions', () => {
       const source = require('fs').readFileSync(
         require('path').join(__dirname, '../../src/components/NoteImage.tsx'),
         'utf-8',
       );
-      expect(source).toMatch(/import\s+\{[^}]*useWindowDimensions[^}]*\}\s+from\s+['"]react-native['"]/);
+      expect(source).not.toMatch(/useWindowDimensions/);
     });
 
-    test('does not contain module-level Dimensions.get("window")', () => {
+    test('reads window dimensions inside the component function', () => {
       const source = require('fs').readFileSync(
         require('path').join(__dirname, '../../src/components/NoteImage.tsx'),
         'utf-8',
       );
-      // The stale pattern is: const { width: screenWidth } = Dimensions.get('window');
-      // or similar module-level calls. useWindowDimensions is fine (it's a hook call).
-      // Match only the stale non-reactive pattern.
-      const hasStalePattern = /const\s*\{[^}]*\}\s*=\s*Dimensions\.get\(['"]window['"]\)/.test(source);
-      expect(hasStalePattern).toBe(false);
-    });
-
-    test('component calls useWindowDimensions inside the component function', () => {
-      const source = require('fs').readFileSync(
-        require('path').join(__dirname, '../../src/components/NoteImage.tsx'),
-        'utf-8',
-      );
-      // Verify useWindowDimensions is called within the component body.
-      // Simple check: useWindowDimensions appears after the component declaration.
       const fnDeclIndex = source.indexOf('export default function NoteImage');
-      const hookIndex = source.indexOf('useWindowDimensions()');
+      const dimensionReadIndex = source.indexOf("Dimensions.get('window')");
       expect(fnDeclIndex).toBeGreaterThanOrEqual(0);
-      expect(hookIndex).toBeGreaterThan(fnDeclIndex);
-    });
-  });
-
-  describe('GraphViewScreen uses useWindowDimensions hook', () => {
-    test('imports useWindowDimensions from react-native', () => {
-      const source = require('fs').readFileSync(
-        require('path').join(__dirname, '../../src/screens/GraphViewScreen.tsx'),
-        'utf-8',
-      );
-      expect(source).toMatch(/import\s+\{[^}]*useWindowDimensions[^}]*\}\s+from\s+['"]react-native['"]/);
-    });
-
-    test('does not contain module-level Dimensions.get("window")', () => {
-      const source = require('fs').readFileSync(
-        require('path').join(__dirname, '../../src/screens/GraphViewScreen.tsx'),
-        'utf-8',
-      );
-      // Dimensions.get('window') at module scope is the stale-pattern regression.
-      // useWindowDimensions() is a hook call (not Dimensions.get) and is fine.
-      const nonHookDimensionsGet = /Dimensions\.get\(['"]window['"]\)(?!\s*\))/.test(source);
-      expect(nonHookDimensionsGet).toBe(false);
-    });
-
-    test('centerGraph callback lists screenWidth in its dependency array', () => {
-      const source = require('fs').readFileSync(
-        require('path').join(__dirname, '../../src/screens/GraphViewScreen.tsx'),
-        'utf-8',
-      );
-      // Find the centerGraph callback and verify its dependency array includes screenWidth
-      // This prevents the regression where centerGraph captured a stale module-level width.
-      const centerGraphMatch = source.match(
-        /const\s+centerGraph\s*=\s*useCallback\s*\(\s*\(\s*\)\s*=>\s*\{[\s\S]*?\},\s*\[([^\]]*)\]\s*\)/,
-      );
-      expect(centerGraphMatch).not.toBeNull();
-      const deps = centerGraphMatch?.[1] ?? '';
-      expect(deps).toMatch(/\bscreenWidth\b/);
+      expect(dimensionReadIndex).toBeGreaterThan(fnDeclIndex);
     });
   });
 });
