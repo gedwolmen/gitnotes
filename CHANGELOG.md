@@ -18,6 +18,14 @@ All notable fixes and feature changes to GitNotēs are documented here.
 
 **PR:** [#1563](https://github.com/gedwolmen/gitnotes/pull/1563)
 
+### fix(android): enable R8 minification and resource shrinking for release builds
+
+**What:** Android release builds had no code obfuscation or dead-code elimination, leaving DEX and resources fully uncompressed.
+
+**Fix:** Install `expo-build-properties@56.0.27` and configure `enableMinifyInReleaseBuilds` and `enableShrinkResourcesInReleaseBuilds` via the Expo config plugin; add a targeted `-dontwarn java.awt.Component` rule for a JNA desktop-only reference so R8 completes without fatal missing-class errors.
+
+**PR:** TBD
+
 ### fix(sync): preserve repository host during clone recovery
 
 **What:** Repository clones and corruption recovery could fall back to the active host or GitHub defaults, breaking GitLab and self-hosted repositories when their saved host context differed.
