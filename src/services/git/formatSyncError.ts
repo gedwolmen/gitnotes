@@ -1,6 +1,6 @@
 /**
  * Shared sanitizer for raw sync errors surfaced to the user. Both the
- * git push path (LocalGitWriter) and the GitHub Contents-API
+ * git push path (LocalGitWriter) and the host Contents-API
  * path (Note/Todo/Canvas/Template sync services) leak wall-of-text errors
  * with refs, ANSI codes, force-flag hints, etc. We map the common cases
  * to one-line user-facing strings and strip jargon from anything that
@@ -21,7 +21,7 @@ interface Matcher {
 const MATCHERS: Matcher[] = [
   {
     needles: ['push rejected', 'not a simple fast-forward', 'non-fast-forward', 'one or more branches were not updated', 'fetch first'],
-    message: 'Someone else changed this on GitHub. Pull and try again.',
+    message: 'Someone else changed this. Pull and try again.',
   },
   {
     needles: ['shallow', 'unshallow', 'shallow update not allowed'],
@@ -29,40 +29,39 @@ const MATCHERS: Matcher[] = [
   },
   {
     needles: ['cannot lock ref'],
-    message: 'Branch is locked on GitHub. Check branch protection rules.',
+    message: 'Branch is locked. Check branch protection rules.',
   },
   {
     needles: ['Permission denied (publickey)', 'publickey', 'ssh auth', 'authentication failed', 'could not read from remote repository', 'SSH_AUTH', 'git@github.com: permission denied'],
-    message: 'SSH key not recognized by GitHub. Please check that your SSH key is added to your account.',
+    message: 'SSH key not recognized. Check that your SSH key is added to your provider account.',
   },
   {
     needles: ['bad credentials', '401', 'not authorized'],
     message:
-      "GitHub rejected the token. Check you copied the full token (starts with ghp_ or github_pat_) — and that it wasn't expired or revoked.",
+      "The provider rejected the token. Check that you copied the full token and that it hasn't expired or been revoked.",
   },
   {
-    // Must precede the generic 403 matcher: GitHub signals API rate limits
+    // Must precede the generic 403 matcher: providers signal API rate limits
     // with a 403 status plus a rate-limit body (now surfaced by http.ts).
     needles: ['rate limit', 'rate-limit', 'ratelimit', 'too many requests', '429'],
-    message: 'GitHub rate limit hit — try again in a few minutes.',
+    message: 'Provider rate limit hit — try again in a few minutes.',
   },
   {
-    // A non-rate-limit 403 means the token lacks access. Name the scopes so
-    // the user knows exactly what to grant.
+    // A non-rate-limit 403 means the token lacks repository access.
     needles: ['403', 'not accessible', 'resource not accessible', 'must have push access', 'integration'],
-    message: "Your token can't access this repo — use a fine-grained token with Contents: Read and write (and the repo selected) or a classic token with the repo scope.",
+    message: "Your token can't access this repository. Check its repository access and write permissions in your provider settings.",
   },
   {
     needles: ['409'],
-    message: 'This file changed on GitHub. Pull and try again.',
+    message: 'This file changed on the remote. Pull and try again.',
   },
   {
     needles: ['422'],
-    message: 'GitHub rejected the change. Try again.',
+    message: 'The provider rejected the change. Check your token and repository permissions, then try again.',
   },
   {
     needles: ['500', '502', '503', '504'],
-    message: 'GitHub is having trouble — will retry.',
+    message: 'The provider is having trouble — will retry.',
   },
   {
     needles: ['network', 'fetch', 'econn', 'timeout', 'offline'],
@@ -91,8 +90,8 @@ const MATCHERS: Matcher[] = [
 ];
 
 function fallbackFor(op?: SyncOp): string {
-  if (op === 'delete') return "Couldn't delete from GitHub";
-  return 'Sync to GitHub failed';
+  if (op === 'delete') return "Couldn't delete from the remote";
+  return 'Sync failed';
 }
 
 /**
