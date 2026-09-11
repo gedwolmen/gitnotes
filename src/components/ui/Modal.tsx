@@ -123,7 +123,7 @@ export function Modal(props: ModalProps) {
         >
           {bottomSheet ? (
             <KeyboardAvoidingView
-              behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+              behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
               style={{
                 position: 'absolute',
                 top: 0,

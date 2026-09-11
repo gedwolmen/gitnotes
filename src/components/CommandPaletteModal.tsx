@@ -93,6 +93,7 @@ export default function CommandPaletteModal({ visible, onClose }: CommandPalette
         data={results}
         keyExtractor={(item) => item.id}
         style={{ flex: 1 }}
+        keyboardShouldPersistTaps="handled"
         ListEmptyComponent={
           <Text style={{ color: colors.textSecondary, textAlign: 'center', paddingVertical: 20 }}>
             No commands found
