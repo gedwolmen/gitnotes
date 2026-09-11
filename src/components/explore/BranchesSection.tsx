@@ -197,8 +197,8 @@ export function BranchesSection({ repo, active, onChanged, chromeTopInset = 0, b
               </View>
             )}
           </View>
-          <View className="mt-1.5 flex-row items-center justify-between">
-            <Text className="text-[11px]" style={{ color: colors.textSecondary }}>
+          <View className="mt-1.5 flex-row flex-wrap items-center justify-between gap-2">
+            <Text className="min-w-0 flex-1 text-[11px]" style={{ color: colors.textSecondary }}>
               {item.upstream ? `upstream ${item.upstream} · ` : ''}
               {`ahead ${item.ahead} · behind ${item.behind}`}
             </Text>
