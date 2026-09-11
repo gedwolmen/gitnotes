@@ -120,7 +120,14 @@ async function runImport(
         }
       }
       await GitFsService.cloneExclusive({
-        repoPath, branch, token, onProgress, repoId: repo?.id, remoteUrlOverride,
+        repoPath,
+        branch,
+        token,
+        onProgress,
+        repoId: repo?.id,
+        remoteUrlOverride,
+        provider: hostConnection?.provider,
+        instanceBaseUrl: hostConnection?.instanceBaseUrl,
       });
     }
 

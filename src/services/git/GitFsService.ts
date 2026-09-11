@@ -31,10 +31,10 @@ interface CloneOpts extends RepoLocator {
   token?: string;
   depth?: number;
   onProgress?: (phase: string, loaded: number, total: number | null) => void;
-  /** Passed to native engine for credential lookup. Omit to skip credential auth (public repos). */
   repoId?: string;
-  /** Override the remote URL (e.g., SSH URL when SSH is enabled). Defaults to HTTPS. */
   remoteUrlOverride?: string;
+  provider?: string;
+  instanceBaseUrl?: string | null;
 }
 
 interface FetchOpts extends RepoLocator {
@@ -294,10 +294,6 @@ export function remoteUrlForHost(
   return `https://github.com/${owner}/${repo}.git`;
 }
 
-function authedRemote(owner: string, repo: string): string {
-  return `https://github.com/${owner}/${repo}.git`;
-}
-
 /**
  * Remove corrupted packfiles from a repo's .git/objects/pack directory.
  * When a fetch times out, partial packfile data may be left on disk, causing
@@ -374,7 +370,11 @@ export class GitFsService {
     for (let attempt = 0; attempt <= MAX_CLONE_RETRIES; attempt++) {
       try {
         await nativeClone(
-          opts.remoteUrlOverride ?? authedRemote(info.owner, info.repo),
+          opts.remoteUrlOverride ?? remoteUrlForHost(info.owner, info.repo, {
+            useSsh: false,
+            provider: opts.provider ?? 'github',
+            instanceBaseUrl: opts.instanceBaseUrl ?? null,
+          }),
           `${fsRoot}${info.owner}/${info.repo}`,
           opts.repoId ?? null,
         );
