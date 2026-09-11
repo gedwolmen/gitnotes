@@ -13,6 +13,8 @@
  */
 
 import * as FileSystem from 'expo-file-system/legacy';
+import { AccountStorage } from '../AccountStorage';
+import { StorageService } from '../StorageService';
 import { parseRepoPath } from '../../utils/gitPathParser';
 import { makeGitFs as buildGitFs } from './gitFs';
 import { GitFsService, repairHeadRef } from './GitFsService';
@@ -114,6 +116,25 @@ function repoDirFs(repoPath: string): string {
   if (!info) return repoPath;
   const root = clonesRoot();
   return `${root.replace(/\/$/, '')}/${info.owner}/${info.repo}`;
+}
+
+async function cloneWithRepositoryContext(opts: {
+  repoPath: string;
+  branch: string;
+  token?: string;
+  repoId?: string;
+}): Promise<void> {
+  const savedRepos = await StorageService.getSavedRepositories();
+  const savedRepo = savedRepos.find(repo => repo.id === opts.repoId || repo.path === opts.repoPath);
+  const hostConnection =
+    (savedRepo?.hostId ? await AccountStorage.getHostConnection(savedRepo.hostId) : null) ??
+    (await AccountStorage.getActiveHostConnection());
+
+  await GitFsService.clone({
+    ...opts,
+    provider: savedRepo?.provider ?? hostConnection?.provider,
+    instanceBaseUrl: hostConnection?.instanceBaseUrl,
+  });
 }
 
 async function ensureOnBranch(
@@ -224,7 +245,7 @@ export async function pushWithRecovery(
         return { success: false, error: `Clone corruption with unpushed commits in ${repoPath}@${branch}. Please push or reset.` };
       }
       await GitFsService.removeRepo({ repoPath });
-      await GitFsService.clone({ repoPath, branch, token, repoId });
+      await cloneWithRepositoryContext({ repoPath, branch, token, repoId });
       try {
         const result = await GitEngine.pushWithIntegrate(repoDirFs(repoPath), 'origin', undefined);
         if (!result.ok) {
@@ -252,7 +273,7 @@ export async function pushWithRecovery(
             return { success: false, error: `Clone corruption with unpushed commits in ${repoPath}@${branch}. Please push or reset.` };
           }
           await GitFsService.removeRepo({ repoPath });
-          await GitFsService.clone({ repoPath, branch, token, repoId });
+          await cloneWithRepositoryContext({ repoPath, branch, token, repoId });
           try {
             const result = await GitEngine.pushWithIntegrate(repoDirFs(repoPath), 'origin', undefined);
             if (!result.ok) {
@@ -380,5 +401,5 @@ export async function repairCloneAfterCorruption(opts: {
   }
 
   await GitFsService.removeRepo({ repoPath });
-  await GitFsService.clone({ repoPath, branch, token: token ?? undefined, repoId });
+  await cloneWithRepositoryContext({ repoPath, branch, token: token ?? undefined, repoId });
 }
