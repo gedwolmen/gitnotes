@@ -1,31 +1,12 @@
 import * as FileSystem from 'expo-file-system/legacy';
 import { parseRepoPath } from '../../utils/gitPathParser';
 import { clone as nativeClone } from './engine/GitEngine';
+import * as GitEngine from './engine/GitEngine';
 import { makeGitFs, type PromiseFsClient } from './gitFs';
 import { gitHttp } from './gitHttp';
 import { LfsService } from './lfs';
 
 const CLONES_SUBDIR = 'GitNotes/';
-
-/**
- * Minimum history depth we fetch so merge-base detection stays reachable.
- * `findMergeBase` needs ~2-3 commits of shared ancestry to compute a common
- * ancestor; a depth-1 shallow fetch cannot compute merge bases, which silently
- * disables divergence-conflict recording (the conflict-store branch surfaced by
- * `surfaceConflictsOnDiverged` in LocalGitWriter and RepoPullService's divergence
- * detection). Fetching ≥3 commits is a small constant cost (a few objects) and
- * makes the merge-base-based divergence detection in pull/push actually reachable.
- */
-const MIN_DIVERGENCE_HISTORY_DEPTH = 3;
-
-/**
- * Experiment flag: allows depth-2 fetches for the divergence-conflict E2E scenario.
- * When `GITNOTES_EXPERIMENT_DEPTH_2` is set, fetch/pull operations use depth 2 instead
- * of the default depth-3 floor. This lets the E2E harness measure whether depth 2
- * still produces correct conflict detection. Default (flag absent) is unchanged.
- */
-const DEPTH_FOR_FETCH =
-  process.env.GITNOTES_EXPERIMENT_DEPTH_2 === '1' ? 2 : MIN_DIVERGENCE_HISTORY_DEPTH;
 
 /**
  * Tree entry shape that mirrors `GitHubService.getTreeRecursiveOrThrow` so
@@ -59,6 +40,7 @@ interface FetchOpts extends RepoLocator {
   branch: string;
   token?: string;
   depth?: number;
+  repoId?: string | null;
 }
 
 interface ReadOpts extends RepoLocator {
@@ -458,19 +440,9 @@ export class GitFsService {
   static async fetch(opts: FetchOpts): Promise<void> {
     const info = parseRepoPath(opts.repoPath);
     if (!info) throw new Error(`Invalid repo path: ${opts.repoPath}`);
-    const dir = repoDirVirtual(info.owner, info.repo);
 
     try {
-      await git.fetch({
-        fs: makeRepoFs(),
-        http: gitHttp,
-        dir,
-        ref: opts.branch,
-        singleBranch: true,
-        depth: Math.max(opts.depth ?? DEPTH_FOR_FETCH, DEPTH_FOR_FETCH),
-        tags: false,
-        onAuth: ensureToken(opts.token),
-      });
+      await GitEngine.fetch(opts.repoPath, 'origin', opts.repoId);
     } catch (fetchError) {
       const msg = fetchError instanceof Error ? fetchError.message : String(fetchError);
       if (/Packfile trailer mismatch|Could not find object|not foundobject|NotFoundError/i.test(msg)) {
@@ -497,78 +469,30 @@ export class GitFsService {
   > {
     const info = parseRepoPath(opts.repoPath);
     if (!info) return { ok: false, reason: 'unknown', error: `Invalid repo path: ${opts.repoPath}` };
-    const dir = repoDirVirtual(info.owner, info.repo);
-    const fs = makeRepoFs();
-
-    // A corrupted HEAD (#1189) makes fast-forward throw for reasons that have
-    // nothing to do with the remote; repair it so the pull below judges the
-    // real divergence state.
-    await repairHeadRef(fs, dir, opts.branch);
 
     try {
-      const remoteRef = `refs/remotes/origin/${opts.branch}`;
-      const refBefore = await git.resolveRef({ fs, dir, ref: remoteRef }).catch(() => null);
       const startedAt = Date.now();
-      await git.fetch({
-        fs,
-        http: gitHttp,
-        dir,
-        ref: opts.branch,
-        singleBranch: true,
-        depth: Math.max(opts.depth ?? DEPTH_FOR_FETCH, DEPTH_FOR_FETCH),
-        tags: false,
-        onAuth: ensureToken(opts.token),
-      });
-      await git.fastForward({
-        fs,
-        http: gitHttp,
-        dir,
-        ref: opts.branch,
-        singleBranch: true,
-        onAuth: ensureToken(opts.token),
-      });
-      // git.fastForward is a no-op when the local branch is already ahead of
-      // the remote (e.g. a freshly-created local commit) — it doesn't throw,
-      // it just returns silently. The push retry that follows would then fail
-      // with the same non-fast-forward rejection. Detect this explicitly and
-      // surface divergence so the caller can handle it instead of pushing
-      // a divergent branch.
-      const localOid = await git.resolveRef({ fs, dir, ref: `refs/heads/${opts.branch}` }).catch(() => null);
-      const remoteOid = await git.resolveRef({ fs, dir, ref: remoteRef }).catch(() => null);
-      if (localOid && remoteOid && localOid !== remoteOid) {
-        const localHasRemote = await git.isDescendent({ fs, dir, oid: remoteOid, ancestor: localOid }).catch(() => false);
-        if (!localHasRemote) {
-          const mergeResult = await this.tryMergeDivergedBranch({
-            fs,
-            dir,
-            branch: opts.branch,
-            localOid,
-            remoteOid,
-            token: opts.token,
-          });
-          if (mergeResult.ok) {
-            return { ok: true };
-          }
-          if (mergeResult.reason === 'conflict') {
-            return { ok: false, reason: 'diverged', error: mergeResult.error ?? 'Merge produced file conflicts' };
-          }
-          return { ok: false, reason: 'unknown', error: mergeResult.error ?? 'Merge failed' };
+      const result = await GitEngine.pull(opts.repoPath, 'origin', opts.repoId);
+      if (!result.ok) {
+        const message = result.error ?? 'Native pull failed';
+        if (/not.*fast.?forward|diverged|merge.?conflict|conflict/i.test(message)) {
+          return { ok: false, reason: 'diverged', error: message };
         }
+        if (/timed?\s*-?out|etimedout/i.test(message)) {
+          return { ok: false, reason: 'timeout', error: message };
+        }
+        if (/network|econn|enotfound|dns|offline|socket/i.test(message)) {
+          return { ok: false, reason: 'network', error: message };
+        }
+        return { ok: false, reason: 'unknown', error: message };
       }
-      // The LFS pointer walk is the most expensive step after a fetch. Skip it
-      // when the remote ref did not move — no new objects arrived, so no new
-      // placeholders can exist. This makes idle pulls (nothing changed on the
-      // remote) avoid the full working-tree walk (#1022).
-      const refAfter = await git.resolveRef({ fs, dir, ref: remoteRef }).catch(() => null);
-      if (refBefore !== refAfter) {
-        try {
-          await LfsService.scanRepo(opts.repoPath, GitFsService.workingTreeUri({ repoPath: opts.repoPath }));
-        } catch {
-          // best-effort
-        }
+      try {
+        await LfsService.scanRepo(opts.repoPath, GitFsService.workingTreeUri({ repoPath: opts.repoPath }));
+      } catch {
+        // best-effort
       }
       if (__DEV__) {
-        console.log(`[GitFsService] pullWithFastForward (${opts.repoPath}@${opts.branch}) in ${Date.now() - startedAt}ms (${refBefore === refAfter ? 'no new objects' : 'fetched'})`);
+        console.log(`[GitFsService] pullWithFastForward (${opts.repoPath}@${opts.branch}) in ${Date.now() - startedAt}ms`);
       }
       return { ok: true };
     } catch (e) {

@@ -102,7 +102,7 @@ async function getRepoReader(
   if (!cloned) {
     await GitFsService.cloneExclusive({ repoPath, branch, token, repoId });
   } else {
-    const result = await GitFsService.pullWithFastForward({ repoPath, branch, token });
+    const result = await GitFsService.pullWithFastForward({ repoPath, branch, token, repoId });
     if (!result.ok) {
       if (result.reason === 'diverged') {
         const remoteRefName = `refs/remotes/origin/${branch}`;
