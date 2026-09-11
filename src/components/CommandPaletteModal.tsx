@@ -48,6 +48,13 @@ export default function CommandPaletteModal({ visible, onClose }: CommandPalette
     onClose();
   }, [onClose]);
 
+  const hintCommands = ['new note', 'go home', 'toggle theme', 'sync'];
+
+  const handleHintPress = useCallback((hint: string) => {
+    setQuery(hint);
+    setResults(searchCommands(hint));
+  }, []);
+
   return (
     <Modal
       visible={visible}
@@ -68,6 +75,20 @@ export default function CommandPaletteModal({ visible, onClose }: CommandPalette
         ]}
         autoFocus
       />
+      <View style={styles.hintsContainer}>
+        {hintCommands.map((hint, index) => (
+          <TouchableOpacity
+            key={hint}
+            onPress={() => handleHintPress(hint)}
+            style={[
+              styles.hintChip,
+              { backgroundColor: colors.surface, borderColor: colors.border },
+            ]}
+          >
+            <Text style={[styles.hintText, { color: colors.textSecondary }]}>{hint}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
       <FlatList
         data={results}
         keyExtractor={(item) => item.id}
@@ -87,7 +108,15 @@ export default function CommandPaletteModal({ visible, onClose }: CommandPalette
 
 const styles = StyleSheet.create({
   title: { fontSize: 18, fontWeight: '600', marginBottom: 12 },
-  input: { borderWidth: 1, borderRadius: 8, padding: 10, fontSize: 16, marginBottom: 12 },
+  input: { borderWidth: 1, borderRadius: 8, padding: 10, fontSize: 16, marginBottom: 8 },
+  hintsContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
+  hintChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  hintText: { fontSize: 12 },
   row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth },
   categoryBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4 },
 });
