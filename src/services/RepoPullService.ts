@@ -57,7 +57,7 @@ async function hasUnpushedCommits(repoPath: string, branch: string): Promise<boo
   }
 }
 
-async function handleCorruptionErrors<T>(fn: () => Promise<T>, repoPath: string, branch: string, token?: string): Promise<T> {
+async function handleCorruptionErrors<T>(fn: () => Promise<T>, repoPath: string, branch: string, token?: string, repoId?: string): Promise<T> {
   try {
     return await fn();
   } catch (error) {
@@ -72,7 +72,7 @@ async function handleCorruptionErrors<T>(fn: () => Promise<T>, repoPath: string,
         );
       }
       await GitFsService.removeRepo({ repoPath });
-      await GitFsService.cloneExclusive({ repoPath, branch, token: token ?? undefined });
+      await GitFsService.cloneExclusive({ repoPath, branch, token: token ?? undefined, repoId });
       return fn();
     }
     throw error;
@@ -107,9 +107,9 @@ async function getRepoReader(
       if (result.reason === 'diverged') {
         const remoteRefName = `refs/remotes/origin/${branch}`;
         return {
-          listTree: () => handleCorruptionErrors(() => GitFsService.listTree({ repoPath, ref: remoteRefName }), repoPath, branch, token),
+          listTree: () => handleCorruptionErrors(() => GitFsService.listTree({ repoPath, ref: remoteRefName }), repoPath, branch, token, repoId),
           readFile: (path: string) =>
-            handleCorruptionErrors(() => GitFsService.readFile({ repoPath, ref: remoteRefName, filepath: path }), repoPath, branch, token),
+            handleCorruptionErrors(() => GitFsService.readFile({ repoPath, ref: remoteRefName, filepath: path }), repoPath, branch, token, repoId),
         };
       }
       const errorMsg = result.error ?? '';
