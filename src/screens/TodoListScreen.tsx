@@ -500,7 +500,7 @@ export default function TodoListScreen() {
       />
 
       {viewMode === 'kanban' ? (
-        <View style={{ paddingTop: headerBlurHeight, paddingHorizontal: 16, flex: 1 }}>
+        <View style={{ paddingTop: headerBlurHeight, flex: 1 }}>
           <KanbanBoard onSelect={openEditModal} />
         </View>
       ) : (
