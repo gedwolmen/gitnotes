@@ -24,13 +24,12 @@ import {
   journalNoteTitle,
 } from '../services/JournalService';
 import { useResponsive } from '../hooks/useResponsive';
-import { Button, Card, Modal, ScreenHeader, IconButton, useScreenHeaderHeight, useTabBarHeight } from '../components/ui';
+import { Button, Card, Modal, ScreenHeader, useScreenHeaderHeight, useTabBarHeight } from '../components/ui';
 import { BentoRecent } from '../components/home/BentoRecent';
 import { QuickAccessShelf } from '../components/home/QuickAccessShelf';
 import { buildPinnedFeed, buildRecentFeed, RecentItem } from '../utils/recentItems';
 import { HomeNoteContextMenu } from '../components/home/HomeNoteContextMenu';
 import ColorPicker from '../components/ColorPicker';
-import CommandPaletteModal from '../components/CommandPaletteModal';
 import { ShareFormat } from '../services/ShareService';
 import { NoteSyncQueueService } from '../services/cloneSyncServiceImpl';
 import { useTranslation } from 'react-i18next';
@@ -68,7 +67,6 @@ export default function HomeScreen() {
   const [pickerRemember, setPickerRemember] = useState<boolean>(false);
   const [contextMenuItem, setContextMenuItem] = useState<RecentItem | null>(null);
   const [colorPickerItem, setColorPickerItem] = useState<RecentItem | null>(null);
-  const [commandPaletteVisible, setCommandPaletteVisible] = useState(false);
   const { quote, isLoading: quoteLoading, refresh: quoteRefresh, error: quoteError } = useDailyQuote();
 
   useEffect(() => {
@@ -490,19 +488,6 @@ export default function HomeScreen() {
       <ScreenHeader
         title={t('home.appTitle')}
         subtitle={t('home.subtitle')}
-        actions={
-          <IconButton
-            testID="home.button.open-command-palette"
-            onPress={() => setCommandPaletteVisible(true)}
-            accessibilityLabel="Command palette"
-          >
-            <Ionicons name="terminal-outline" size={22} color={colors.text} />
-          </IconButton>
-        }
-      />
-      <CommandPaletteModal
-        visible={commandPaletteVisible}
-        onClose={() => setCommandPaletteVisible(false)}
       />
     </SafeAreaView>
   );
