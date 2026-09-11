@@ -10,6 +10,14 @@ All notable fixes and feature changes to GitNotēs are documented here.
 
 ## 2026-09-11
 
+### fix(notes): preserve repository modification dates
+
+**What:** Imported Notes and other supported repository files displayed the import date instead of their historical last-modified date, which also made date sorting inaccurate.
+
+**Fix:** Read each file's GitHub commit history during import and preserve its oldest and newest commit dates through note creation.
+
+**PR:** #1543
+
 ### fix(sync): stabilize activity labels and recover missing Git objects
 
 **What:** Sync activity briefly switched to a generic label while hiding, and native `object not found` pull failures were not recognized by the corruption recovery path.

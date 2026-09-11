@@ -382,6 +382,7 @@ async function pullNotesFromRepo(
       const format = noteFormatFromExt(ext);
       const tags = extractTagsFromContent(item.content, format);
       const color = extractColorFromContent(item.content, format);
+      const commitDates = await GitHubService.getPathCommitDates(owner, repo, item.path, branch);
       const titleFromPath = item.path
         .replace(/^notes\//, '')
         .replace(/\.[^.]+$/, '')
@@ -404,7 +405,7 @@ async function pullNotesFromRepo(
             content: item.content,
             tags,
             color: color ?? existing.color,
-            updatedAt: Date.now(),
+            updatedAt: commitDates.updatedAt ?? Date.now(),
           };
           pulled++;
         } else if (color && color !== existing.color) {
@@ -422,6 +423,8 @@ async function pullNotesFromRepo(
             format,
             tags,
             color,
+            createdAt: commitDates.createdAt,
+            updatedAt: commitDates.updatedAt,
           }),
         );
         pulled++;
