@@ -43,6 +43,7 @@ import { useRenderStyleStore } from './src/stores/renderStyleStore';
 import { useFloatingGitButtonStore } from './src/stores/floatingGitButtonStore';
 import { startForegroundWatcher } from './src/services/ForegroundSyncService';
 import { loadForegroundSyncConfig } from './src/hooks/useForegroundSyncSettings';
+import { useForegroundSyncAlert } from './src/hooks/useForegroundSyncAlert';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { reconcileThoughtDumps } from './src/services/ai/thoughtDumpIndexing';
 import { LastSelectionPreferenceService } from './src/services/LastSelectionPreferenceService';
@@ -67,6 +68,7 @@ if (__DEV__) {
 export default function App() {
   const [showOnboarding, setShowOnboarding] = useState<boolean | null>(null);
   const systemColorScheme = useColorScheme();
+  useForegroundSyncAlert();
 
   const checkOnboarding = useCallback(async () => {
     await bootstrapStorage();
