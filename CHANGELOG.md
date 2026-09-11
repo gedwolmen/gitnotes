@@ -16,7 +16,7 @@ All notable fixes and feature changes to GitNotēs are documented here.
 
 **Fix:** Preserve the active label through the hide delay and centralize corruption matching for the native missing-object error.
 
-**PR:** #1533
+**PR:** Follow-up to #1533
 
 ### fix(sync): alert when foreground sync fails
 
