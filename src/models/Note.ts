@@ -62,6 +62,8 @@ export interface NoteCreateInput {
   format?: NoteFormat;
   attachments?: Attachment[];
   accountId?: string;
+  createdAt?: number;
+  updatedAt?: number;
   /** When true, skip the immediate clone-mode commit so the note goes through normal sync flow. */
   isAiCreated?: boolean;
 }
@@ -89,8 +91,8 @@ export function createNote(input: NoteCreateInput): Note {
     id: generateId(),
     title: input.title,
     content: input.content,
-    createdAt: now,
-    updatedAt: now,
+    createdAt: input.createdAt ?? now,
+    updatedAt: input.updatedAt ?? input.createdAt ?? now,
     tags: input.tags || [],
     color: input.color === null ? undefined : input.color,
     repo: input.repo,

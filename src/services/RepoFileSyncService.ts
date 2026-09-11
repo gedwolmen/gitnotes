@@ -111,6 +111,12 @@ class RepoFileSyncServiceClass {
           const title = item.name.replace(/\.[^.]+$/, '');
           const lastSlash = item.path.lastIndexOf('/');
           const folderPath = lastSlash > 0 ? item.path.substring(0, lastSlash) : undefined;
+          const commitDates = await GitHubService.getPathCommitDates(
+            owner,
+            repo,
+            item.path,
+            branch,
+          );
           await StorageService.createNote({
             title,
             content,
@@ -120,6 +126,8 @@ class RepoFileSyncServiceClass {
             tags: [],
             filePath: item.path,
             folderPath,
+            createdAt: commitDates.createdAt,
+            updatedAt: commitDates.updatedAt,
           });
 
           result.created++;
