@@ -442,7 +442,7 @@ export class GitFsService {
     if (!info) throw new Error(`Invalid repo path: ${opts.repoPath}`);
 
     try {
-      await GitEngine.fetch(opts.repoPath, 'origin', opts.repoId);
+      await GitEngine.fetch(GitFsService.workingTreeUri({ repoPath: opts.repoPath }), 'origin', opts.repoId);
     } catch (fetchError) {
       const msg = fetchError instanceof Error ? fetchError.message : String(fetchError);
       if (/Packfile trailer mismatch|Could not find object|not foundobject|NotFoundError/i.test(msg)) {
@@ -472,7 +472,11 @@ export class GitFsService {
 
     try {
       const startedAt = Date.now();
-      const result = await GitEngine.pull(opts.repoPath, 'origin', opts.repoId);
+      const result = await GitEngine.pull(
+        GitFsService.workingTreeUri({ repoPath: opts.repoPath }),
+        'origin',
+        opts.repoId,
+      );
       if (!result.ok) {
         const message = result.error ?? 'Native pull failed';
         if (/not.*fast.?forward|diverged|merge.?conflict|conflict/i.test(message)) {
