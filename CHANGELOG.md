@@ -34,6 +34,14 @@ All notable fixes and feature changes to GitNotēs are documented here.
 
 **PR:** TBD
 
+### test(android): cover responsive and build configuration fixes
+
+**What:** Added deterministic regression tests for the Android build configuration and responsive dimension fixes so future prebuild or orientation changes fail clearly.
+
+**Fix:** Added `__tests__/plugins/androidBuildConfig.test.ts` validating R8 minification config, JNA rule, orientation setting, and no deprecated keys. Added `__tests__/utils/responsiveDimensions.test.ts` validating that `NoteImage` and `GraphViewScreen` use `useWindowDimensions()` hook and that `GraphViewScreen.centerGraph()` lists `screenWidth` in its dependency array.
+
+**PR:** TBD
+
 ### fix(android): migrate app-owned edge-to-edge handling
 
 **What:** Audited all app-owned status-bar/navigation-bar call sites for Android 15 edge-to-edge compatibility.
