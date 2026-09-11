@@ -10,6 +10,14 @@ All notable fixes and feature changes to GitNotēs are documented here.
 
 ## 2026-09-11
 
+### fix(sync): preserve repository identity during clone recovery
+
+**What:** Corruption recovery re-clones could omit the repository ID, so the native Git engine could not recover the registered HTTPS or SSH credential and libgit2 reported authentication replay failures.
+
+**Fix:** Thread `repoId` through push, pull, lazy-reader, and direct clone-repair recovery paths, resolving it from saved repository metadata when needed.
+
+**PR:** #1545
+
 ### fix(notes): preserve repository modification dates
 
 **What:** Imported Notes and other supported repository files displayed the import date instead of their historical last-modified date, which also made date sorting inaccurate.

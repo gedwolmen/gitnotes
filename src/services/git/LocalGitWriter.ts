@@ -1,6 +1,7 @@
 /** Thin facade over commitOps.ts + recovery.ts. Public API unchanged. */
 import * as FileSystem from 'expo-file-system/legacy';
 import { parseRepoPath } from '../../utils/gitPathParser';
+import { StorageService } from '../StorageService';
 import { formatSyncError } from './formatSyncError';
 import { GitFsService } from './GitFsService';
 import { commitWrite, commitDelete, ensureOnBranch } from './commitOps';
@@ -12,8 +13,14 @@ export function summarizePushError(raw: string | undefined): string { return for
 export interface LocalGitWriterResult { success: boolean; filePath?: string; error?: string; }
 interface AuthorInfo { name: string; email: string; }
 interface BaseOpts { repoPath: string; branch: string; message: string; author: AuthorInfo; }
-interface WriteOpts extends BaseOpts { filePath: string; content: string; push?: boolean; token?: string; onProgress?: (p: { phase: string; loaded: number; total: number }) => void; }
-interface DeleteOpts extends BaseOpts { filePath: string; push?: boolean; token?: string; onProgress?: (p: { phase: string; loaded: number; total: number }) => void; }
+interface WriteOpts extends BaseOpts { filePath: string; content: string; push?: boolean; token?: string; repoId?: string; onProgress?: (p: { phase: string; loaded: number; total: number }) => void; }
+interface DeleteOpts extends BaseOpts { filePath: string; push?: boolean; token?: string; repoId?: string; onProgress?: (p: { phase: string; loaded: number; total: number }) => void; }
+
+async function resolveRepoId(repoPath: string, repoId?: string): Promise<string | undefined> {
+  if (repoId) return repoId;
+  const repositories = await StorageService.getSavedRepositories();
+  return repositories.find(repository => repository.path === repoPath)?.id;
+}
 
 function clonesRoot(): string {
   const docDir = FileSystem.documentDirectory;
@@ -38,7 +45,8 @@ export class LocalGitWriter {
       const cr = await commitWrite({ repo: opts.repoPath, branch: opts.branch, filePath: opts.filePath, content: opts.content, message: opts.message, author: opts.author });
       if (!cr.success) return { success: false, error: cr.error };
       if (opts.push !== false) {
-        const pr = await pushWithRecovery({ repoPath: opts.repoPath, branch: opts.branch, token: opts.token, onProgress: opts.onProgress });
+        const repoId = await resolveRepoId(opts.repoPath, opts.repoId);
+        const pr = await pushWithRecovery({ repoPath: opts.repoPath, branch: opts.branch, token: opts.token, repoId, onProgress: opts.onProgress });
         if (!pr.success) return { success: false, error: pr.error };
       }
       return { success: true, filePath: opts.filePath };
@@ -52,7 +60,8 @@ export class LocalGitWriter {
       const cr = await commitDelete({ repo: opts.repoPath, branch: opts.branch, filePath: opts.filePath, message: opts.message, author: opts.author });
       if (!cr.success) return { success: false, error: cr.error };
       if (opts.push !== false) {
-        const pr = await pushWithRecovery({ repoPath: opts.repoPath, branch: opts.branch, token: opts.token, onProgress: opts.onProgress });
+        const repoId = await resolveRepoId(opts.repoPath, opts.repoId);
+        const pr = await pushWithRecovery({ repoPath: opts.repoPath, branch: opts.branch, token: opts.token, repoId, onProgress: opts.onProgress });
         if (!pr.success) return { success: false, error: pr.error };
       }
       return { success: true, filePath: opts.filePath };
@@ -74,11 +83,12 @@ export class LocalGitWriter {
     } catch (e) { return { success: false, error: e instanceof Error ? e.message : String(e) }; }
   }
 
-  static async push(opts: { repoPath: string; branch: string; token?: string; onProgress?: (p: { phase: string; loaded: number; total: number }) => void }): Promise<LocalGitWriterResult> {
+  static async push(opts: { repoPath: string; branch: string; token?: string; repoId?: string; onProgress?: (p: { phase: string; loaded: number; total: number }) => void }): Promise<LocalGitWriterResult> {
     const info = parseRepoPath(opts.repoPath);
     if (!info) return { success: false, error: `Invalid repo path: ${opts.repoPath}` };
     try {
-      const r = await pushWithRecovery({ repoPath: opts.repoPath, branch: opts.branch, token: opts.token, onProgress: opts.onProgress });
+      const repoId = await resolveRepoId(opts.repoPath, opts.repoId);
+      const r = await pushWithRecovery({ repoPath: opts.repoPath, branch: opts.branch, token: opts.token, repoId, onProgress: opts.onProgress });
       return { success: r.success, error: r.error };
     } catch (e) { return { success: false, error: classifyPushError(e instanceof Error ? e.message : String(e)) }; }
   }
