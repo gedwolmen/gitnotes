@@ -10,6 +10,12 @@ All notable fixes and feature changes to GitNotēs are documented here.
 
 ## 2026-09-12
 
+### fix(explore): keep Git tab content below the header
+
+**What:** Git sub-tabs could render list content and empty-state messages underneath the absolute workspace header, hiding their top content.
+
+**Fix:** Apply the measured Git header inset to loading, error, and not-cloned states across the affected Explore sections.
+
 ### fix(android): stabilize explore files section hooks
 
 **What:** Android could crash with `Rendered fewer hooks than expected` when `FilesSection` changed from loading to clone-error or not-cloned state.
