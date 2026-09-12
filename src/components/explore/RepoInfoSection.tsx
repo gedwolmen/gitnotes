@@ -162,7 +162,7 @@ export function RepoInfoSection({ repo, status, active, onChanged, chromeTopInse
 
   if (notCloned) {
     return (
-      <View className="items-center px-8 py-10">
+      <View className="items-center px-8 py-10" style={{ paddingTop: chromeTopInset }}>
         <Ionicons name="folder-outline" size={36} color={colors.textSecondary} />
         <Text className="mt-2 text-center text-sm font-semibold" style={{ color: colors.text }}>Clone required</Text>
         <Text className="mt-1 text-center text-xs" style={{ color: colors.textSecondary }}>
