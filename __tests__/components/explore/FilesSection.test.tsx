@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { Text } from 'react-native';
 
 jest.mock('expo-file-system', () => ({}));
 
@@ -48,15 +49,16 @@ jest.mock('@react-navigation/native', () => ({
   useFocusEffect: jest.fn((cb: () => void) => cb()),
 }));
 
+const mockColors = {
+  background: '#ffffff', card: '#f0f0f0', border: '#cccccc',
+  text: '#000000', textSecondary: '#666666', accent: '#007AFF',
+  success: '#34C759', error: '#FF3B30', warning: '#FF9500',
+  surface: '#e5e5ea', surfaceSecondary: '#e5e5ea',
+};
+
 jest.mock('@/contexts/ThemeContext', () => ({
-  useTokens: () => ({
-    colors: {
-      background: '#ffffff', card: '#f0f0f0', border: '#cccccc',
-      text: '#000000', textSecondary: '#666666', accent: '#007AFF',
-      success: '#34C759', error: '#FF3B30', warning: '#FF9500',
-      surface: '#e5e5ea', surfaceSecondary: '#e5e5ea',
-    },
-  }),
+  useTheme: () => ({ colors: mockColors }),
+  useTokens: () => ({ colors: mockColors }),
 }));
 
 import { FilesSection } from '@/components/explore/FilesSection';
@@ -69,6 +71,22 @@ const mockRepo = {
   id: 'test-repo-id', path: 'owner/test-repo', name: 'test-repo',
   localPath: '/mock/repos/test-repo', branch: 'main',
 };
+
+class TestErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { error: Error | null }
+> {
+  state = { error: null };
+
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+
+  render() {
+    if (this.state.error) return <Text>{this.state.error.message}</Text>;
+    return this.props.children;
+  }
+}
 
 describe('FilesSection row navigation', () => {
   beforeEach(() => {
@@ -148,5 +166,17 @@ describe('FilesSection row navigation', () => {
       await waitFor(() => expect(getByTestId('explore.file.readme.md')).toBeTruthy());
       expect(mockNavigate).not.toHaveBeenCalled();
     });
+  });
+
+  it('does not change hook count when loading changes to the not-cloned state', async () => {
+    (GitFsService.isCloned as jest.Mock).mockResolvedValueOnce(false);
+
+    const { findByText } = render(
+      <TestErrorBoundary>
+        <FilesSection repo={mockRepo} active={true} onChanged={jest.fn()} status={null} />,
+      </TestErrorBoundary>,
+    );
+
+    await findByText('Clone required');
   });
 });

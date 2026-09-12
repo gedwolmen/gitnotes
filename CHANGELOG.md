@@ -8,6 +8,14 @@ All notable fixes and feature changes to GitNotēs are documented here.
 >
 > **History**: prior fixes (pre-2026-08) lived in single-PR wiki pages. Those pages were retired in [#1047](https://github.com/gedwolmen/gitnotes/pull/1047); their full diagnostic content is preserved in git history via `git log -p -- docs/wiki/<file>.md`.
 
+## 2026-09-12
+
+### fix(android): stabilize explore files section hooks
+
+**What:** Android could crash with `Rendered fewer hooks than expected` when `FilesSection` changed from loading to clone-error or not-cloned state.
+
+**Fix:** Move the list container `useMemo` before conditional render returns and add a regression test for the not-cloned transition.
+
 ## 2026-09-11
 
 ### fix(android): avoid dimension hooks in affected render paths
