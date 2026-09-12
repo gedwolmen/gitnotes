@@ -8,6 +8,32 @@ All notable fixes and feature changes to GitNotēs are documented here.
 >
 > **History**: prior fixes (pre-2026-08) lived in single-PR wiki pages. Those pages were retired in [#1047](https://github.com/gedwolmen/gitnotes/pull/1047); their full diagnostic content is preserved in git history via `git log -p -- docs/wiki/<file>.md`.
 
+## 2026-09-13
+
+### fix(explore): persist event and capture layout before reading in onLayout
+
+**What:** Reading layout measurements from the `onLayout` event before capturing the event reference first could yield stale or zero dimensions when the event was reused across re-renders.
+
+**Fix:** Capture the event reference and its `nativeEvent.layout` values into refs before any derived-value reads, ensuring consistent dimensions across layout cycles.
+
+**PR:** [#1573](https://github.com/gedwolmen/gitnotes/pull/1573)
+
+### fix(explore): guard onLayout event.nativeEvent against null
+
+**What:** The `onLayout` handler on some Explore list items could fire with a null `nativeEvent`, causing a crash when accessing `nativeEvent.layout`.
+
+**Fix:** Add a null guard on `nativeEvent` before reading `layout` in all affected `onLayout` handlers.
+
+**PR:** [#1572](https://github.com/gedwolmen/gitnotes/pull/1572)
+
+### fix(explore): reserve section tab header space
+
+**What:** Section sub-tabs (commits, changes, staging, remotes, conflicts) could overlap the workspace header because their content was not inset by the header height.
+
+**Fix:** Apply the measured header inset to section tab content so all sub-tab lists render below the header with correct padding.
+
+**PR:** [#1571](https://github.com/gedwolmen/gitnotes/pull/1571)
+
 ## 2026-09-12
 
 ### fix(explore): keep Git tab content below the header
