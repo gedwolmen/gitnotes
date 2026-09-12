@@ -297,8 +297,10 @@ export default function ExploreScreen() {
         pointerEvents="box-none"
         style={{ position: 'absolute', top: 0, left: 0, right: 0 }}
         onLayout={(event: LayoutChangeEvent) => {
-          if (event.nativeEvent?.layout) {
-            setChromeTotalHeight((currentHeight) => Math.max(currentHeight, event.nativeEvent.layout.height));
+          event.persist();
+          const { layout } = event.nativeEvent;
+          if (layout) {
+            setChromeTotalHeight((currentHeight) => Math.max(currentHeight, layout.height));
           }
         }}
       >
