@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { act, render, fireEvent, waitFor } from '@testing-library/react-native';
 import { Text } from 'react-native';
 
 jest.mock('expo-file-system', () => ({}));
@@ -178,5 +178,36 @@ describe('FilesSection row navigation', () => {
     );
 
     await findByText('Clone required');
+  });
+
+  it('keeps loading content below the Git header', async () => {
+    let resolveClone: (cloned: boolean) => void = () => undefined;
+    (GitFsService.isCloned as jest.Mock).mockReturnValueOnce(
+      new Promise<boolean>((resolve) => {
+        resolveClone = resolve;
+      }),
+    );
+
+    const { getByTestId } = render(
+      <FilesSection repo={mockRepo} active={true} onChanged={jest.fn()} chromeTopInset={128} status={null} />,
+    );
+
+    expect(getByTestId('explore.files.list').props.contentContainerStyle.paddingTop).toBe(128);
+    await act(async () => {
+      resolveClone(true);
+    });
+  });
+
+  it('keeps the not-cloned message below the Git header', async () => {
+    (GitFsService.isCloned as jest.Mock).mockResolvedValueOnce(false);
+
+    const { findByText, findByTestId } = render(
+      <FilesSection repo={mockRepo} active={true} onChanged={jest.fn()} chromeTopInset={128} status={null} />,
+    );
+
+    const message = await findByText('Clone required');
+    expect(message).toBeTruthy();
+    const state = await findByTestId('explore.files.not-cloned');
+    expect(state.props.style.paddingTop).toBe(128);
   });
 });
