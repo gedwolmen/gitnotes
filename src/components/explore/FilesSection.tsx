@@ -171,6 +171,15 @@ export function FilesSection({ repo, active, chromeTopInset = 0, branchInvalidat
     [data, navigation, repo.id, toggleDir],
   );
 
+  const listContentContainerStyle = useMemo(
+    () => ({
+      paddingTop: data ? chromeTopInset : 0,
+      paddingBottom: 96,
+      flexGrow: 1,
+    }),
+    [data, chromeTopInset],
+  );
+
   if (error) {
     return (
       <View className="items-center px-8 py-10">
@@ -194,15 +203,6 @@ export function FilesSection({ repo, active, chromeTopInset = 0, branchInvalidat
       </View>
     );
   }
-
-  const listContentContainerStyle = useMemo(
-    () => ({
-      paddingTop: data ? chromeTopInset : 0,
-      paddingBottom: 96,
-      flexGrow: 1,
-    }),
-    [data, chromeTopInset],
-  );
 
   return (
     <FlatList
