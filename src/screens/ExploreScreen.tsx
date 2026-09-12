@@ -57,6 +57,8 @@ import { getActiveBranch } from '@/services/git/activeBranchStore';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
+const EXPLORE_TAB_ROW_HEIGHT = 44;
+
 /**
  * Explore workspace shell (todo 23): the Git-client surface hosting every
  * workspace section — Files, Changes, Staging, Commits, Branches, Remotes,
@@ -80,7 +82,7 @@ export default function ExploreScreen() {
   const [selectedRepoId, setSelectedRepoId] = useState<string | null>(null);
   const [showRepoPicker, setShowRepoPicker] = useState(false);
 
-  const [chromeTotalHeight, setChromeTotalHeight] = useState(insets.top + 60);
+  const [chromeTotalHeight, setChromeTotalHeight] = useState(insets.top + 60 + EXPLORE_TAB_ROW_HEIGHT);
 
   // Centralized branch state
   const [activeBranch, setActiveBranch] = useState<string | null>(null);
@@ -294,7 +296,9 @@ export default function ExploreScreen() {
       <View
         pointerEvents="box-none"
         style={{ position: 'absolute', top: 0, left: 0, right: 0 }}
-        onLayout={(event: LayoutChangeEvent) => setChromeTotalHeight(event.nativeEvent.layout.height)}
+        onLayout={(event: LayoutChangeEvent) =>
+          setChromeTotalHeight((currentHeight) => Math.max(currentHeight, event.nativeEvent.layout.height))
+        }
       >
         <BlurView intensity={60} tint={isDark ? 'dark' : 'light'} style={{ overflow: 'hidden' }}>
             <View style={{ paddingTop: insets.top }}>
