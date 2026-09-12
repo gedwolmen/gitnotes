@@ -66,7 +66,7 @@ export function ConflictsSection({ repo, active, chromeTopInset = 0 }: SectionPr
 
   if (error) {
     return (
-      <View className="items-center px-8 py-10">
+      <View className="items-center px-8 py-10" style={{ paddingTop: chromeTopInset }}>
         <Ionicons name="warning-outline" size={36} color={colors.error} />
         <Text className="mt-2 text-center text-sm" style={{ color: colors.error }}>{error}</Text>
       </View>
@@ -75,7 +75,7 @@ export function ConflictsSection({ repo, active, chromeTopInset = 0 }: SectionPr
 
   if (notCloned) {
     return (
-      <View className="items-center px-8 py-10">
+      <View className="items-center px-8 py-10" style={{ paddingTop: chromeTopInset }}>
         <Ionicons name="folder-outline" size={36} color={colors.textSecondary} />
         <Text className="mt-2 text-center text-sm font-semibold" style={{ color: colors.text }}>Clone required</Text>
         <Text className="mt-1 text-center text-xs" style={{ color: colors.textSecondary }}>
