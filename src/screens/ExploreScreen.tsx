@@ -296,9 +296,11 @@ export default function ExploreScreen() {
       <View
         pointerEvents="box-none"
         style={{ position: 'absolute', top: 0, left: 0, right: 0 }}
-        onLayout={(event: LayoutChangeEvent) =>
-          setChromeTotalHeight((currentHeight) => Math.max(currentHeight, event.nativeEvent.layout.height))
-        }
+        onLayout={(event: LayoutChangeEvent) => {
+          if (event.nativeEvent?.layout) {
+            setChromeTotalHeight((currentHeight) => Math.max(currentHeight, event.nativeEvent.layout.height));
+          }
+        }}
       >
         <BlurView intensity={60} tint={isDark ? 'dark' : 'light'} style={{ overflow: 'hidden' }}>
             <View style={{ paddingTop: insets.top }}>
