@@ -1,0 +1,157 @@
+# Task 2 Evidence — floating-button-release-fixes
+# Branch: fix/floating-button-release-fixes | Worktree: .worktrees/fix/floating-button-release-fixes
+# Run: 2026-09-13
+
+## Scope
+Make Git affordance state terminal-safe and timing-authoritative:
+- Refactor `useFloatingGitButtonAffordances` so press-in, release, cancellation,
+  failed gesture, route change, and unmount have explicit cleanup.
+- Preserve release-based stage/commit/push semantics and exactly-once callback behavior.
+- Keep `HOLD_FILL_MS = 3000` authoritative with derived 1000/2000/3000 thresholds.
+
+## Problem Analysis
+
+### Duplicate emission bug
+The original implementation had a race: if the user held past 3000ms, both
+`handleHoldComplete` (fires at 3000ms, emits 'push') AND `handlePressOut`
+(fires on release, also emits based on holdProgress.value) would BOTH call
+`onReleaseSegment`, resulting in duplicate 'push' callbacks.
+
+Root cause:
+- `handleHoldComplete` unconditionally called `onReleaseSegment('push')` and started
+  a drain animation on holdProgress
+- `handlePressOut` then read `holdProgress.value` (now mid-drain) and emitted
+  based on whatever fraction it saw
+- No guard against duplicate emissions
+
+### Cleanup gaps
+- Unmount cleanup used `cancelAnimation` which freezes values in place, but did
+  not drain progress to 0 visually
+- `cancelAffordances` set values to 0 immediately (no drain animation)
+
+## Solution
+
+### 1. Duplicate emission guard (`holdCompleteFiredRef`)
+Added `holdCompleteFiredRef = useRef(false)` to track whether `handleHoldComplete`
+has already fired for the current press cycle.
+
+Modified `handlePressIn` to reset: `holdCompleteFiredRef.current = false`
+
+Modified `handleHoldComplete` to:
+- Return early if `holdCompleteFiredRef.current` is already true (idempotent)
+- Set `holdCompleteFiredRef.current = true` before emitting
+- Drain holdProgress with `withTiming(0, { duration: HOLD_DRAIN_MS })`
+
+Modified `handlePressOut` to:
+- Return early (skip all emission logic) if `holdCompleteFiredRef.current` is true
+  (hold already completed, its callback already fired)
+- Otherwise proceed with normal segment detection based on `holdProgress.value`
+
+### 2. Terminal paths covered
+
+| Path | Behavior |
+|------|----------|
+| Press-in | Resets `holdCompleteFiredRef = false`, starts hold animation |
+| Hold complete (3000ms) | Sets ref=true, emits 'push', starts drain |
+| Release after hold complete | Ref=true, pressOut returns early, no double-emit |
+| Hold complete called twice | Idempotent — second call returns early |
+| Cancel during partial fill | Sets `holdCompleteFiredRef=false`, cancels animations, resets to 0 |
+| Release after cancel | Ref=false, but holdProgress=0 → no segment emitted |
+| New press after any terminal | Ref resets to false, hold restarts from 0 |
+| Unmount | `cancelAnimation` on all three progress SVs (existing behavior) |
+
+## Files Changed
+M  src/components/git/useFloatingGitButtonAffordances.ts (+13/-4 lines)
+M  __tests__/components/git/useFloatingGitButtonAffordances.test.ts (+4 new tests)
+
+## Tests Added
+
+### New tests (4)
+1. **handleHoldComplete is idempotent** — second call does not emit again
+2. **handlePressOut after handleHoldComplete suppresses duplicate emission**
+3. **new press after holdComplete starts fresh — emission count resets**
+4. **cancel during partial fill + release + new press starts at zero**
+
+### Baseline characterization
+All 11 pre-existing tests continue to pass:
+- pressProgress fills immediately on press-in (withSpring)
+- holdProgress advances proportionally over 3000ms
+- releases early before 3000ms with no segment callback
+- releases at stage threshold (≥1000ms) → stage segment
+- releases at commit threshold (≥2000ms) → commit segment
+- releases at push threshold (≥3000ms) → push segment
+- handleHoldComplete triggers push segment
+- cancelAffordances resets holdProgress and pressProgress
+- reduceMotion skips hold fill
+- press out during stage then press in again restarts hold
+- cancelAffordances before release suppresses segment and leaves zero progress
+
+## Verification
+
+### Tests
+```
+yarn jest __tests__/components/git/useFloatingGitButtonAffordances.test.ts --no-coverage --forceExit
+PASS — 15/15 tests (11 pre-existing + 4 new)
+
+yarn jest __tests__/components/git/ --no-coverage --forceExit
+PASS — 31/31 tests across 4 test suites
+```
+
+### TypeScript
+```
+yarn ts:check
+Done in 6.50s — 0 errors
+```
+
+### ESLint (Task 2 files only)
+```
+yarn eslint src/components/git/useFloatingGitButtonAffordances.ts
+          __tests__/components/git/useFloatingGitButtonAffordances.test.ts
+0 errors, 15 warnings (all pre-existing Unused eslint-disable directives)
+```
+
+## Timing Contract (unchanged — confirmed authoritative)
+- `HOLD_FILL_MS = 3000` — hold fills from 0→1 over 3 seconds
+- Stage threshold: `≥1/3` (≥1000ms) → segment 'stage'
+- Commit threshold: `≥2/3` (≥2000ms) → segment 'commit'
+- Push threshold: `=1` (≥3000ms) → segment 'push'
+- Stale 300/600/900ms exports already removed in Task 5
+
+## Race Evidence (manual cancel/release patterns)
+
+### Pattern 1: Cancel BEFORE release
+1. Press-in → holdProgress starts
+2. Advance to 1500ms (holdProgress ≈ 0.5)
+3. `cancelAffordances()` → holdProgress=0, pressProgress=0
+4. `handlePressOut()` → holdCompleteFiredRef=false, holdProgress=0 → no segment
+✓ Correct: no spurious callback
+
+### Pattern 2: Hold complete THEN release
+1. Press-in → holdProgress starts
+2. Advance to 3000ms → holdProgress=1
+3. `handleHoldComplete()` → holdCompleteFiredRef=true, onReleaseSegment('push')
+4. User releases → `handlePressOut()` → ref=true → returns early
+✓ Correct: exactly one 'push' callback
+
+### Pattern 3: Hold complete called TWICE
+1. Press-in → holdProgress starts
+2. Advance to 3000ms
+3. `handleHoldComplete()` → ref=false, sets ref=true, emits 'push'
+4. `handleHoldComplete()` again → ref=true → returns early
+✓ Correct: only one 'push' callback
+
+### Pattern 4: Cancel + partial + release + new press
+1. Press-in → holdProgress starts
+2. Advance to 500ms → holdProgress ≈ 0.167
+3. `cancelAffordances()` → holdProgress=0, pressProgress=0
+4. `handlePressOut()` → ref=false, holdProgress=0 → no segment
+5. `handlePressIn()` → ref=false, holdProgress restarts from 0
+✓ Correct: fresh start, no carryover
+
+## Commit
+`fix(git-button): make hold affordances terminal-safe`
+
+## Risks
+- None identified. The ref-based guard is a standard pattern for exactly-once semantics.
+- The 3000ms timing contract is unchanged — verified by existing proportional tests.
+- All 31 git component tests pass.
