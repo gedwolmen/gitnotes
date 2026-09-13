@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { GestureDetector } from 'react-native-gesture-handler';
@@ -49,6 +49,7 @@ export function FloatingAIButton({ currentRouteName }: FloatingAIButtonProps) {
   const [horizontalDirection, setHorizontalDirection] = useState<MenuDirection>(-1);
   const [verticalDirection, setVerticalDirection] = useState<MenuDirection>(-1);
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const panBeganDuringPressRef = useRef(false);
   const position = useFloatingAIButtonPosition();
   useFloatingButtonCollision('ai', {
     translateX: position.translateX,
@@ -120,6 +121,10 @@ export function FloatingAIButton({ currentRouteName }: FloatingAIButtonProps) {
 
   const closeMenu = useCallback(() => setMenuOpen(false), []);
 
+  const setPanBeganDuringPress = useCallback((began: boolean) => {
+    panBeganDuringPressRef.current = began;
+  }, []);
+
   useEffect(() => {
     closeMenu();
   }, [closeMenu, geometry]);
@@ -139,6 +144,10 @@ export function FloatingAIButton({ currentRouteName }: FloatingAIButtonProps) {
     affordances.handleHoldComplete();
     markPositionInteractionStarted();
     HapticService.selection();
+    if (panBeganDuringPressRef.current) {
+      panBeganDuringPressRef.current = false;
+      return;
+    }
     if (menuOpen) {
       closeMenu();
       return;
@@ -203,6 +212,7 @@ export function FloatingAIButton({ currentRouteName }: FloatingAIButtonProps) {
     setHorizontalDirection,
     setVerticalDirection,
     cancelAffordances: affordances.cancelAffordances,
+    setPanBeganDuringPress,
   });
 
   const animatedStyle = useAnimatedStyle(() => {
