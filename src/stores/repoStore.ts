@@ -76,8 +76,7 @@ export const useRepoStore = create<RepoState & RepoActions>()((set, get) => ({
           case 'no_access':
             throw new RepoAccessPreflightError(access);
           case 'transient':
-            console.warn('[RepoStore] GitHub repository access preflight was inconclusive:', access.message);
-            break;
+            throw new RepoAccessPreflightError(access, true);
           default: {
             const exhaustiveCheck: never = access;
             return exhaustiveCheck;
