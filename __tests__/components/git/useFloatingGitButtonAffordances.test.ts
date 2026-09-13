@@ -193,4 +193,32 @@ describe('useFloatingGitButtonAffordances', () => {
     // Hold restarts from 0
     expect(result.current.holdProgress.value).toBeLessThan(0.1);
   });
+
+  // Race: Pan.onBegin calls cancelAffordances before release fires.
+  // After cancel the release handler sees fraction=0, suppresses the segment
+  // callback, and both shared values drain to 0 — no stale state survives.
+  it('cancelAffordances before release suppresses segment and leaves zero progress', () => {
+    let emitted: string | undefined;
+    const { result } = renderHook(() =>
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      require('@/components/git/useFloatingGitButtonAffordances').useFloatingGitButtonAffordances({
+        ...defaultOptions,
+        onReleaseSegment: (s) => { emitted = s; },
+      })
+    );
+
+    act(() => { result.current.handlePressIn(); });
+    act(() => { __advanceBy(1500); });
+    expect(result.current.holdProgress.value).toBeCloseTo(0.5, 1);
+
+    // Simulates Pan gesture's onBegin calling actions.cancelAffordances (via runOnJS)
+    act(() => { result.current.cancelAffordances(); });
+    expect(result.current.holdProgress.value).toBe(0);
+    expect(result.current.pressProgress.value).toBe(0);
+
+    act(() => { result.current.handlePressOut(); });
+    expect(emitted).toBeUndefined();
+    expect(result.current.holdProgress.value).toBe(0);
+    expect(result.current.pressProgress.value).toBe(0);
+  });
 });
