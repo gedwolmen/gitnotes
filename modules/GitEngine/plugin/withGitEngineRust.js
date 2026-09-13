@@ -89,10 +89,11 @@ function withGitEngineRust(config) {
     const shellScript = ['set -e', '"$PROJECT_DIR/../scripts/build-rust.sh" --xcode', ''].join(
       '\n',
     );
+    const rustArchive = '"$(PROJECT_DIR)/../modules/GitEngine/ios-local/rust/libgitnotes_git2.a"';
 
     const { uuid } = project.addBuildPhase([], 'PBXShellScriptBuildPhase', PHASE_NAME, targetUuid, {
       inputPaths: [],
-      outputPaths: [],
+      outputPaths: [rustArchive],
       shellPath: '/bin/sh',
       shellScript,
     });
