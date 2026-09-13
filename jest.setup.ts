@@ -143,6 +143,9 @@ jest.mock('react-native', () => {
     KeyboardAvoidingView: View,
     View,
     useWindowDimensions: () => ({ width: 375, height: 812, scale: 2, fontScale: 1 }),
+    Alert: {
+      alert: jest.fn((_title?: string, _message?: string, _buttons?: any[]) => {}),
+    },
   };
 });
 

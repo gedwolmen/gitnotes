@@ -67,14 +67,36 @@ const CLONE_CANCEL_GRACE_MS = 800;
 
 type ImportAtAddOutcome = 'imported' | 'cancelled' | 'failed';
 
-function confirmUnverifiedWrite(t: TFunction, onConfirm: () => void): void {
+function confirmUnverifiedWrite(
+  t: TFunction,
+  onConfirm: () => void,
+  pendingConfirmationRef?: React.MutableRefObject<boolean>,
+): void {
+  if (pendingConfirmationRef) pendingConfirmationRef.current = true;
   Alert.alert(
     t('settings.writeAccessNotVerifiedTitle'),
     t('settings.writeAccessNotVerifiedBody'),
     [
-      { text: t('common.cancel'), style: 'cancel' },
-      { text: t('settings.addAnyway'), onPress: onConfirm },
+      {
+        text: t('common.cancel'),
+        style: 'cancel',
+        onPress: () => {
+          if (pendingConfirmationRef) pendingConfirmationRef.current = false;
+        },
+      },
+      {
+        text: t('settings.addAnyway'),
+        onPress: () => {
+          if (pendingConfirmationRef) pendingConfirmationRef.current = false;
+          onConfirm();
+        },
+      },
     ],
+    {
+      onDismiss: () => {
+        if (pendingConfirmationRef) pendingConfirmationRef.current = false;
+      },
+    },
   );
 }
 
@@ -180,6 +202,7 @@ export default function SettingsScreen() {
   const [sshKeyData, setSshKeyData] = useState<{ publicKey: string; privateKey: string } | null>(null);
   const [sshGenerating, setSshGenerating] = useState(false);
   const [hostUseSsh, setHostUseSsh] = useState<Record<string, boolean>>({});
+  const pendingConfirmationRef = useRef(false);
 
   const loadHostUseSsh = useCallback(async (hosts: Array<{ id: string }>) => {
     const results: Record<string, boolean> = {};
@@ -611,7 +634,7 @@ export default function SettingsScreen() {
   }, [accountSummaries]);
 
   const handleSelectRepo = useCallback(async (repo: GitHostRepository) => {
-    if (isAddingRepoPath !== null) return;
+    if (isAddingRepoPath !== null || pendingConfirmationRef.current) return;
     if (repositories.length >= FREE_TIER_MAX_REPOS && !isPro) {
       promptProUpgrade(t, openPaywall);
       return;
@@ -631,16 +654,40 @@ export default function SettingsScreen() {
         HapticService.success();
         await importRepoAfterAdd(repo.fullName, repo.name, repo.sizeKb);
       } catch (error) {
-        if (error instanceof RepoAccessPreflightError && error.canRetry && !allowUnverifiedWrite) {
-          confirmUnverifiedWrite(t, () => void attemptAdd(true));
+        if (error instanceof RepoAccessPreflightError) {
+          if (error.result.kind === 'transient' && error.canRetry && !allowUnverifiedWrite) {
+            pendingConfirmationRef.current = true;
+            Alert.alert(
+              t('settings.repositoryAccessTitle'),
+              t('settings.transientAccessErrorBody'),
+              [
+                {
+                  text: t('common.cancel'),
+                  style: 'cancel',
+                  onPress: () => { pendingConfirmationRef.current = false; },
+                },
+                {
+                  text: t('common.retry'),
+                  onPress: () => {
+                    pendingConfirmationRef.current = false;
+                    void attemptAdd(false);
+                  },
+                },
+              ],
+            );
+            return;
+          }
+          if (error.canRetry && !allowUnverifiedWrite) {
+            confirmUnverifiedWrite(t, () => void attemptAdd(true), pendingConfirmationRef);
+            return;
+          }
+          console.warn('[SettingsScreen] handleSelectRepo failed:', error);
+          HapticService.error();
+          Alert.alert(t('settings.repositoryAccessTitle'), error.message);
           return;
         }
         console.warn('[SettingsScreen] handleSelectRepo failed:', error);
         HapticService.error();
-        if (error instanceof RepoAccessPreflightError) {
-          Alert.alert(t('settings.repositoryAccessTitle'), error.message);
-          return;
-        }
         Alert.alert(
           t('common.error'),
           error instanceof Error ? error.message : String(error),
@@ -650,10 +697,10 @@ export default function SettingsScreen() {
       }
     };
     await attemptAdd(false);
-  }, [addRepo, importRepoAfterAdd, repositories, t, isPro, openPaywall, isAddingRepoPath]);
+  }, [addRepo, importRepoAfterAdd, repositories, t, isPro, openPaywall, isAddingRepoPath, pendingConfirmationRef]);
 
   const handleAddManualRepo = useCallback(async () => {
-    if (isAddingRepoPath !== null) return;
+    if (isAddingRepoPath !== null || pendingConfirmationRef.current) return;
     const value = manualRepoInput.trim();
     if (!value) return;
     if (repositories.length >= FREE_TIER_MAX_REPOS && !isPro) {
@@ -672,16 +719,40 @@ export default function SettingsScreen() {
         HapticService.success();
         await importRepoAfterAdd(value, value);
       } catch (error) {
-        if (error instanceof RepoAccessPreflightError && error.canRetry && !allowUnverifiedWrite) {
-          confirmUnverifiedWrite(t, () => void attemptAdd(true));
+        if (error instanceof RepoAccessPreflightError) {
+          if (error.result.kind === 'transient' && error.canRetry && !allowUnverifiedWrite) {
+            pendingConfirmationRef.current = true;
+            Alert.alert(
+              t('settings.repositoryAccessTitle'),
+              t('settings.transientAccessErrorBody'),
+              [
+                {
+                  text: t('common.cancel'),
+                  style: 'cancel',
+                  onPress: () => { pendingConfirmationRef.current = false; },
+                },
+                {
+                  text: t('common.retry'),
+                  onPress: () => {
+                    pendingConfirmationRef.current = false;
+                    void attemptAdd(false);
+                  },
+                },
+              ],
+            );
+            return;
+          }
+          if (error.canRetry && !allowUnverifiedWrite) {
+            confirmUnverifiedWrite(t, () => void attemptAdd(true), pendingConfirmationRef);
+            return;
+          }
+          console.warn('[SettingsScreen] handleAddManualRepo failed:', error);
+          HapticService.error();
+          Alert.alert(t('settings.repositoryAccessTitle'), error.message);
           return;
         }
         console.warn('[SettingsScreen] handleAddManualRepo failed:', error);
         HapticService.error();
-        if (error instanceof RepoAccessPreflightError) {
-          Alert.alert(t('settings.repositoryAccessTitle'), error.message);
-          return;
-        }
         Alert.alert(
           t('common.error'),
           error instanceof Error ? error.message : String(error),
@@ -691,7 +762,7 @@ export default function SettingsScreen() {
       }
     };
     await attemptAdd(false);
-  }, [addRepo, importRepoAfterAdd, manualRepoInput, t, repositories, isPro, openPaywall, isAddingRepoPath]);
+  }, [addRepo, importRepoAfterAdd, manualRepoInput, t, repositories, isPro, openPaywall, isAddingRepoPath, pendingConfirmationRef]);
 
   const handleRemoveRepo = useCallback((repo: GitRepository) => {
     HapticService.warning();

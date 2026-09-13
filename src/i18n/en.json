@@ -477,6 +477,7 @@
     "writeAccessNotVerifiedTitle": "Write access not verified",
     "writeAccessNotVerifiedBody": "Write access not verified. This repository may be read-only. Add anyway?",
     "addAnyway": "Add anyway",
+    "transientAccessErrorBody": "GitHub repository access could not be verified right now. Would you like to retry?",
     "repositoryAccessTitle": "Repository Access",
     "syncFailedBody": "Failed to sync repository files.",
     "clonePhasePreparing": "Preparing",
