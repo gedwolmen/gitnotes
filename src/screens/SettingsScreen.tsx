@@ -50,7 +50,7 @@ import { reposAffectedByRemovedHosts, buildProviderAccountCount, type RemovedHos
 import { useRepoStore } from '../stores/repoStore';
 import { importRepoAtAdd } from '../services/RepoImportService';
 import { useTranslation } from 'react-i18next';
-import type { TFunction } from 'i18next';
+
 import { AccountStorage } from '../services/AccountStorage';
 import { generateSshKey, clearCredential } from '../services/git/engine/GitEngine';
 import { RepoAccessPreflightError } from '../services/git/repoAccessPreflight';
@@ -59,6 +59,10 @@ import { useFloatingGitButtonStore } from '../stores/floatingGitButtonStore';
 import { useProStore } from '../stores/proStore';
 import { promptProUpgrade } from '../utils/proAlerts';
 import { FREE_TIER_MAX_REPOS, FREE_TIER_MAX_ACCOUNTS } from '../services/TierLimits';
+import {
+  confirmUnverifiedWrite,
+  showTransientAccessConfirmation,
+} from './addRepoConfirmation';
 
 // Mirrors GitFsService's MAX_CLONE_RETRIES so a failing repo can't loop the outer flow.
 const MAX_OUTER_CLONE_RETRIES = 1;
@@ -67,38 +71,7 @@ const CLONE_CANCEL_GRACE_MS = 800;
 
 type ImportAtAddOutcome = 'imported' | 'cancelled' | 'failed';
 
-function confirmUnverifiedWrite(
-  t: TFunction,
-  onConfirm: () => void,
-  pendingConfirmationRef?: React.MutableRefObject<boolean>,
-): void {
-  if (pendingConfirmationRef) pendingConfirmationRef.current = true;
-  Alert.alert(
-    t('settings.writeAccessNotVerifiedTitle'),
-    t('settings.writeAccessNotVerifiedBody'),
-    [
-      {
-        text: t('common.cancel'),
-        style: 'cancel',
-        onPress: () => {
-          if (pendingConfirmationRef) pendingConfirmationRef.current = false;
-        },
-      },
-      {
-        text: t('settings.addAnyway'),
-        onPress: () => {
-          if (pendingConfirmationRef) pendingConfirmationRef.current = false;
-          onConfirm();
-        },
-      },
-    ],
-    {
-      onDismiss: () => {
-        if (pendingConfirmationRef) pendingConfirmationRef.current = false;
-      },
-    },
-  );
-}
+
 
 export default function SettingsScreen() {
   const { t } = useTranslation();
@@ -498,7 +471,7 @@ export default function SettingsScreen() {
         ? t('settings.templatesSyncDoneBody', { count: synced, path: templatesRepoPref.repoPath })
         : t('settings.templatesSyncDonePartial', { count: synced, failed }),
     );
-  }, [templatesRepoPref, t]);
+  }, [repositories, templatesRepoPref, t]);
 
   const handleSyncRepo = useCallback(async (repo: GitRepository) => {
     if (!GitHubService.isAuthenticated()) {
@@ -656,29 +629,11 @@ export default function SettingsScreen() {
       } catch (error) {
         if (error instanceof RepoAccessPreflightError) {
           if (error.result.kind === 'transient' && error.canRetry && !allowUnverifiedWrite) {
-            pendingConfirmationRef.current = true;
-            Alert.alert(
-              t('settings.repositoryAccessTitle'),
-              t('settings.transientAccessErrorBody'),
-              [
-                {
-                  text: t('common.cancel'),
-                  style: 'cancel',
-                  onPress: () => { pendingConfirmationRef.current = false; },
-                },
-                {
-                  text: t('common.retry'),
-                  onPress: () => {
-                    pendingConfirmationRef.current = false;
-                    void attemptAdd(false);
-                  },
-                },
-              ],
-            );
+            showTransientAccessConfirmation(t, Alert.alert, pendingConfirmationRef, () => void attemptAdd(false));
             return;
           }
           if (error.canRetry && !allowUnverifiedWrite) {
-            confirmUnverifiedWrite(t, () => void attemptAdd(true), pendingConfirmationRef);
+            confirmUnverifiedWrite(t, () => void attemptAdd(true), Alert.alert, pendingConfirmationRef);
             return;
           }
           console.warn('[SettingsScreen] handleSelectRepo failed:', error);
@@ -721,29 +676,11 @@ export default function SettingsScreen() {
       } catch (error) {
         if (error instanceof RepoAccessPreflightError) {
           if (error.result.kind === 'transient' && error.canRetry && !allowUnverifiedWrite) {
-            pendingConfirmationRef.current = true;
-            Alert.alert(
-              t('settings.repositoryAccessTitle'),
-              t('settings.transientAccessErrorBody'),
-              [
-                {
-                  text: t('common.cancel'),
-                  style: 'cancel',
-                  onPress: () => { pendingConfirmationRef.current = false; },
-                },
-                {
-                  text: t('common.retry'),
-                  onPress: () => {
-                    pendingConfirmationRef.current = false;
-                    void attemptAdd(false);
-                  },
-                },
-              ],
-            );
+            showTransientAccessConfirmation(t, Alert.alert, pendingConfirmationRef, () => void attemptAdd(false));
             return;
           }
           if (error.canRetry && !allowUnverifiedWrite) {
-            confirmUnverifiedWrite(t, () => void attemptAdd(true), pendingConfirmationRef);
+            confirmUnverifiedWrite(t, () => void attemptAdd(true), Alert.alert, pendingConfirmationRef);
             return;
           }
           console.warn('[SettingsScreen] handleAddManualRepo failed:', error);

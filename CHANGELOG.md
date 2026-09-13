@@ -8,6 +8,14 @@ All notable fixes and feature changes to GitNotēs are documented here.
 >
 > **History**: prior fixes (pre-2026-08) lived in single-PR wiki pages. Those pages were retired in [#1047](https://github.com/gedwolmen/gitnotes/pull/1047); their full diagnostic content is preserved in git history via `git log -p -- docs/wiki/<file>.md`.
 
+## 2026-09-14
+
+### fix(app,settings): show loading indicator on launch and handle transient PAT access errors
+
+**What:** App showed a blank screen while checking onboarding on launch, and Settings did not give users actionable options when a Personal Access Token could not verify repository write access due to transient network or server errors.
+
+**Fix:** App now renders a visible loading container while the onboarding check runs. Settings now shows a Retry/Cancel confirmation when PAT access preflight returns a transient error, and an Add Anyway/Cancel confirmation when write access cannot be verified. Transient preflight errors no longer block repo addition.
+
 ## 2026-09-13
 
 ### fix(explore): persist event and capture layout before reading in onLayout
