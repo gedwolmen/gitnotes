@@ -51,110 +51,126 @@ export default function AppFloatingGitButton() {
     aggregatedState.anyConflicts;
   const isDisabled = !hasAnyAction;
 
+  const isOperationActiveRef = useRef(false);
+
   const handleReleaseSegment = useCallback(
     async (segment: ReleaseSegment) => {
-      if (repos.length === 0) {
-        toast.show({
-          placement: 'top',
-          duration: 3000,
-          render: ({ id }: { id: string }) => (
-            <Toast action="error" nativeID={`gitbutton-norepos-${id}`}>
-              <ToastTitle>Cannot {segment}</ToastTitle>
-              <ToastDescription>No repositories connected. Add a repo in Settings.</ToastDescription>
-            </Toast>
-          ),
-        });
-        return;
-      }
-      if (!author) {
-        toast.show({
-          placement: 'top',
-          duration: 3000,
-          render: ({ id }: { id: string }) => (
-            <Toast action="error" nativeID={`gitbutton-noauthor-${id}`}>
-              <ToastTitle>Cannot commit</ToastTitle>
-              <ToastDescription>No active account found. Add an account in Settings.</ToastDescription>
-            </Toast>
-          ),
-        });
-        return;
-      }
+      if (isOperationActiveRef.current) return;
+      isOperationActiveRef.current = true;
 
-      const stageResult = await stageAllPending(repos);
-      if (segment === 'stage') {
-        toast.show({
-          placement: 'top',
-          duration: 2000,
-          render: ({ id }: { id: string }) => (
-            <Toast action="success" nativeID={`gitbutton-stage-${id}`}>
-              <ToastTitle>Staged {stageResult.totalActed} file(s)</ToastTitle>
-            </Toast>
-          ),
-        });
-        void aggregatedState.refresh();
-        emitGitRefresh();
-        emitGitContentRefresh();
-        return;
-      }
+      let pushFailedCount = 0;
 
-      const message = `Sync: stage ${stageResult.totalActed} file(s)`;
-      await commitAll(repos, message, author);
-      if (segment === 'commit') {
-        toast.show({
-          placement: 'top',
-          duration: 2000,
-          render: ({ id }: { id: string }) => (
-            <Toast action="success" nativeID={`gitbutton-commit-${id}`}>
-              <ToastTitle>Staged and committed</ToastTitle>
-            </Toast>
-          ),
-        });
-        void aggregatedState.refresh();
-        emitGitRefresh();
-        emitGitContentRefresh();
-        return;
-      }
-
-      const pushResult = await pushAll(repos);
-      const failedCount = pushResult.failures.length;
-      if (failedCount === repos.length) {
-        toast.show({
-          placement: 'top',
-          duration: 4000,
-          render: ({ id }: { id: string }) => (
-            <Toast action="error" nativeID={`gitbutton-push-error-${id}`}>
-              <ToastTitle>Push failed</ToastTitle>
-              <ToastDescription>
-                {pushResult.failures.map((f) => f.repoName).join(', ')}
-              </ToastDescription>
-            </Toast>
-          ),
-        });
-      } else {
-        const pushedCount = repos.length - failedCount;
-        toast.show({
-          placement: 'top',
-          duration: 3000,
-          render: ({ id }: { id: string }) => (
-            <Toast
-              action={failedCount > 0 ? 'error' : 'success'}
-              nativeID={`gitbutton-push-${id}`}
-            >
-              <ToastTitle>
-                {failedCount > 0
-                  ? `Pushed ${pushedCount} repos, ${failedCount} had conflicts`
-                  : `Pushed to ${pushedCount} repos`}
-              </ToastTitle>
-            </Toast>
-          ),
-        });
-        for (const failure of pushResult.failures) {
-          navigation.navigate('ExploreConflict', { repoId: failure.repoId });
+      try {
+        if (repos.length === 0) {
+          toast.show({
+            placement: 'top',
+            duration: 3000,
+            render: ({ id }: { id: string }) => (
+              <Toast action="error" nativeID={`gitbutton-norepos-${id}`}>
+                <ToastTitle>Cannot {segment}</ToastTitle>
+                <ToastDescription>No repositories connected. Add a repo in Settings.</ToastDescription>
+              </Toast>
+            ),
+          });
+          return;
         }
+        if (!author) {
+          toast.show({
+            placement: 'top',
+            duration: 3000,
+            render: ({ id }: { id: string }) => (
+              <Toast action="error" nativeID={`gitbutton-noauthor-${id}`}>
+                <ToastTitle>Cannot commit</ToastTitle>
+                <ToastDescription>No active account found. Add an account in Settings.</ToastDescription>
+              </Toast>
+            ),
+          });
+          return;
+        }
+
+        const stageResult = await stageAllPending(repos);
+        if (segment === 'stage') {
+          toast.show({
+            placement: 'top',
+            duration: 2000,
+            render: ({ id }: { id: string }) => (
+              <Toast action="success" nativeID={`gitbutton-stage-${id}`}>
+                <ToastTitle>Staged {stageResult.totalActed} file(s)</ToastTitle>
+              </Toast>
+            ),
+          });
+          void aggregatedState.refresh();
+          emitGitRefresh();
+          emitGitContentRefresh();
+          return;
+        }
+
+        const message = `Sync: stage ${stageResult.totalActed} file(s)`;
+        await commitAll(repos, message, author);
+        if (segment === 'commit') {
+          toast.show({
+            placement: 'top',
+            duration: 2000,
+            render: ({ id }: { id: string }) => (
+              <Toast action="success" nativeID={`gitbutton-commit-${id}`}>
+                <ToastTitle>Staged and committed</ToastTitle>
+              </Toast>
+            ),
+          });
+          void aggregatedState.refresh();
+          emitGitRefresh();
+          emitGitContentRefresh();
+          return;
+        }
+
+        const pushResult = await pushAll(repos);
+        pushFailedCount = pushResult.failures.length;
+
+        if (pushFailedCount === repos.length) {
+          toast.show({
+            placement: 'top',
+            duration: 4000,
+            render: ({ id }: { id: string }) => (
+              <Toast action="error" nativeID={`gitbutton-push-error-${id}`}>
+                <ToastTitle>Push failed</ToastTitle>
+                <ToastDescription>
+                  {pushResult.failures.map((f) => f.repoName).join(', ')}
+                </ToastDescription>
+              </Toast>
+            ),
+          });
+        } else {
+          const pushedCount = repos.length - pushFailedCount;
+          toast.show({
+            placement: 'top',
+            duration: 3000,
+            render: ({ id }: { id: string }) => (
+              <Toast
+                action={pushFailedCount > 0 ? 'error' : 'success'}
+                nativeID={`gitbutton-push-${id}`}
+              >
+                <ToastTitle>
+                  {pushFailedCount > 0
+                    ? `Pushed ${pushedCount} repos, ${pushFailedCount} had conflicts`
+                    : `Pushed to ${pushedCount} repos`}
+                </ToastTitle>
+              </Toast>
+            ),
+          });
+          const navigatedToConflicts = new Set<string>();
+          for (const failure of pushResult.failures) {
+            if (!navigatedToConflicts.has(failure.repoId)) {
+              navigatedToConflicts.add(failure.repoId);
+              navigation.navigate('ExploreConflict', { repoId: failure.repoId });
+            }
+          }
+        }
+        void aggregatedState.refresh();
+        emitGitRefresh();
+        emitGitContentRefresh();
+      } finally {
+        isOperationActiveRef.current = false;
       }
-      void aggregatedState.refresh();
-      emitGitRefresh();
-      emitGitContentRefresh();
     },
     [repos, author, toast, aggregatedState, navigation],
   );

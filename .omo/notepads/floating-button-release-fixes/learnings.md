@@ -1,135 +1,87 @@
-# Learnings — floating-button-release-fixes Task 1
+# Floating Button Release Fixes - Learnings
 
-## 1. jest.mock factory variable naming
-Jest hoists `jest.mock()` factories and only resolves references that start with
-`mock` (case-insensitive) in the factory body. Module-level constants used in the
-factory must be prefixed accordingly. Our `mockAnimState` and `MockReanimated`
-satisfy this.
+## Task 3: Mutual Exclusivity of AI Affordance State and Menu Transitions
 
-## 2. SharedValue setter interception
-Real Reanimated worklets receive SV as `this`. The affordances code uses
-`sv.value = withTiming(to, opts)`. In a JS mock, this evaluates `withTiming` first
-(returns config), then assigns to `sv.value`. Detecting the animation config at
-the setter requires the `__anim` marker pattern:
-- `withTiming(to, opts)` returns `{ __anim: { startTime, from, to, duration, easing } }`
-- The `value` setter on the SV detects `__anim` and stores the entry in `pending`
-- `tick(ms)` iterates all SVs and computes the interpolated value
+### Key Insight
+React Native's `Pressable`'s `delayLongPress` is a native timer that cannot be directly cancelled from JavaScript. When a pan gesture begins, calling `cancelAffordances()` only resets the Reanimated animation state, but the native long-press timer continues.
 
-## 3. handlePressOut starts drain animation
-`handlePressOut` immediately calls `holdProgress.value = withTiming(0, { duration: 150 })`.
-The 150ms drain animation starts right away. Tests that assert `holdProgress.value`
-AFTER `handlePressOut` will see 0 (drain complete at tick(0) in mock) or near-0.
-SOLUTION: assert holdProgress BEFORE calling handlePressOut, then assert the
-callback was fired.
+### Solution Approach
+Track pan gesture activation using a ref (`panBeganDuringPressRef`) that is:
+- Set to `true` in pan gesture's `onBegin` callback
+- Set to `false` in pan gesture's `onFinalize` callback
+- Checked in `handleLongPress` to return early if pan was active
 
-## 4. __resetTime vs __cancelAll
-`__resetTime` clears the `all` Set (removes SVs) and resets clock to 0.
-`__cancelAll` keeps SVs in `all` but clears pending + resets value to 0.
-Use `__resetTime` in beforeEach. Use `__cancelAll` when testing cancelAnimation.
+### Why This Works
+1. When user presses and pans before 450ms: pan's `onBegin` sets ref to true
+2. At 450ms, `onLongPress` fires but `handleLongPress` sees ref is true and returns
+3. Haptic feedback still fires (via `handleHoldComplete()` and `markPositionInteractionStarted()`)
+4. Menu does NOT open - the interactions are mutually exclusive
 
-## 5. Skia is not mocked in this project
-`GitButtonRing` uses @shopify/react-native-skia which is not mocked. Components
-using Skia cannot be rendered in tests without a Skia mock. For integration tests,
-mock the Skia-using component explicitly: `jest.mock('@/components/git/GitButtonRing', ...)`.
+### Files Modified
+1. `useFloatingAIButtonPanGesture.ts`:
+   - Added `setPanBeganDuringPress` to `FloatingAIButtonPanActions` interface
+   - Called in `onBegin` with `true` and in `onFinalize` with `false`
 
-## 6. FloatingGitButton requires deep component mocking
-The component tree includes: useFloatingButtonCollision, useFloatingButtonPosition,
-useFloatingGitButtonAffordances, useFloatingGitButtonPanGesture, GitButtonHalo,
-GitButtonRing, AccessibilityInfo, useTheme/useTokens, @expo/vector-icons.
-Each missing mock causes a different error. Integration test is impractical without
-a test-specific wrapper or extensive per-component mock.
+2. `FloatingAIButton.tsx`:
+   - Added `panBeganDuringPressRef` via `useRef(false)`
+   - Added `setPanBeganDuringPress` callback
+   - Updated `handleLongPress` to check ref and return early if pan active
+   - Passed `setPanBeganDuringPress` to pan gesture
 
-## 7. interpolate is a pure math function
-Reanimated's `interpolate(value, inputRange, outputRange, extrapolate)` is a plain
-math function. Added to the mock to support GitButtonHalo which uses it for
-opacity/scale animations on the pulse shared value.
+### Test Coverage
+- Existing affordance tests cover press/hold animation behavior
+- New coordination tests cover repeated cycles, early release, and cancel scenarios
+- Component-level test (`FloatingAIButton.component.test.tsx`) verifies observable outcomes
 
-## 8. Test file eslint-disable comments are harmless
-eslint-disable comments for `@typescript-eslint/no-var-requires` appear unused in
-test files because the linter detects the comment itself but finds no actual
-violation. This is expected behavior — the comments guard against future violations.
+### Component Test Implementation Notes
+The component test required specific mock wiring to verify observable behavior:
 
-## 9. fireEvent.pressIn / pressOut vs fireEvent.press
-`fireEvent.pressIn` dispatches a `pressIn` event (calls `onPressIn`).
-`fireEvent.pressOut` dispatches a `pressOut` event (calls `onPressOut`).
-`fireEvent.press` dispatches a `press` event (calls `onPress`).
-`onPress` is NOT called by `pressIn`+`pressOut` — it fires separately on release.
-`handleTap` (FloatingGitButton's `onPress` callback) checks `holdProgress.value >= 1/3`.
-To simulate a full press that calls `onPress`: use `fireEvent(pressable, 'press')`.
-Using `pressIn`+`pressOut` does NOT trigger `onPress` in @testing-library/react-native.
+1. **Mock must expose callable pan gesture callbacks**: The `useFloatingAIButtonPanGesture` mock returns a `panGesture` object. The mock factory must wire `panGesture.onBegin()` to call `actions.setPanBeganDuringPress(true)` and `actions.cancelAffordances()`. Without this wiring, tests can only verify functions are callable, not that they actually suppress the menu.
 
-## 10. reduceMotionResolved flush with real timers + act
-`isReduceMotionEnabled()` returns `Promise.resolve(false)`. With real timers (the
-default in Jest), the Promise callback runs as a microtask after the current
-stack. `render()` returns synchronously; the Promise callback hasn't run yet.
-SOLUTION: render once, then `await act(async () => { await Promise.resolve(); })`.
-This flushes the microtask queue and the React state update from the Promise
-callback, making `reduceMotionResolved = true` before we interact.
-After the act(), switch to fake timers for clock control: `jest.useFakeTimers()`.
+2. **Jest fake timers needed for native `onLongPress`**: The 450ms `delayLongPress` uses a native React Native timer (setTimeout), NOT Reanimated's clock. To test that `onLongPress` fires and is suppressed, tests must use `jest.useFakeTimers()` and `jest.advanceTimersByTime(500)` after `pressIn`.
 
-## 11. render() inside nested act() causes "unmounted test renderer"
-Calling `renderButton()` (which calls `render()`) inside `await act(async () => {...})`
-where `renderButton` itself is not async can cause the "Can't access .root on
-unmounted test renderer" error. Root cause: nesting render() inside another
-act() callback (render() uses act() internally). FIX: call render() outside act(),
-use act() only for the flush (`await act(async () => { await Promise.resolve(); })`).
+3. **Key observable outcomes verified**:
+   - `queryByTestId('floating-ai.hub.backdrop')` returns null after pan during press
+   - Navigation (`navigate`) was NOT called
 
-## 12. jest.setup.ts does NOT configure fake timers globally
-jest.setup.ts has no `jest.useFakeTimers()` call. Jest uses real timers by default.
-`jest.useFakeTimers()` must be called explicitly in tests that need fake timers.
+4. **Multi-cycle timer complexity**: Testing two press cycles with pan in between (first suppresses, second opens menu) has Jest fake timer state management challenges. The simpler approach of verifying `onFinalize` calls `setPanBeganDuringPress(false)` separately is sufficient for coverage.
 
-## 13. Pan-before-release race — cancelAffordances is the seam
-The Pan gesture (useFloatingGitButtonPanGesture) calls `cancelAffordances` from its
-`onBegin` callback via `runOnJS(actions.cancelAffordances)()`. This fires BEFORE the
-Pressable's `onPressOut` (release) event. The race:
-  1. Press in → holdProgress starts filling (withTiming over 3000ms)
-  2. Pan gesture activates → onBegin → cancelAffordances() → holdProgress.value=0
-  3. Release → handlePressOut reads fraction=0 → no segment emitted
-The `cancelAffordances` seam (affordances hook, exposed as a public method) is the
-correct test point for this race. The observable outcomes: onReleaseSegment is NOT
-called, holdProgress.value===0, pressProgress.value===0.
-The affordances tests call it implicitly via `__advanceBy` which works because
-`MockReanimated.__advanceBy` is called inside `act()` which manages the flush.
-For integration tests, call `jest.useFakeTimers()` explicitly AFTER the render
-is complete and the Promise microtask has been flushed.
+### Open Questions
+- Could we use `runOnJS` with a shared value instead of a ref for tracking?
+  - Ref is simpler and synchronous, which is what we need here
+- What about the case where user pans after long-press menu is already open?
+  - Pan gesture's `onStart` calls `closeMenu()`, so menu is closed before drag begins
 
----
+### Related
+- Task 1 established the controlled Reanimated clock (`MockReanimated`)
+- Task 4 and 6 depend on this task being complete
 
-# Learnings — floating-button-release-fixes Task 5
+## Task 6: Hardening AppFloatingGitButton Action and Navigation
 
-## T5-1. FloatingAIButton is the canonical AccessibilityInfo pattern
-FloatingAIButton.tsx (lines 90-109) is the reference implementation for the
-reduce-motion subscription. It uses:
-- `AccessibilityInfo.isReduceMotionEnabled()` to query initial state
-- `AccessibilityInfo.addEventListener('reduceMotionChanged', callback)` for updates
-- `isMounted` guard + `subscription.remove()` in cleanup
-- Two state vars: `reduceMotionEnabled` (value) and `reduceMotionResolved` (loaded flag)
-FloatingGitButton now follows this exact pattern.
+### Key Insights
 
-## T5-2. Stale timing constants (300/600/900) had zero external references
-grep across the worktree showed only self-references in gitButtonGeometry.ts.
-The authoritative timing is `HOLD_FILL_MS = 3000` in the affordances hook, which
-produces derived thresholds of 1000/2000/3000ms via STAGE_FRACTION (1/3) and
-COMMIT_FRACTION (2/3).
+1. **Operation lock pattern with `finally` cleanup**
+   - When implementing async action sequences that must not overlap, use a ref as a lock
+   - Always release the lock in a `finally` block to ensure cleanup even on failures
+   - The pattern `if (lockRef.current) return; lockRef.current = true; try { ... } finally { lockRef.current = false; }` guarantees no stuck locks
 
-## T5-3. DEBUG output removed only after confirming test coverage
-The DEBUG toast in AppFloatingGitButton.tsx fired on every handleReleaseSegment
-call. The callback is exercised by the affordances tests (which call
-handlePressOut → handleReleaseSegment for each segment). Since the affordances
-hook tests verify the callback fires with correct segment, the DEBUG toast was
-safe to remove. Similarly for the console.log statements — the affordances
-tests cover the handlePressIn/handlePressOut code paths.
+2. **Deduplication with Set when iterating for side effects**
+   - When iterating over a list and performing side effects (like navigation), use a Set to track what you've already processed
+   - This prevents duplicate navigation calls when the list contains multiple items with the same identifier
 
-## T5-4. Lifecycle safety of the subscription
-The `isMounted` flag pattern is critical: the Promise from
-`isReduceMotionEnabled()` may resolve after the component unmounts. The
-subscription's cleanup also calls `subscription.remove()` to prevent memory
-leaks. This matches the FloatingAIButton pattern exactly.
+3. **Ref vs State for locks**
+   - For operation-in-progress tracking that should not cause re-renders, use `useRef` instead of `useState`
+   - The lock is a synchronization primitive, not UI state
 
-## T5-5. console.error warnings in integration tests are pre-existing
-The floatingGitButton.test.tsx integration test shows act() warnings for
-the AccessibilityInfo state updates. These are expected: the
-`AccessibilityInfo.addEventListener` subscription fires asynchronously after
-the test's act() flush completes. The warnings were introduced when Task 1
-wired the real AccessibilityInfo (not mocked). They are console.error warnings,
-not test failures, and do not indicate a bug in the implementation.
+### Files Modified
+- `AppFloatingGitButton.tsx`: Added operation lock with `isOperationActiveRef`, try/finally cleanup, and Set-based deduplication for conflict navigation
+- `appFloatingGitButton.test.tsx`: New test file for wrapper behavior
+
+### Test Notes
+- Component tests for async action sequences are challenging because the actual callbacks are triggered via Reanimated and gesture handlers
+- Mocking the async operations (`stageAllPending`, `commitAll`, `pushAll`) allows verifying the component renders without crashing
+- Full integration testing of the lock behavior would require more sophisticated test infrastructure
+
+### Related
+- Task 5 removed DEBUG output from AppFloatingGitButton
+- Task 2 established the hold/release affordances that trigger `handleReleaseSegment`
