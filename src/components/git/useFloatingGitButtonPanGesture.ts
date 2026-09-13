@@ -1,7 +1,8 @@
-import { useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { Gesture } from 'react-native-gesture-handler';
 import { runOnJS, useSharedValue, withSpring } from 'react-native-reanimated';
 import type { FloatingGitButtonPositionState } from './useFloatingGitButtonPosition';
+import { GIT_BUTTON_DRAG_MIN_DISTANCE } from './gitButtonGeometry';
 import {
   GIT_BUTTON_SIZE,
   resolveFloatingGitButtonPlacement,
@@ -27,6 +28,8 @@ interface FloatingGitButtonPanActions {
   readonly setHorizontalDirection: (direction: MenuDirection) => void;
   readonly setVerticalDirection: (direction: MenuDirection) => void;
   readonly cancelAffordances: () => void;
+  /** Called when pan gesture activates (movement past minDistance) — signals that tap should be suppressed. */
+  readonly setPanBegan: (began: boolean) => void;
 }
 
 export function useFloatingGitButtonPanGesture(
@@ -44,6 +47,7 @@ export function useFloatingGitButtonPanGesture(
     savePosition,
   } = position;
   const otherRect = useSharedValue<FloatingButtonRect | null>(null);
+  const panBeganRef = useRef(false);
 
   useEffect(() => {
     otherRect.value = getButtonRect('ai');
@@ -52,14 +56,21 @@ export function useFloatingGitButtonPanGesture(
     });
   }, [otherRect]);
 
+  const setPanBegan = useCallback((began: boolean) => {
+    panBeganRef.current = began;
+  }, []);
+
   return Gesture.Pan()
+    .minDistance(GIT_BUTTON_DRAG_MIN_DISTANCE)
     .onBegin(() => {
       dragActive.value = true;
       runOnJS(markPositionInteractionStarted)();
-      runOnJS(actions.cancelAffordances)();
     })
     .onStart(() => {
       runOnJS(actions.closeMenu)();
+      runOnJS(actions.cancelAffordances)();
+      panBeganRef.current = true;
+      runOnJS(setPanBegan)(true);
     })
     .onUpdate((event) => {
       translateX.value = savedTranslateX.value + event.translationX;
@@ -96,6 +107,8 @@ export function useFloatingGitButtonPanGesture(
     })
     .onFinalize((_event, successful) => {
       dragActive.value = false;
+      panBeganRef.current = false;
+      runOnJS(setPanBegan)(false);
       if (successful) return;
 
       const savedPosition = {

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, Pressable, StyleSheet, View } from 'react-native';
 import { GestureDetector } from 'react-native-gesture-handler';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
@@ -129,14 +129,22 @@ export default function FloatingGitButton({
     if (disabled) return;
     const wasHoldRelease = holdProgress.value >= 1 / 3;
     if (wasHoldRelease) return;
+    if (panBeganRef.current) return;
     onQuickTap?.();
   }, [disabled, onQuickTap, holdProgress]);
+
+  const panBeganRef = useRef(false);
+
+  const setPanBegan = useCallback((began: boolean) => {
+    panBeganRef.current = began;
+  }, []);
 
   const panGesture = useFloatingGitButtonPanGesture(position, {
     closeMenu: () => undefined,
     setHorizontalDirection: () => undefined,
     setVerticalDirection: () => undefined,
     cancelAffordances: affordances.cancelAffordances,
+    setPanBegan,
   });
 
   const containerStyle = useAnimatedStyle(() => ({

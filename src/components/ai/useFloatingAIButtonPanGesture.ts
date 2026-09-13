@@ -15,6 +15,8 @@ import {
   type FloatingButtonRect,
 } from '../floatingButtonLayout';
 
+const DRAG_MIN_DISTANCE = 10;
+
 const POSITION_SPRING = {
   mass: 1,
   damping: 15,
@@ -55,6 +57,7 @@ export function useFloatingAIButtonPanGesture(
   }, [otherRect]);
 
   return Gesture.Pan()
+    .minDistance(DRAG_MIN_DISTANCE)
     .onBegin(() => {
       dragActive.value = true;
       runOnJS(markPositionInteractionStarted)();
