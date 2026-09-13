@@ -1,5 +1,5 @@
-import { useCallback } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { AccessibilityInfo, Pressable, StyleSheet, View } from 'react-native';
 import { GestureDetector } from 'react-native-gesture-handler';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
@@ -49,6 +49,30 @@ export default function FloatingGitButton({
 }: FloatingGitButtonProps) {
   const { colors } = useTheme();
 
+  const [reduceMotionEnabled, setReduceMotionEnabled] = useState(true);
+  const [reduceMotionResolved, setReduceMotionResolved] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    AccessibilityInfo.isReduceMotionEnabled().then((enabled) => {
+      if (!isMounted) return;
+      setReduceMotionEnabled(enabled);
+      setReduceMotionResolved(true);
+    });
+    const subscription = AccessibilityInfo.addEventListener(
+      'reduceMotionChanged',
+      (enabled) => {
+        setReduceMotionEnabled(enabled);
+        setReduceMotionResolved(true);
+      },
+    );
+
+    return () => {
+      isMounted = false;
+      subscription.remove();
+    };
+  }, []);
+
   const state: AggregatedGitState = aggregatedState ?? {
     perRepo: new Map(),
     totalUncommitted: 0,
@@ -92,8 +116,8 @@ export default function FloatingGitButton({
   });
 
   const affordances = useFloatingGitButtonAffordances({
-    reduceMotionEnabled: false,
-    reduceMotionResolved: true,
+    reduceMotionEnabled,
+    reduceMotionResolved,
     menuOpen: false,
     onReleaseSegment,
   });

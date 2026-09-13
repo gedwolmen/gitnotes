@@ -68,7 +68,6 @@ export function useFloatingGitButtonAffordances(
 
   const handlePressIn = useCallback(() => {
     pressProgress.value = withSpring(1, PRESS_SPRING);
-    console.log('[DEBUG handlePressIn] starting hold animation, reduceMotionEnabled =', reduceMotionEnabled);
     if (!reduceMotionEnabled) {
       holdProgress.value = withTiming(1, { duration: HOLD_FILL_MS });
     }
@@ -76,7 +75,6 @@ export function useFloatingGitButtonAffordances(
 
   const handlePressOut = useCallback(() => {
     pressProgress.value = withSpring(0, PRESS_SPRING);
-    console.log('[DEBUG handlePressOut] holdProgress.value =', holdProgress.value);
 
     const fraction = holdProgress.value;
     let segment: ReleaseSegment | null = null;

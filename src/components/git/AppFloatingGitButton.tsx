@@ -53,19 +53,6 @@ export default function AppFloatingGitButton() {
 
   const handleReleaseSegment = useCallback(
     async (segment: ReleaseSegment) => {
-      console.log('[handleReleaseSegment]', { segment, reposLen: repos.length, authorExists: !!author });
-      toast.show({
-        placement: 'top',
-        duration: 4000,
-        render: ({ id }: { id: string }) => (
-          <Toast           action="error" nativeID={`gitbutton-debug-${id}`}>
-            <ToastTitle>DEBUG: handleReleaseSegment fired</ToastTitle>
-            <ToastDescription>
-              segment={segment} repos={repos.length} author={author ? 'ok' : 'null'}
-            </ToastDescription>
-          </Toast>
-        ),
-      });
       if (repos.length === 0) {
         toast.show({
           placement: 'top',
@@ -93,9 +80,7 @@ export default function AppFloatingGitButton() {
         return;
       }
 
-      console.log('[handleReleaseSegment] calling stageAllPending, repos =', repos.map(r => r.name));
       const stageResult = await stageAllPending(repos);
-      console.log('[handleReleaseSegment] stageAllPending result =', JSON.stringify(stageResult));
       if (segment === 'stage') {
         toast.show({
           placement: 'top',
