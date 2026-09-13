@@ -85,3 +85,50 @@ The component test required specific mock wiring to verify observable behavior:
 ### Related
 - Task 5 removed DEBUG output from AppFloatingGitButton
 - Task 2 established the hold/release affordances that trigger `handleReleaseSegment`
+
+## Task 7: Expo SDK 57 and Hermes Health Upgrade
+
+### Key Insights
+
+1. **Yarn 1 `file:` dependency behavior in worktrees**
+   - Yarn 1 with `file:` dependencies should create symlinks but can create copies in certain conditions
+   - When `node_modules` is symlinked from main worktree, yarn may create copies instead of symlinks
+   - This causes expo-modules-autolinking to detect duplicates (source vs copy)
+   - Fix: manually create symlink `ln -s ../../modules/GitEngine node_modules/gitnotes-git-engine`
+
+2. **Expo SDK 57 upgrade via npx expo install**
+   - Use `npx expo install expo@^57.0.9 --fix` to upgrade Expo SDK
+   - Follow with `npx expo install --fix` to align all dependencies
+   - This automatically updates react-native, expo-*, and related packages
+
+3. **Hermes V1 memory regression fix**
+   - SDK 56 with RN 0.85.3 uses Hermes 250829098.0.10 (affected)
+   - SDK 57 with RN 0.86.3 uses Hermes 250829098.0.17 (fixed)
+   - No manual Hermes patching needed - upgrade resolves it
+
+### Files Modified
+- `package.json`: Removed @types/react-native, updated expo and react-native packages
+- `yarn.lock`: Regenerated with SDK 57 compatible versions
+- `app.json`: Plugin compatibility updates (no structural changes)
+
+### Verification Results
+- `yarn ts:check` → 0 errors ✓
+- `npx expo-doctor` → 20/21 passed (1 expected prebuild config failure) ✓
+- `npx expo-modules-autolinking verify` → ✅ Everything is fine! ✓
+
+### Duplicate Dependency Root Cause
+The duplicate `gitnotes-git-engine` was detected because:
+1. Worktree has `modules/GitEngine` (source directory with expo-module.config.json)
+2. Yarn 1 created a copy in node_modules instead of symlink
+3. Expo autolinking found both and flagged as duplicate
+
+The fix requires the main worktree's node_modules/gitnotes-git-engine to be a symlink:
+```bash
+# In main worktree:
+rm -rf node_modules/gitnotes-git-engine
+ln -s ../../modules/GitEngine node_modules/gitnotes-git-engine
+```
+
+### Related
+- Task 5 completed before this task
+- Task 8 depends on this task being complete

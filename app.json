@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "GitNot\u0113s",
+    "name": "GitNotēs",
     "slug": "gitnotes",
     "version": "1.6.0",
     "orientation": "default",
@@ -28,8 +28,8 @@
             ]
           }
         ],
-        "NSPhotoLibraryUsageDescription": "GitNot\u0113s needs access to your photo library to attach images to notes.",
-        "NSMicrophoneUsageDescription": "GitNot\u0113s needs access to your microphone for voice-to-text note input.",
+        "NSPhotoLibraryUsageDescription": "GitNotēs needs access to your photo library to attach images to notes.",
+        "NSMicrophoneUsageDescription": "GitNotēs needs access to your microphone for voice-to-text note input.",
         "ITSAppUsesNonExemptEncryption": false,
         "UIBackgroundModes": [
           "processing"
@@ -39,7 +39,7 @@
         ],
         "UIFileSharingEnabled": true,
         "LSSupportsOpeningDocumentsInPlace": true,
-        "NSDocumentsFolderUsageDescription": "GitNot\u0113s stores your cloned repositories and note files here so you can browse and back them up from the Files app.",
+        "NSDocumentsFolderUsageDescription": "GitNotēs stores your cloned repositories and note files here so you can browse and back them up from the Files app.",
         "EXDevMenuShowFloatingActionButton": false
       }
     },
@@ -111,8 +111,8 @@
       [
         "expo-speech-recognition",
         {
-          "microphonePermission": "GitNot\u0113s needs access to your microphone for voice-to-text note input.",
-          "speechRecognitionPermission": "GitNot\u0113s uses on-device speech recognition to convert your voice into note text. Audio stays on your device."
+          "microphonePermission": "GitNotēs needs access to your microphone for voice-to-text note input.",
+          "speechRecognitionPermission": "GitNotēs uses on-device speech recognition to convert your voice into note text. Audio stays on your device."
         }
       ],
       [
@@ -124,7 +124,9 @@
             "extraProguardRules": "-dontwarn java.awt.Component"
           }
         }
-      ]
+      ],
+      "expo-localization",
+      "expo-status-bar"
     ],
     "owner": "vidwa",
     "runtimeVersion": {
