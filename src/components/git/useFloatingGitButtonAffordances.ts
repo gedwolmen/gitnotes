@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import {
   cancelAnimation,
   useSharedValue,
@@ -46,7 +46,7 @@ export function useFloatingGitButtonAffordances(
   const pressProgress = useSharedValue(0);
   const holdProgress = useSharedValue(0);
 
-
+  const holdCompleteFiredRef = useRef(false);
 
   useEffect(() => {
     if (!reduceMotionResolved) return;
@@ -67,6 +67,7 @@ export function useFloatingGitButtonAffordances(
   }, [entranceProgress, pressProgress, holdProgress]);
 
   const handlePressIn = useCallback(() => {
+    holdCompleteFiredRef.current = false;
     pressProgress.value = withSpring(1, PRESS_SPRING);
     if (!reduceMotionEnabled) {
       holdProgress.value = withTiming(1, { duration: HOLD_FILL_MS });
@@ -75,6 +76,11 @@ export function useFloatingGitButtonAffordances(
 
   const handlePressOut = useCallback(() => {
     pressProgress.value = withSpring(0, PRESS_SPRING);
+
+    if (holdCompleteFiredRef.current) {
+      holdProgress.value = withTiming(0, { duration: HOLD_DRAIN_MS });
+      return;
+    }
 
     const fraction = holdProgress.value;
     let segment: ReleaseSegment | null = null;
@@ -94,6 +100,8 @@ export function useFloatingGitButtonAffordances(
   }, [pressProgress, holdProgress, onReleaseSegment]);
 
   const handleHoldComplete = useCallback(() => {
+    if (holdCompleteFiredRef.current) return;
+    holdCompleteFiredRef.current = true;
     holdProgress.value = withTiming(0, { duration: HOLD_DRAIN_MS });
     if (onReleaseSegment) {
       onReleaseSegment('push');

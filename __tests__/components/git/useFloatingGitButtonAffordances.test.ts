@@ -221,4 +221,81 @@ describe('useFloatingGitButtonAffordances', () => {
     expect(result.current.holdProgress.value).toBe(0);
     expect(result.current.pressProgress.value).toBe(0);
   });
+
+  it('handleHoldComplete is idempotent — second call does not emit again', () => {
+    let emissionCount = 0;
+    const { result } = renderHook(() =>
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      require('@/components/git/useFloatingGitButtonAffordances').useFloatingGitButtonAffordances({
+        ...defaultOptions,
+        onReleaseSegment: (_s) => { emissionCount++; },
+      })
+    );
+
+    act(() => { result.current.handlePressIn(); });
+    act(() => { __advanceBy(3000); });
+    act(() => { result.current.handleHoldComplete(); });
+    act(() => { result.current.handleHoldComplete(); });
+
+    expect(emissionCount).toBe(1);
+  });
+
+  it('handlePressOut after handleHoldComplete suppresses duplicate emission', () => {
+    let emitted: string | undefined;
+    const { result } = renderHook(() =>
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      require('@/components/git/useFloatingGitButtonAffordances').useFloatingGitButtonAffordances({
+        ...defaultOptions,
+        onReleaseSegment: (s) => { emitted = s; },
+      })
+    );
+
+    act(() => { result.current.handlePressIn(); });
+    act(() => { __advanceBy(3000); });
+    act(() => { result.current.handleHoldComplete(); });
+    act(() => { result.current.handlePressOut(); });
+
+    expect(emitted).toBe('push');
+    expect(result.current.holdProgress.value).toBe(0);
+  });
+
+  it('new press after holdComplete starts fresh — emission count resets', () => {
+    let emissionCount = 0;
+    const { result } = renderHook(() =>
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      require('@/components/git/useFloatingGitButtonAffordances').useFloatingGitButtonAffordances({
+        ...defaultOptions,
+        onReleaseSegment: (_s) => { emissionCount++; },
+      })
+    );
+
+    act(() => { result.current.handlePressIn(); });
+    act(() => { __advanceBy(3000); });
+    act(() => { result.current.handleHoldComplete(); });
+    act(() => { result.current.handlePressOut(); });
+
+    act(() => { result.current.handlePressIn(); });
+    act(() => { __advanceBy(1500); });
+    act(() => { result.current.handlePressOut(); });
+
+    expect(emissionCount).toBe(2);
+    expect(result.current.holdProgress.value).toBe(0);
+  });
+
+  it('cancel during partial fill + release + new press starts at zero', () => {
+    const { result } = renderHook(() =>
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      require('@/components/git/useFloatingGitButtonAffordances').useFloatingGitButtonAffordances(defaultOptions)
+    );
+
+    act(() => { result.current.handlePressIn(); });
+    act(() => { __advanceBy(500); });
+    expect(result.current.holdProgress.value).toBeCloseTo(1 / 6, 2);
+
+    act(() => { result.current.cancelAffordances(); });
+    act(() => { result.current.handlePressOut(); });
+
+    act(() => { result.current.handlePressIn(); });
+    expect(result.current.holdProgress.value).toBeLessThan(0.1);
+  });
 });
