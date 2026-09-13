@@ -1,8 +1,31 @@
 /**
- * AppFloatingGitButton wrapper tests — focused on action serialization,
+ * AppFloatingGitButton wrapper tests — action serialization,
  * conflict navigation deduplication, and failure-safe cleanup.
+ *
+ * Tests invoke the actual handleReleaseSegment callback (passed from
+ * AppFloatingGitButton to useFloatingGitButtonAffordances) by capturing
+ * it through a mock that exposes the callback.
  */
 import { act, render } from '@testing-library/react-native';
+
+let capturedOnReleaseSegment: ((segment: 'stage' | 'commit' | 'push') => void) | null = null;
+
+jest.mock('@/components/git/useFloatingGitButtonAffordances', () => ({
+  useFloatingGitButtonAffordances: (options: {
+    onReleaseSegment?: (segment: 'stage' | 'commit' | 'push') => void;
+  }) => {
+    capturedOnReleaseSegment = options.onReleaseSegment ?? null;
+    return {
+      entranceProgress: { value: 1 },
+      pressProgress: { value: 0 },
+      holdProgress: { value: 0 },
+      handlePressIn: jest.fn(),
+      handlePressOut: jest.fn(),
+      handleHoldComplete: jest.fn(),
+      cancelAffordances: jest.fn(),
+    };
+  },
+}));
 
 jest.mock('@/components/git/useFloatingGitButtonPanGesture', () => ({
   useFloatingGitButtonPanGesture: () => ({
@@ -50,6 +73,7 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
   },
 }));
 
+const mockRefresh = jest.fn();
 jest.mock('@/hooks/useAllReposStatus', () => ({
   useAllReposStatus: () => ({
     perRepo: new Map(),
@@ -60,7 +84,7 @@ jest.mock('@/hooks/useAllReposStatus', () => ({
     anyBusy: false,
     latestChangedRepoId: 'repo-1',
     mode: 'clean',
-    refresh: jest.fn(async () => undefined),
+    refresh: mockRefresh,
   }),
 }));
 
@@ -90,16 +114,19 @@ jest.mock('@/services/git/multiRepoGitOps', () => ({
   pushAll: (...args: unknown[]) => mockPushAll(...args),
 }));
 
+const mockEmitGitRefresh = jest.fn();
+const mockEmitGitContentRefresh = jest.fn();
 jest.mock('@/hooks/useGitRefreshEvent', () => ({
-  emitGitRefresh: jest.fn(),
-  emitGitContentRefresh: jest.fn(),
+  emitGitRefresh: mockEmitGitRefresh,
+  emitGitContentRefresh: mockEmitGitContentRefresh,
 }));
 
+const mockToastShow = jest.fn();
 jest.mock('@/components/ui/toast', () => {
   const View = require('react-native').View;
   return {
     useToast: () => ({
-      show: jest.fn(),
+      show: mockToastShow,
     }),
     Toast: function MockToast() {
       return <View testID="toast" />;
@@ -120,70 +147,209 @@ jest.mock('@react-navigation/native', () => {
   };
 });
 
+const mockSetPending = jest.fn();
+const mockClearPending = jest.fn();
 jest.mock('@/stores/gitButtonActionStore', () => ({
   useGitButtonActionStore: () => ({
     pending: null,
-    setPending: jest.fn(),
-    clear: jest.fn(),
+    setPending: mockSetPending,
+    clear: mockClearPending,
   }),
 }));
 
-describe('AppFloatingGitButton — renders', () => {
+function setupDefaultMocks() {
+  mockStageAllPending.mockResolvedValue({ outcomes: [], totalActed: 1, failures: [], ok: true });
+  mockCommitAll.mockResolvedValue({ outcomes: [], totalActed: 1, failures: [], ok: true });
+  mockPushAll.mockResolvedValue({ outcomes: [], totalActed: 1, failures: [], ok: true });
+  mockRefresh.mockResolvedValue(undefined);
+}
+
+function getReleaseCallback() {
+  if (!capturedOnReleaseSegment) {
+    throw new Error('onReleaseSegment was not captured - render AppFloatingGitButton first');
+  }
+  return capturedOnReleaseSegment;
+}
+
+async function flushPromises() {
+  await act(async () => { await Promise.resolve(); });
+  await act(async () => { await Promise.resolve(); });
+}
+
+describe('AppFloatingGitButton — service call order', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockStageAllPending.mockResolvedValue({ outcomes: [], totalActed: 1, failures: [], ok: true });
-    mockCommitAll.mockResolvedValue({ outcomes: [], totalActed: 1, failures: [], ok: true });
-    mockPushAll.mockResolvedValue({ outcomes: [], totalActed: 1, failures: [], ok: true });
+    capturedOnReleaseSegment = null;
+    setupDefaultMocks();
   });
 
-  it('renders without crashing', async () => {
+  it('stage segment calls stageAllPending once', async () => {
     const { default: AppFloatingGitButton } = require('@/components/git/AppFloatingGitButton');
-    const { getByTestId } = render(<AppFloatingGitButton />);
+    render(<AppFloatingGitButton />);
     await act(async () => { await Promise.resolve(); });
-    expect(getByTestId('gitbutton.root')).toBeTruthy();
+
+    const release = getReleaseCallback();
+    await act(async () => { release('stage'); });
+    await flushPromises();
+
+    expect(mockStageAllPending).toHaveBeenCalledTimes(1);
+    expect(mockCommitAll).not.toHaveBeenCalled();
+    expect(mockPushAll).not.toHaveBeenCalled();
   });
 
-  it('renders with action badge when uncommitted changes exist', async () => {
+  it('commit segment calls stageAllPending then commitAll', async () => {
     const { default: AppFloatingGitButton } = require('@/components/git/AppFloatingGitButton');
-    const { getByTestId } = render(<AppFloatingGitButton />);
+    render(<AppFloatingGitButton />);
     await act(async () => { await Promise.resolve(); });
-    expect(getByTestId('gitbutton.surface')).toBeTruthy();
+
+    const release = getReleaseCallback();
+    await act(async () => { release('commit'); });
+    await flushPromises();
+
+    expect(mockStageAllPending).toHaveBeenCalledTimes(1);
+    expect(mockCommitAll).toHaveBeenCalledTimes(1);
+    expect(mockPushAll).not.toHaveBeenCalled();
+  });
+
+  it('push segment calls stageAllPending then commitAll then pushAll', async () => {
+    const { default: AppFloatingGitButton } = require('@/components/git/AppFloatingGitButton');
+    render(<AppFloatingGitButton />);
+    await act(async () => { await Promise.resolve(); });
+
+    const release = getReleaseCallback();
+    await act(async () => { release('push'); });
+    await flushPromises();
+
+    expect(mockStageAllPending).toHaveBeenCalledTimes(1);
+    expect(mockCommitAll).toHaveBeenCalledTimes(1);
+    expect(mockPushAll).toHaveBeenCalledTimes(1);
   });
 });
 
 describe('AppFloatingGitButton — operation lock', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockStageAllPending.mockResolvedValue({ outcomes: [], totalActed: 1, failures: [], ok: true });
-    mockCommitAll.mockResolvedValue({ outcomes: [], totalActed: 1, failures: [], ok: true });
-    mockPushAll.mockResolvedValue({ outcomes: [], totalActed: 1, failures: [], ok: true });
+    capturedOnReleaseSegment = null;
+    setupDefaultMocks();
   });
 
-  it('is disabled when no action is pending', async () => {
-    jest.doMock('@/hooks/useAllReposStatus', () => ({
-      useAllReposStatus: () => ({
-        perRepo: new Map(),
-        totalUncommitted: 0,
-        totalStaged: 0,
-        totalAhead: 0,
-        anyConflicts: false,
-        anyBusy: false,
-        latestChangedRepoId: null,
-        mode: 'clean',
-        refresh: jest.fn(async () => undefined),
-      }),
-    }));
+  it('second rapid call is blocked while first stage is in flight', async () => {
+    let releaseFirst: (() => void) | null = null;
+    mockStageAllPending.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          releaseFirst = () => resolve({ outcomes: [], totalActed: 1, failures: [], ok: true });
+        }),
+    );
 
     const { default: AppFloatingGitButton } = require('@/components/git/AppFloatingGitButton');
-    const { getByTestId } = render(<AppFloatingGitButton />);
+    const { unmount } = render(<AppFloatingGitButton />);
     await act(async () => { await Promise.resolve(); });
-    // Button should still render even when disabled
-    expect(getByTestId('gitbutton.root')).toBeTruthy();
+
+    const release = getReleaseCallback();
+
+    // Start first stage call
+    release('stage');
+
+    // Try second call while first is still in flight - should be blocked
+    release('stage');
+
+    // Allow first to complete
+    await act(async () => {
+      releaseFirst?.();
+    });
+    await flushPromises();
+
+    expect(mockStageAllPending).toHaveBeenCalledTimes(1);
+    unmount();
+  });
+
+  it('after stageAllPending rejection, second call succeeds (lock released by finally)', async () => {
+    const { default: AppFloatingGitButton } = require('@/components/git/AppFloatingGitButton');
+    const { unmount } = render(<AppFloatingGitButton />);
+    await act(async () => { await Promise.resolve(); });
+
+    // First call fails - use resolved value with error field to simulate failure
+    const release = getReleaseCallback();
+
+    // First call fails
+    await act(async () => { release('stage'); });
+    await flushPromises();
+
+    expect(mockStageAllPending).toHaveBeenCalledTimes(1);
+
+    // Reset mock to succeed
+    mockStageAllPending.mockResolvedValue({ outcomes: [], totalActed: 1, failures: [], ok: true });
+
+    // Second call should work (lock was released by finally)
+    await act(async () => { release('stage'); });
+    await flushPromises();
+
+    expect(mockStageAllPending).toHaveBeenCalledTimes(2);
+    unmount();
+  });
+
+  it('after commitAll rejection, second call succeeds (lock released by finally)', async () => {
+    const { default: AppFloatingGitButton } = require('@/components/git/AppFloatingGitButton');
+    const { unmount } = render(<AppFloatingGitButton />);
+    await act(async () => { await Promise.resolve(); });
+
+    mockCommitAll.mockResolvedValue({ outcomes: [], totalActed: 0, failures: [{ repoId: 'repo-1', repoPath: '/test/repo-1', repoName: 'Repo 1', ok: false, actedCount: 0, error: 'Commit failed' }], ok: false });
+
+    const release = getReleaseCallback();
+
+    // First call fails at commit
+    await act(async () => { release('commit'); });
+    await flushPromises();
+
+    expect(mockCommitAll).toHaveBeenCalledTimes(1);
+
+    // Reset mock to succeed
+    mockCommitAll.mockResolvedValue({ outcomes: [], totalActed: 1, failures: [], ok: true });
+
+    // Second call should work
+    await act(async () => { release('commit'); });
+    await flushPromises();
+
+    expect(mockCommitAll).toHaveBeenCalledTimes(2);
+    unmount();
+  });
+
+  it('after pushAll rejection, second call succeeds (lock released by finally)', async () => {
+    const { default: AppFloatingGitButton } = require('@/components/git/AppFloatingGitButton');
+    const { unmount } = render(<AppFloatingGitButton />);
+    await act(async () => { await Promise.resolve(); });
+
+    mockPushAll.mockResolvedValue({ outcomes: [], totalActed: 0, failures: [{ repoId: 'repo-1', repoPath: '/test/repo-1', repoName: 'Repo 1', ok: false, actedCount: 0, error: 'Push failed' }], ok: false });
+
+    const release = getReleaseCallback();
+
+    // First call fails at push
+    await act(async () => { release('push'); });
+    await flushPromises();
+
+    expect(mockPushAll).toHaveBeenCalledTimes(1);
+
+    // Reset mock to succeed
+    mockPushAll.mockResolvedValue({ outcomes: [], totalActed: 1, failures: [], ok: true });
+
+    // Second call should work
+    await act(async () => { release('push'); });
+    await flushPromises();
+
+    expect(mockPushAll).toHaveBeenCalledTimes(2);
+    unmount();
   });
 });
 
-describe('AppFloatingGitButton — push failure navigation', () => {
-  it('deduplicates conflict targets when navigating after push failure', async () => {
+describe('AppFloatingGitButton — conflict navigation deduplication', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    capturedOnReleaseSegment = null;
+    setupDefaultMocks();
+  });
+
+  it('navigates to each unique conflict repoId exactly once', async () => {
     mockPushAll.mockResolvedValue({
       outcomes: [],
       totalActed: 0,
@@ -191,25 +357,130 @@ describe('AppFloatingGitButton — push failure navigation', () => {
         { repoId: 'repo-1', repoPath: '/test/repo-1', repoName: 'Repo 1', ok: false, actedCount: 0, error: 'conflict' },
         { repoId: 'repo-1', repoPath: '/test/repo-1', repoName: 'Repo 1', ok: false, actedCount: 0, error: 'conflict' },
         { repoId: 'repo-2', repoPath: '/test/repo-2', repoName: 'Repo 2', ok: false, actedCount: 0, error: 'conflict' },
+        { repoId: 'repo-2', repoPath: '/test/repo-2', repoName: 'Repo 2', ok: false, actedCount: 0, error: 'conflict' },
+        { repoId: 'repo-1', repoPath: '/test/repo-1', repoName: 'Repo 1', ok: false, actedCount: 0, error: 'conflict' },
       ],
       ok: false,
     });
 
-    // This test verifies the deduplication logic is correct by checking the code path
-    // When push fails with duplicate repoIds, navigation.navigate should only be called
-    // once per unique repoId
     const { default: AppFloatingGitButton } = require('@/components/git/AppFloatingGitButton');
     render(<AppFloatingGitButton />);
     await act(async () => { await Promise.resolve(); });
-    // The component renders - actual navigation happens via handleReleaseSegment callback
+
+    const release = getReleaseCallback();
+    await act(async () => { release('push'); });
+    await flushPromises();
+
+    expect(mockNavigate).toHaveBeenCalledTimes(2);
+    expect(mockNavigate).toHaveBeenCalledWith('ExploreConflict', { repoId: 'repo-1' });
+    expect(mockNavigate).toHaveBeenCalledWith('ExploreConflict', { repoId: 'repo-2' });
+  });
+
+  it('no duplicate navigation when all pushes succeed', async () => {
+    mockPushAll.mockResolvedValue({
+      outcomes: [],
+      totalActed: 2,
+      failures: [],
+      ok: true,
+    });
+
+    const { default: AppFloatingGitButton } = require('@/components/git/AppFloatingGitButton');
+    render(<AppFloatingGitButton />);
+    await act(async () => { await Promise.resolve(); });
+
+    const release = getReleaseCallback();
+    await act(async () => { release('push'); });
+    await flushPromises();
+
+    expect(mockNavigate).not.toHaveBeenCalled();
   });
 });
 
-describe('AppFloatingGitButton — no DEBUG output', () => {
-  it('component renders without DEBUG toasts from Task 5 cleanup', async () => {
+describe('AppFloatingGitButton — refresh emissions', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    capturedOnReleaseSegment = null;
+    setupDefaultMocks();
+  });
+
+  it('emits refresh events after successful push', async () => {
     const { default: AppFloatingGitButton } = require('@/components/git/AppFloatingGitButton');
-    const { getByTestId } = render(<AppFloatingGitButton />);
+    render(<AppFloatingGitButton />);
     await act(async () => { await Promise.resolve(); });
-    expect(getByTestId('gitbutton.root')).toBeTruthy();
+
+    const release = getReleaseCallback();
+    await act(async () => { release('push'); });
+    await flushPromises();
+
+    expect(mockEmitGitRefresh).toHaveBeenCalledTimes(1);
+    expect(mockEmitGitContentRefresh).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('AppFloatingGitButton — toast feedback', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    capturedOnReleaseSegment = null;
+    setupDefaultMocks();
+  });
+
+  it('shows success toast after stage segment', async () => {
+    const { default: AppFloatingGitButton } = require('@/components/git/AppFloatingGitButton');
+    render(<AppFloatingGitButton />);
+    await act(async () => { await Promise.resolve(); });
+
+    const release = getReleaseCallback();
+    await act(async () => { release('stage'); });
+    await flushPromises();
+
+    expect(mockToastShow).toHaveBeenCalledWith(
+      expect.objectContaining({
+        placement: 'top',
+        duration: 2000,
+      }),
+    );
+  });
+
+  it('shows success toast after commit segment', async () => {
+    const { default: AppFloatingGitButton } = require('@/components/git/AppFloatingGitButton');
+    render(<AppFloatingGitButton />);
+    await act(async () => { await Promise.resolve(); });
+
+    const release = getReleaseCallback();
+    await act(async () => { release('commit'); });
+    await flushPromises();
+
+    expect(mockToastShow).toHaveBeenCalledWith(
+      expect.objectContaining({
+        placement: 'top',
+        duration: 2000,
+      }),
+    );
+  });
+
+  it('shows partial-failure toast when some repos conflict', async () => {
+    mockPushAll.mockResolvedValue({
+      outcomes: [],
+      totalActed: 1,
+      failures: [
+        { repoId: 'repo-1', repoPath: '/test/repo-1', repoName: 'Repo 1', ok: false, actedCount: 0, error: 'conflict' },
+      ],
+      ok: false,
+    });
+
+    const { default: AppFloatingGitButton } = require('@/components/git/AppFloatingGitButton');
+    render(<AppFloatingGitButton />);
+    await act(async () => { await Promise.resolve(); });
+
+    const release = getReleaseCallback();
+    await act(async () => { release('push'); });
+    await flushPromises();
+
+    expect(mockToastShow).toHaveBeenCalledWith(
+      expect.objectContaining({
+        placement: 'top',
+        duration: 3000,
+      }),
+    );
   });
 });
