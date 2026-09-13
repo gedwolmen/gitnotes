@@ -100,9 +100,49 @@ jest.mock('expo-crypto', () => ({
 }));
 
 jest.mock('expo-blur', () => {
-  const { View } = require('react-native');
+  const { View } = jest.requireActual('react-native');
   return {
     BlurView: View
+  };
+});
+
+// Provide a minimal react-native stub that satisfies the export surface needed by
+// the component, @testing-library/react-native, and every library in the Jest chain.
+// AccessibilityInfo.isReduceMotionEnabled returns a resolved Promise so
+// reduceMotionResolved becomes true during the first render and the useEffect hook
+// (which guards the hold-animation start) runs without returning early.
+jest.mock('react-native', () => {
+  const React = require('react');
+  const View = (props: object & { children?: React.ReactNode }) =>
+    React.createElement('View', props, props?.children);
+  View.displayName = 'View';
+  return {
+    AccessibilityInfo: {
+      isReduceMotionEnabled: () => Promise.resolve(false),
+      addEventListener: () => ({ remove: jest.fn() }),
+    },
+    StyleSheet: {
+      create: (styles: object) => styles,
+      flatten: (style: object) => style,
+    },
+    Platform: { OS: 'ios', select: (opts: object) => opts },
+    PixelRatio: { get: () => 2 },
+    Dimensions: { get: () => ({ width: 375, height: 812 }) },
+    Image: View,
+    Text: View,
+    TouchableOpacity: View,
+    Pressable: View,
+    ScrollView: View,
+    FlatList: View,
+    SectionList: View,
+    TextInput: View,
+    Switch: View,
+    ActivityIndicator: View,
+    RefreshControl: View,
+    Modal: View,
+    KeyboardAvoidingView: View,
+    View,
+    useWindowDimensions: () => ({ width: 375, height: 812, scale: 2, fontScale: 1 }),
   };
 });
 
@@ -168,7 +208,8 @@ jest.mock('react-native-reanimated', () => {
     const options = opts ?? {};
     const duration = typeof options === 'number' ? options : (options.duration ?? 0);
     const easing = typeof options === 'number' ? S.linearEase : (options.easing ?? S.linearEase);
-    return { __anim: { startTime: S.now, from: 0, to, duration, easing } };
+    const anim = { __anim: { startTime: S.now, from: 0, to, duration, easing } };
+    return anim;
   }
 
   function withDelay(_d: unknown, anim: unknown): unknown { return anim; }
