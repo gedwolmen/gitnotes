@@ -10,6 +10,7 @@ interface BulkActionBarProps {
   onDelete: () => void;
   bottomOffset: number;
   itemNoun: string;
+  itemNounPlural?: string;
 }
 
 export function BulkActionBar({
@@ -18,11 +19,12 @@ export function BulkActionBar({
   onDelete,
   bottomOffset,
   itemNoun,
+  itemNounPlural,
 }: BulkActionBarProps) {
   const { colors } = useTheme();
   if (count === 0) return null;
 
-  const noun = count === 1 ? itemNoun : `${itemNoun}s`;
+  const noun = count === 1 ? itemNoun : itemNounPlural ?? `${itemNoun}s`;
 
   return (
     <View

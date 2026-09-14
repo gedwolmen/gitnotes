@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -29,6 +29,9 @@ import { useEntityFilter } from '../hooks/useEntityFilter';
 import { useTranslation } from 'react-i18next';
 import { useProGate } from '../hooks/useProGate';
 import CanvasCard from '../components/CanvasCard';
+import { SwipeableListItem } from '../components/list/SwipeableListItem';
+import { BulkActionBar } from '../components/list/BulkActionBar';
+import { HapticService } from '../utils/haptics';
 
 type CanvasViewMode = 'list' | 'grid';
 
@@ -85,6 +88,8 @@ export default function CanvasListScreen() {
   const [customH, setCustomH] = useState('600');
   const [canvasTitle, setCanvasTitle] = useState('');
   const [viewMode, setViewMode] = useState<CanvasViewMode>('list');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+  const isDeletingRef = useRef(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -146,6 +151,55 @@ export default function CanvasListScreen() {
     [deleteCanvas, t],
   );
 
+  const selectionMode = selectedIds.size > 0;
+
+  const toggleSelected = useCallback((id: string) => {
+    setSelectedIds((previous) => {
+      const next = new Set(previous);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
+
+  const handleBulkDelete = useCallback(() => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0 || isDeletingRef.current) return;
+
+    Alert.alert(
+      t('common.deleteBulkConfirm', { count: ids.length, noun: t('canvases.canvas') }),
+      t('common.cannotBeUndone'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('common.delete'),
+          style: 'destructive',
+          onPress: async () => {
+            if (isDeletingRef.current) return;
+            isDeletingRef.current = true;
+            try {
+              let failed = false;
+              const selectedCanvases = canvases.filter((canvas) => selectedIds.has(canvas.id));
+              for (const canvas of selectedCanvases) {
+                if (!(await deleteCanvas(canvas.id))) failed = true;
+              }
+              if (failed) {
+                HapticService.warning();
+              } else {
+                HapticService.success();
+                clearSelection();
+              }
+            } finally {
+              isDeletingRef.current = false;
+            }
+          },
+        },
+      ],
+    );
+  }, [canvases, clearSelection, deleteCanvas, selectedIds, t]);
+
   const handleViewModeChange = useCallback((mode: CanvasViewMode) => {
     setViewMode(mode);
     setShowViewModePicker(false);
@@ -153,9 +207,16 @@ export default function CanvasListScreen() {
 
   const renderCanvas = useCallback(
     ({ item }: { item: Canvas }) => (
-      <CanvasCardContainer canvas={item} onOpen={handleOpen} onDelete={handleDelete} />
+      <SwipeableListItem
+        itemId={item.id}
+        selected={selectedIds.has(item.id)}
+        selectionMode={selectionMode}
+        onToggleSelect={() => toggleSelected(item.id)}
+      >
+        <CanvasCardContainer canvas={item} onOpen={handleOpen} onDelete={handleDelete} />
+      </SwipeableListItem>
     ),
-    [handleOpen, handleDelete],
+    [handleDelete, handleOpen, selectedIds, selectionMode, toggleSelected],
   );
 
   return (
@@ -203,6 +264,15 @@ export default function CanvasListScreen() {
             </TouchableOpacity>
           </View>
         }
+        />
+
+      <BulkActionBar
+        count={selectedIds.size}
+        itemNoun={t('canvases.canvas')}
+        itemNounPlural={t('canvases.canvases')}
+        bottomOffset={tabBarHeight + 12}
+        onCancel={clearSelection}
+        onDelete={handleBulkDelete}
       />
 
       <Modal
@@ -218,7 +288,7 @@ export default function CanvasListScreen() {
         >
           <View style={[styles.viewModeSheet, { backgroundColor: colors.surface }]}>
             <View style={[styles.viewModeHandle, { backgroundColor: colors.border + '40' }]} />
-            <Text style={[styles.viewModeTitle, { color: colors.textSecondary }]}>View Mode</Text>
+             <Text style={[styles.viewModeTitle, { color: colors.textSecondary }]}>{t('common.viewMode')}</Text>
             <View style={styles.viewModeOptions}>
               <TouchableOpacity
                 testID="canvas-view-mode.button.change-list"
@@ -440,4 +510,3 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 });
-
