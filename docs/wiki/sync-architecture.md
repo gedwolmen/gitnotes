@@ -21,6 +21,14 @@ User edits note
 
 Delete operations remove the working-tree file without staging the deletion, so the user can review, stage, and commit it from the Git workspace.
 
+### Intentional Local Commits
+
+Most user mutations remain unstaged so they can be reviewed in the Git workspace. The following flows intentionally create a local commit because they require an atomic or recovery transition:
+
+- Note renames commit the old-path deletion and new-path write together.
+- Conflict resolution commits the selected resolution after the conflict is marked resolved.
+- Clone migration commits legacy local data into the newly initialized clone.
+
 ### Explore File Editing (Raw Working-Tree Write)
 
 When editing a file from the Git → Files tab:
@@ -109,7 +117,7 @@ tryPushNow → 409 Conflict
     → User resolves: keep local / keep remote / manual merge
       → On keep-local: force push (`git push --force`)
       → On keep-remote: discard local changes, re-clone from remote
-      → On manual merge: user edits the conflicting file directly, then re-saves (which creates a new commit)
+      → On manual merge: user edits the conflicting file directly, then re-saves to the working tree for review
 ```
 
 ### Push Marker Preflight/Postflight Coordination
@@ -181,7 +189,7 @@ branch-dependent UI and preserve queue branch isolation.
                           └─────┬─────┘
                                 │
                                 ▼
-                          (commit on next save)
+(stage and commit from Git workspace)
 ```
 
 ---
@@ -190,7 +198,7 @@ branch-dependent UI and preserve queue branch isolation.
 
 | Service | Role |
 |---------|------|
-| `CloneSyncService` | Clone mode file write + commit |
+| `CloneSyncService` | Clone mode working-tree file writes; does not stage or commit |
 | `NoteSyncQueueService` | AsyncStorage-backed branch-aware mutation queue; tracks `{ repoId, repoPath, branch }` per item; drains only active-branch items |
 | `BackgroundSyncService` | OS background sync task |
 | `ForegroundSyncService` | Foreground change monitoring |
