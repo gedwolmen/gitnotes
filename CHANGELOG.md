@@ -16,7 +16,7 @@ All notable fixes and feature changes to GitNotēs are documented here.
 
 **Fix:** Rebuild the live stroke path from the gesture-updated point snapshots instead of mutating a shared Skia `PathBuilder` across worklet executions.
 
-**PR:** pending
+**PR:** [#1580](https://github.com/gedwolmen/gitnotes/pull/1580)
 
 ### fix(canvas): remove worklet path mutation warnings and inset launch spinner
 
