@@ -22,7 +22,7 @@ All notable fixes and feature changes to GitNotēs are documented here.
 
 **What:** App-owned React Native Skia deprecated path construction (`Skia.Path.Make().addCircle().close()`, `Skia.Path.Make()` builder pattern) generated deprecation warnings in the iOS runner.
 
-**Fix:** Migrated all bounded app-owned deprecated Skia path calls to the current immutable/builder APIs (`Skia.PathBuilder.Make().addCircle().close().build()` for circles and composed paths) in `GitButtonRing`, `CanvasThumbnail`, `CanvasPreview`, and `GraphViewScreen`. Added a deterministic warning classifier with 57 regression tests. CanvasEditorContent worklet path building remains documented as a framework limitation.
+**Fix:** Migrated all bounded app-owned deprecated Skia path calls to the current immutable/builder APIs (`Skia.PathBuilder.Make().addCircle().close().build()` for circles and composed paths) in `GitButtonRing`, `CanvasThumbnail`, `CanvasPreview`, and `GraphViewScreen`. Added a deterministic warning classifier with 57 regression tests. CanvasEditorContent worklet path building was deferred at that time and is completed by the `fix(canvas)` entry above.
 
 **PR:** fix/runner-warning-cleanup (branch `ad065b6`)
 
