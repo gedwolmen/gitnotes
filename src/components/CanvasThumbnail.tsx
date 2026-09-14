@@ -92,16 +92,16 @@ function isChartElement(el: unknown): el is CanvasChart {
 
 function buildStrokePath(points: { x: number; y: number }[]) {
   if (points.length === 0) return null;
-  const p = Skia.Path.Make();
+  const p = Skia.PathBuilder.Make();
   p.moveTo(points[0].x, points[0].y);
   for (let i = 1; i < points.length; i++) {
     p.lineTo(points[i].x, points[i].y);
   }
-  return p;
+  return p.build();
 }
 
 function buildArrowPath(x1: number, y1: number, x2: number, y2: number, sw: number) {
-  const p = Skia.Path.Make();
+  const p = Skia.PathBuilder.Make();
   p.moveTo(x1, y1);
   p.lineTo(x2, y2);
   const ang = Math.atan2(y2 - y1, x2 - x1);
@@ -110,26 +110,26 @@ function buildArrowPath(x1: number, y1: number, x2: number, y2: number, sw: numb
   p.lineTo(x2 - hl * Math.cos(ang - 0.4), y2 - hl * Math.sin(ang - 0.4));
   p.moveTo(x2, y2);
   p.lineTo(x2 - hl * Math.cos(ang + 0.4), y2 - hl * Math.sin(ang + 0.4));
-  return p;
+  return p.build();
 }
 
 function buildDiamondPath(x1: number, y1: number, x2: number, y2: number) {
   const cx = (x1 + x2) / 2;
   const cy = (y1 + y2) / 2;
-  const p = Skia.Path.Make();
+  const p = Skia.PathBuilder.Make();
   p.moveTo(cx, y1);
   p.lineTo(x2, cy);
   p.lineTo(cx, y2);
   p.lineTo(x1, cy);
   p.close();
-  return p;
+  return p.build();
 }
 
 function buildLinePath(x1: number, y1: number, x2: number, y2: number) {
-  const p = Skia.Path.Make();
+  const p = Skia.PathBuilder.Make();
   p.moveTo(x1, y1);
   p.lineTo(x2, y2);
-  return p;
+  return p.build();
 }
 
 function hexToRgba(hex: string, alpha: number): string {
@@ -224,17 +224,18 @@ export default function CanvasThumbnail({ scene, width, height, background }: Ca
       }
       if (el.chartType === 'line') {
         const maxVal = Math.max(...el.values, 1);
-        const linePath = Skia.Path.Make();
+        const linePath = Skia.PathBuilder.Make();
         el.values.forEach((v, i) => {
           const px = el.x + (i / Math.max(1, el.values.length - 1)) * el.width;
           const py = el.y + el.height - (v / maxVal) * el.height;
           if (i === 0) linePath.moveTo(px, py);
           else linePath.lineTo(px, py);
         });
+        const builtLinePath = linePath.build();
         return (
           <Group key={el.id ?? idx}>
             <Rect x={el.x} y={el.y} width={el.width} height={el.height} color="#f5f5f5" />
-            <Path path={linePath} color="#007AFF" style="stroke" strokeWidth={2} />
+            <Path path={builtLinePath} color="#007AFF" style="stroke" strokeWidth={2} />
           </Group>
         );
       }
@@ -250,7 +251,7 @@ export default function CanvasThumbnail({ scene, width, height, background }: Ca
               const startAngle = (acc / total) * Math.PI * 2 - Math.PI / 2;
               acc += v;
               const endAngle = (acc / total) * Math.PI * 2 - Math.PI / 2;
-              const slicePath = Skia.Path.Make();
+              const slicePath = Skia.PathBuilder.Make();
               slicePath.moveTo(cx, cy);
               slicePath.arcToOval(
                 { x: cx - r, y: cy - r, width: r * 2, height: r * 2 },
@@ -259,7 +260,7 @@ export default function CanvasThumbnail({ scene, width, height, background }: Ca
                 false,
               );
               slicePath.close();
-              return <Path key={`pie-${el.id}-${v}-${el.labels[i]}`} path={slicePath} color={chartColors[i % chartColors.length]} />;
+              return <Path key={`pie-${el.id}-${v}-${el.labels[i]}`} path={slicePath.build()} color={chartColors[i % chartColors.length]} />;
             })}
           </Group>
         );

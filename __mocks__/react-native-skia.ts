@@ -30,10 +30,22 @@ module.exports = {
   Text: passthrough('Text'),
   matchFont: () => null,
   Skia: {
-    Path: { Make: () => ({ moveTo: () => {}, lineTo: () => {}, close: () => {} }) },
+    Path: { Make: () => ({ moveTo: () => {}, lineTo: () => {}, close: () => {}, build: () => ({}) }) },
+    PathBuilder: {
+      Make: () => ({
+        moveTo: () => {},
+        lineTo: () => {},
+        close: () => {},
+        addCircle: () => {},
+        arcToOval: () => {},
+        build: () => ({}),
+      }),
+    },
     XYWHRect: () => ({}),
     RRect: () => ({}),
     Font: { Make: () => null },
+    Data: { fromBase64: () => ({}) },
+    Image: { MakeImageFromEncoded: () => null },
   },
   useFont: () => null,
   useTypeface: () => null,
