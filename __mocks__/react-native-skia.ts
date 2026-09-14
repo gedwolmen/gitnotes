@@ -30,13 +30,18 @@ module.exports = {
   Text: passthrough('Text'),
   matchFont: () => null,
   Skia: {
-    Path: { Make: () => ({ moveTo: () => {}, lineTo: () => {}, close: () => {}, build: () => ({}) }) },
+    Path: {
+      Make: () => ({ moveTo: () => {}, lineTo: () => {}, close: () => {}, build: () => ({}) }),
+      Circle: () => ({}),
+      Rect: () => ({}),
+      Oval: () => ({}),
+      RRect: () => ({}),
+    },
     PathBuilder: {
       Make: () => ({
         moveTo: () => {},
         lineTo: () => {},
         close: () => {},
-        addCircle: () => {},
         arcToOval: () => {},
         build: () => ({}),
       }),
