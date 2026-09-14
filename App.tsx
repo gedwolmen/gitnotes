@@ -13,7 +13,7 @@ configureReanimatedLogger({
 });
 import { useColorScheme } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 
 import { NoteProvider } from './src/contexts/NoteContext';
 import { ThemeProvider } from './src/contexts/ThemeContext';
@@ -195,7 +195,11 @@ export default function App() {
   }, []);
 
   if (showOnboarding === null) {
-    return <AppLoadingView colorScheme={systemColorScheme ?? 'light'} />;
+    return (
+      <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+        <AppLoadingView colorScheme={systemColorScheme ?? 'light'} />
+      </SafeAreaProvider>
+    );
   }
 
   return (
