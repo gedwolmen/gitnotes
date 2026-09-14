@@ -196,7 +196,7 @@ async function fetchDirectoryFiles(
   return fetched.filter((f): f is { path: string; content: string } => f !== null);
 }
 
-const NOTE_EXTS = ['md', 'markdown', 'norg', 'org', 'txt'] as const;
+const NOTE_EXTS = ['md', 'markdown', 'norg', 'org', 'pdf', 'txt'] as const;
 
 /**
  * Paths that exist locally (staged but not yet pushed) and must be immune to
@@ -217,9 +217,10 @@ async function collectPendingPaths(
   }
 }
 
-function noteFormatFromExt(ext: string): 'markdown' | 'neorg' | 'org' {
+function noteFormatFromExt(ext: string): 'markdown' | 'neorg' | 'org' | 'pdf' {
   if (ext === 'norg') return 'neorg';
   if (ext === 'org') return 'org';
+  if (ext === 'pdf') return 'pdf';
   return 'markdown';
 }
 

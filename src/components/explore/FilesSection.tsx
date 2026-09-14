@@ -12,6 +12,7 @@ import type { FileStatus } from '@/services/git/engine/GitEngine';
 import { GitHubService } from '@/services/GitHubService';
 import { GitFsService } from '@/services/git/GitFsService';
 import type { RootStackParamList } from '@/navigation/types';
+import { parseRepoPath } from '@/utils/gitPathParser';
 import {
   buildFileTreeRows,
   changedFileAncestors,
@@ -139,9 +140,26 @@ export function FilesSection({ repo, active, chromeTopInset = 0, branchInvalidat
       const status = data?.statuses[item.path];
       const meta = status ? STATUS_META[status.status] : null;
       const toneStyle = meta ? resolveStatusTone(colors, meta.tone) : null;
+      const handlePress = () => {
+        const ext = item.name.toLowerCase().split('.').pop() ?? '';
+        if (ext === 'pdf') {
+          const info = parseRepoPath(repo.path);
+          if (info) {
+            navigation.navigate('PdfViewer', {
+              owner: info.owner,
+              repo: info.repo,
+              branch: repo.branch,
+              path: item.path,
+              title: item.name,
+            });
+            return;
+          }
+        }
+        navigation.navigate('ExploreFile', { repoId: repo.id, path: item.path });
+      };
       return (
         <Pressable
-          onPress={() => navigation.navigate('ExploreFile', { repoId: repo.id, path: item.path })}
+          onPress={handlePress}
           accessibilityRole="button"
           testID={`explore.file.${item.path}`}
           className="mx-4 mb-1.5 flex-row items-center rounded-sm px-3 py-2"
@@ -168,7 +186,7 @@ export function FilesSection({ repo, active, chromeTopInset = 0, branchInvalidat
         </Pressable>
       );
     },
-    [data, navigation, repo.id, toggleDir],
+    [data, navigation, repo.id, repo.path, repo.branch, toggleDir],
   );
 
   const listContentContainerStyle = useMemo(
