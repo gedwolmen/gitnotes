@@ -105,49 +105,20 @@ export const useNoteStore = create<NoteState & NoteActions>()((set, get) => ({
       const slug = title ? slugifyLocal(title) : `note-${Date.now()}`;
       const ext = getExtensionForFormat(input.format ?? 'markdown');
       const folderPath = input.folderPath ?? resolveDefaultFolder('note');
-      const filePath = `${folderPath}/${slug}${ext}`;
+      const normalizedFolderPath = folderPath.replace(/\/+$/, '');
+      const filePath = `${normalizedFolderPath}/${slug}${ext}`;
 
-      if (input.isAiCreated) {
-        const saveResult = await CloneSyncService.save({
-          repoPath: repo,
-          branch: input.branch ?? 'main',
-          filePath,
-          content: input.content ?? '',
-          message: `Create note: ${title || filePath}`,
-          intent: 'upsert',
-        });
-        if (!saveResult.success) {
-          set({ error: saveResult.error ?? 'Failed to write note to disk' });
-          return null;
-        }
-      } else {
-        const opId = gitOperationRegistry.begin({
-          kind: 'upsert',
-          repo,
-          branch: input.branch ?? 'main',
-          path: filePath,
-          entityIds: [],
-          status: 'running',
-          attempts: 0,
-        });
-        try {
-          const commitResult = await CommitService.commit({
-            repo,
-            branch: input.branch ?? 'main',
-            filePath,
-            content: input.content ?? '',
-            message: `Create note: ${title || filePath}`,
-          });
-          if (!commitResult.success) {
-            gitOperationRegistry.fail(opId, commitResult.error ?? 'Failed to create note');
-            set({ error: commitResult.error ?? 'Failed to create note' });
-            return null;
-          }
-          gitOperationRegistry.succeed(opId);
-        } catch (commitError) {
-          gitOperationRegistry.fail(opId, commitError instanceof Error ? commitError.message : 'Commit failed');
-          throw commitError;
-        }
+      const saveResult = await CloneSyncService.save({
+        repoPath: repo,
+        branch: input.branch ?? 'main',
+        filePath,
+        content: input.content ?? '',
+        message: `Create note: ${title || filePath}`,
+        intent: 'upsert',
+      });
+      if (!saveResult.success) {
+        set({ error: saveResult.error ?? 'Failed to write note to disk' });
+        return null;
       }
 
       const newNote = await StorageService.createNote({ ...input, repo });
