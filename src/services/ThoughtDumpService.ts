@@ -3,7 +3,6 @@ import { StorageService } from './StorageService';
 import { ThoughtDump, createThoughtDump, serializeThoughtDump, parseThoughtDump } from '../models/ThoughtDump';
 import { parseRepoPath } from '../utils/gitPathParser';
 import { resolveBranch } from './git/branchResolver';
-import { CommitService } from './git/CommitService';
 import { CloneSyncService } from './cloneSyncServiceImpl';
 import type { GitHostProvider } from './git/GitHost';
 
@@ -87,19 +86,20 @@ export class ThoughtDumpService {
     const dump = createThoughtDump(text);
     const content = serializeThoughtDump(dump);
 
-    let commitResult: Awaited<ReturnType<typeof CommitService.commit>>;
+    let saveResult: Awaited<ReturnType<typeof CloneSyncService.save>>;
     try {
-      commitResult = await enqueueRepoWrite(repoInfo.owner, repoInfo.repo, branch, () =>
-        CommitService.commit({
-          repo: repoPath,
+      saveResult = await enqueueRepoWrite(repoInfo.owner, repoInfo.repo, branch, () =>
+        CloneSyncService.save({
+          repoPath,
           branch,
           filePath: dump.filePath,
           content,
           message: `Create thought dump: ${dump.filePath}`,
+          intent: 'upsert',
         }),
       );
     } catch (error) {
-      console.warn('[ThoughtDumpService] create commit failed:', error);
+      console.warn('[ThoughtDumpService] create write failed:', error);
       return {
         ok: false,
         reason: 'write-failed',
@@ -107,8 +107,8 @@ export class ThoughtDumpService {
       };
     }
 
-    if (!commitResult.success) {
-      return { ok: false, reason: 'write-failed', error: commitResult.error };
+    if (!saveResult.success) {
+      return { ok: false, reason: 'write-failed', error: saveResult.error };
     }
 
     return { ok: true, dump };
