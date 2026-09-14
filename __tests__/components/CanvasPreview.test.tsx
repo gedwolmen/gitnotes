@@ -13,7 +13,6 @@
  */
 import React from 'react';
 import { render } from '@testing-library/react-native';
-import { View } from 'react-native';
 import CanvasPreview from '@/components/CanvasPreview';
 import type { CanvasScene, CanvasStroke, CanvasShape, CanvasText, CanvasChart, Canvas } from '@/models/Canvas';
 

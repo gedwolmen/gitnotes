@@ -15,7 +15,6 @@
  */
 import React from 'react';
 import { render } from '@testing-library/react-native';
-import { View } from 'react-native';
 import CanvasThumbnail from '@/components/CanvasThumbnail';
 import type { CanvasScene, CanvasStroke, CanvasShape, CanvasText, CanvasChart } from '@/models/Canvas';
 
