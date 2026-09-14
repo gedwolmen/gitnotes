@@ -135,6 +135,8 @@
   },
   "canvases": {
     "title": "Leinwände",
+    "canvas": "Leinwand",
+    "canvases": "Leinwände",
     "newCanvas": "Neue Leinwand",
     "untitled": "Leinwand ohne Titel",
     "searchPlaceholder": "Leinwände suchen...",

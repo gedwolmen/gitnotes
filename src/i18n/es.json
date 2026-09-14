@@ -135,6 +135,8 @@
   },
   "canvases": {
     "title": "Lienzos",
+    "canvas": "lienzo",
+    "canvases": "lienzos",
     "newCanvas": "Nuevo lienzo",
     "untitled": "Lienzo sin título",
     "searchPlaceholder": "Buscar lienzos...",
