@@ -10,6 +10,14 @@ All notable fixes and feature changes to GitNotēs are documented here.
 
 ## 2026-09-14
 
+### fix(skia): eliminate deprecated Skia path API deprecation warnings in runner
+
+**What:** App-owned React Native Skia deprecated path construction (`Skia.Path.Make().addCircle().close()`, `Skia.Path.Make()` builder pattern) generated deprecation warnings in the iOS runner.
+
+**Fix:** Migrated all bounded app-owned deprecated Skia path calls to the current immutable/builder APIs (`Skia.PathBuilder.Make().addCircle().close().build()` for circles and composed paths) in `GitButtonRing`, `CanvasThumbnail`, `CanvasPreview`, and `GraphViewScreen`. Added a deterministic warning classifier with 57 regression tests. CanvasEditorContent worklet path building remains documented as a framework limitation.
+
+**PR:** fix/runner-warning-cleanup (branch `ad065b6`)
+
 ### fix(app,settings): show loading indicator on launch and handle transient PAT access errors
 
 **What:** App showed a blank screen while checking onboarding on launch, and Settings did not give users actionable options when a Personal Access Token could not verify repository write access due to transient network or server errors.
