@@ -402,7 +402,9 @@ async function pullNotesFromRepo(
       const format = noteFormatFromExt(ext);
       const tags = extractTagsFromContent(item.content, format);
       const color = extractColorFromContent(item.content, format);
-      const commitDates = await GitHubService.getPathCommitDates(owner, repo, item.path, branch);
+      const commitDates = canPersistNoteTags(format)
+        ? await GitHubService.getPathCommitDates(owner, repo, item.path, branch)
+        : {};
       const titleFromPath = item.path
         .replace(/^notes\//, '')
         .replace(/\.[^.]+$/, '')
