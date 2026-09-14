@@ -37,16 +37,14 @@
 
 ## Canvas Store (`src/stores/canvasStore.ts`)
 
-**Purpose:** Manages canvas documents, selected canvas, tile state, and viewport.
+**Purpose:** Manages canvas documents and their local-first document lifecycle.
 
 **State:**
 - `canvases: Canvas[]`
-- `selectedCanvasId: string | null`
-- `currentTileState: TileState`
-- `viewport: { x, y, zoom }`
-- `isDirty: boolean` — unsaved changes
+- `isLoading: boolean`
+- `error: string | null`
 
-**Key Actions:** `loadCanvases`, `createCanvas`, `updateCanvas`, `deleteCanvas`, `selectCanvas`, `setViewport`, `markDirty`
+**Key Actions:** `loadCanvases`, `createCanvas`, `updateCanvas`, `deleteCanvas`, `refreshCanvases`, `clearError`
 
 ---
 

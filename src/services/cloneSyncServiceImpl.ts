@@ -19,8 +19,12 @@ function clonesRoot(): string {
   return docDir.endsWith('/') ? docDir + CLONES_SUBDIR : `${docDir}/${CLONES_SUBDIR}`;
 }
 
-function toRepoRelativePath(filePath: string): string {
-  return filePath.replace(/^\/+/, '');
+function toRepoRelativePath(filePath: string): string | null {
+  const relativePath = filePath.replaceAll('\\', '/').replace(/^\/+/, '');
+  if (!relativePath || relativePath.split('/').some((segment) => segment === '..')) {
+    return null;
+  }
+  return relativePath;
 }
 
 // NoteSyncQueueService stubs

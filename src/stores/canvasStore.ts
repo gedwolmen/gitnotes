@@ -1,6 +1,9 @@
 import { create } from 'zustand';
 import { Canvas, CanvasCreateInput, CanvasUpdateInput, sortCanvasesByUpdated } from '../models/Canvas';
 import { DocumentService } from '../services/documents/DocumentService';
+import { CloneSyncService } from '../services/cloneSyncServiceImpl';
+import { resolveBranch } from '../services/git/resolveBranch';
+import { parseFrontmatter } from '../utils/frontmatterParser';
 
 /**
  * Canvas store on the document model.
@@ -23,6 +26,7 @@ function toCanvasFromDocument(doc: {
   tags: string[];
   createdAt: number;
   updatedAt: number;
+  raw: string;
 }): Canvas {
   let scene: Canvas['scene'];
   try {
@@ -35,6 +39,12 @@ function toCanvasFromDocument(doc: {
   } catch {
     scene = { version: 1, width: 800, height: 600, background: '#FFFFFF', elements: [] };
   }
+  const frontmatter = parseFrontmatter(doc.raw).frontmatter;
+  const stringField = (key: string): string | undefined => {
+    const value = frontmatter[key];
+    return typeof value === 'string' ? value : undefined;
+  };
+
   return {
     id: doc.id,
     title: doc.title,
@@ -42,6 +52,19 @@ function toCanvasFromDocument(doc: {
     tags: doc.tags,
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
+    repo: stringField('repo'),
+    branch: stringField('branch'),
+    filePath: stringField('filePath'),
+    accountId: stringField('accountId'),
+  };
+}
+
+function canvasExtra(input: Pick<CanvasCreateInput, 'repo' | 'branch' | 'filePath' | 'accountId'>) {
+  return {
+    repo: input.repo,
+    branch: input.branch,
+    filePath: input.filePath,
+    accountId: input.accountId,
   };
 }
 
@@ -92,6 +115,7 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()((set, get) =
         title: input.title || 'Untitled Canvas',
         body: JSON.stringify(scene, null, 2),
         tags: input.tags ?? [],
+        extra: canvasExtra(input),
       });
       const canvas = toCanvasFromDocument(doc);
       set((state) => ({ canvases: sortCanvasesByUpdated([...state.canvases, canvas]) }));
@@ -116,12 +140,22 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()((set, get) =
         title: input.title !== undefined ? input.title : existing.title,
         body: JSON.stringify(scene, null, 2),
         tags: input.tags !== undefined ? input.tags : existing.tags,
+        extra: canvasExtra({
+          repo: input.repo ?? existing.repo,
+          branch: input.branch ?? existing.branch,
+          filePath: input.filePath ?? existing.filePath,
+          accountId: input.accountId ?? existing.accountId,
+        }),
       });
       const updated: Canvas = {
         ...existing,
         title: input.title !== undefined ? input.title : existing.title,
         scene,
         tags: input.tags !== undefined ? input.tags : existing.tags,
+        repo: input.repo ?? existing.repo,
+        branch: input.branch ?? existing.branch,
+        filePath: input.filePath ?? existing.filePath,
+        accountId: input.accountId ?? existing.accountId,
         updatedAt: Date.now(),
       };
       set((state) => ({
@@ -145,6 +179,20 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()((set, get) =
       if (!doc) {
         set({ error: 'Canvas not found' });
         return false;
+      }
+      const canvas = get().canvases.find((candidate) => candidate.id === id);
+      if (canvas?.repo && canvas.filePath) {
+        const result = await CloneSyncService.save({
+          repoPath: canvas.repo,
+          branch: canvas.branch ?? await resolveBranch(canvas.repo),
+          filePath: canvas.filePath,
+          message: `Delete canvas: ${canvas.title}`,
+          intent: 'delete',
+        });
+        if (!result.success && result.error !== 'queued') {
+          set({ error: result.error ?? 'Failed to delete canvas from Git' });
+          return false;
+        }
       }
       await service.purge(id);
       set((state) => ({ canvases: state.canvases.filter((c) => c.id !== id) }));

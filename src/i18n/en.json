@@ -159,6 +159,8 @@
   },
   "canvases": {
     "title": "Canvases",
+    "canvas": "canvas",
+    "canvases": "canvases",
     "newCanvas": "New Canvas",
     "untitled": "Untitled Canvas",
     "searchPlaceholder": "Search canvases...",
