@@ -135,6 +135,8 @@
   },
   "canvases": {
     "title": "캔버스",
+    "canvas": "캔버스",
+    "canvases": "캔버스",
     "newCanvas": "새 캔버스",
     "untitled": "제목 없는 캔버스",
     "searchPlaceholder": "캔버스 검색...",

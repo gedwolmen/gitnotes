@@ -135,6 +135,8 @@
   },
   "canvases": {
     "title": "Toiles",
+    "canvas": "toile",
+    "canvases": "toiles",
     "newCanvas": "Nouvelle toile",
     "untitled": "Toile sans titre",
     "searchPlaceholder": "Rechercher des toiles...",

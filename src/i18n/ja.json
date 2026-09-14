@@ -135,6 +135,8 @@
   },
   "canvases": {
     "title": "キャンバス",
+    "canvas": "キャンバス",
+    "canvases": "キャンバス",
     "newCanvas": "新規キャンバス",
     "untitled": "無題のキャンバス",
     "searchPlaceholder": "キャンバスを検索...",
