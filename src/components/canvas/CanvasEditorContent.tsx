@@ -463,7 +463,6 @@ export default function CanvasEditorContent() {
   const savedTx = useSharedValue(0);
   const savedTy = useSharedValue(0);
   const activeDrawingElement = useSharedValue<CanvasStroke | CanvasShape | null>(null);
-  const activeStrokePathBuilder = useSharedValue(Skia.PathBuilder.Make());
   const contentBounds = useMemo(() => getCanvasContentBounds(elements), [elements]);
   const shouldAutoFitRef = useRef(true);
   const didAutoFitRef = useRef(!!canvasId);
@@ -865,7 +864,18 @@ export default function CanvasEditorContent() {
     return element?.type === 'stroke' ? element.width : 0;
   });
   const activeStrokePath = useDerivedValue(() => {
-    return activeStrokePathBuilder.value.build();
+    const element = activeDrawingElement.value;
+    if (!element || element.type !== 'stroke' || element.points.length === 0) {
+      return Skia.PathBuilder.Make().build();
+    }
+
+    const points = element.points;
+    const pathBuilder = Skia.PathBuilder.Make();
+    pathBuilder.moveTo(points[0].x, points[0].y);
+    for (let i = 1; i < points.length; i++) {
+      pathBuilder.lineTo(points[i].x, points[i].y);
+    }
+    return pathBuilder.build();
   });
   const activeLinePath = useDerivedValue(() => {
     const element = activeDrawingElement.value;
@@ -971,8 +981,6 @@ export default function CanvasEditorContent() {
           if (tool === 'eraser') {
             runOnJS(eraseElementsAtPoint)(pt, size * 3);
           } else if (tool === 'pen' || tool === 'highlighter') {
-            activeStrokePathBuilder.value.reset();
-            activeStrokePathBuilder.value.moveTo(pt.x, pt.y);
             activeDrawingElement.value = {
               type: 'stroke',
               id: uid(),
@@ -982,7 +990,6 @@ export default function CanvasEditorContent() {
               points: [pt],
             };
           } else {
-            activeStrokePathBuilder.value.reset();
             activeDrawingElement.value = {
               type: 'shape',
               id: uid(),
@@ -1014,7 +1021,6 @@ export default function CanvasEditorContent() {
           if (!active) return;
 
           if (active.type === 'stroke') {
-            activeStrokePathBuilder.value.lineTo(pt.x, pt.y);
             const newPoints = [...active.points, pt];
             activeDrawingElement.value = { ...active, points: newPoints };
           } else {
@@ -1029,17 +1035,15 @@ export default function CanvasEditorContent() {
 
           const completedElement = activeDrawingElement.value;
           activeDrawingElement.value = null;
-          activeStrokePathBuilder.value.reset();
           runOnJS(commitActiveDrawing)(completedElement);
         })
         .onFinalize(() => {
           'worklet';
           if (activeDrawingElement.value !== null && tool !== 'eraser') {
             activeDrawingElement.value = null;
-            activeStrokePathBuilder.value.reset();
           }
         }),
-    [tool, color, size, filled, saveHistory, startTextPlacement, startChartPlacement, startImagePlacement, commitActiveDrawing, activeDrawingElement, activeStrokePathBuilder, eraseElementsAtPoint],
+    [tool, color, size, filled, saveHistory, startTextPlacement, startChartPlacement, startImagePlacement, commitActiveDrawing, activeDrawingElement, eraseElementsAtPoint],
   );
 
   const addTextElement = useCallback(() => {
