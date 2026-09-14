@@ -16,7 +16,7 @@ All notable fixes and feature changes to GitNotēs are documented here.
 
 **Fix:** Migrated canvas worklet and PNG export path construction to `Skia.PathBuilder`, updated the Skia mock, and applied safe-area insets to the loading surface with regression coverage.
 
-**PR:** TBD
+**PR:** [#1578](https://github.com/gedwolmen/gitnotes/pull/1578)
 
 ### fix(skia): eliminate deprecated Skia path API deprecation warnings in runner
 
