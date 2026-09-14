@@ -50,4 +50,20 @@ describe('CloneSyncService.save', () => {
     );
     expect(GitEngine.remove).not.toHaveBeenCalled();
   });
+
+  it('rejects file paths that escape the clone directory', async () => {
+    const result = await CloneSyncService.save({
+      repoPath: 'owner/repo',
+      branch: 'main',
+      filePath: '../outside.json',
+      message: 'Delete outside file',
+      intent: 'delete',
+    });
+
+    expect(result).toEqual({ success: false, error: 'Missing filePath' });
+    expect(FileSystem.deleteAsync).not.toHaveBeenCalledWith(
+      expect.stringContaining('outside.json'),
+      expect.anything(),
+    );
+  });
 });
