@@ -31,7 +31,7 @@ module.exports = {
   matchFont: () => null,
   Skia: {
     Path: {
-      Make: () => ({ moveTo: () => {}, lineTo: () => {}, close: () => {}, build: () => ({}) }),
+      Make: () => ({ moveTo: () => {}, lineTo: () => {}, close: () => {}, build: () => ({}), rewind: () => {}, setIsVolatile: () => {} }),
       Circle: () => ({}),
       Rect: () => ({}),
       Oval: () => ({}),
