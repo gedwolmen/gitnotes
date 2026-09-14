@@ -244,18 +244,18 @@ export default function ExploreFileScreen() {
           <ActivityIndicator size="small" color={colors.accent} />
           <Text style={{ color: colors.textSecondary }}>Reading file…</Text>
         </View>
-      ) : content == null ? (
-        <View className="flex-1 items-center justify-center px-8" style={{ flex: 1 }}>
-          <Ionicons name="document-outline" size={40} color={colors.textSecondary} />
-          <Text className="mt-2 text-center text-sm" style={{ color: colors.textSecondary }}>
-            Empty file.
-          </Text>
-        </View>
       ) : isBinary ? (
         <View className="flex-1 items-center justify-center px-8" style={{ flex: 1 }}>
           <Ionicons name="cube-outline" size={44} color={colors.textSecondary} />
           <Text className="mt-2 text-center" style={{ color: colors.textSecondary }} testID="explore-file.binary-message">
             Binary file — no textual preview available.
+          </Text>
+        </View>
+      ) : content == null ? (
+        <View className="flex-1 items-center justify-center px-8" style={{ flex: 1 }}>
+          <Ionicons name="document-outline" size={40} color={colors.textSecondary} />
+          <Text className="mt-2 text-center text-sm" style={{ color: colors.textSecondary }}>
+            Empty file.
           </Text>
         </View>
       ) : isLfsPointer ? (
