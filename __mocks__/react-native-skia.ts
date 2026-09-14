@@ -31,20 +31,36 @@ module.exports = {
   matchFont: () => null,
   Skia: {
     Path: {
-      Make: () => ({ moveTo: () => {}, lineTo: () => {}, close: () => {}, build: () => ({}), rewind: () => {}, setIsVolatile: () => {} }),
+      Make: () => ({
+        moveTo: () => undefined,
+        lineTo: () => undefined,
+        close: () => undefined,
+        build: () => ({}),
+        rewind: () => undefined,
+        setIsVolatile: () => undefined,
+      }),
       Circle: () => ({}),
       Rect: () => ({}),
       Oval: () => ({}),
       RRect: () => ({}),
     },
     PathBuilder: {
-      Make: () => ({
-        moveTo: () => {},
-        lineTo: () => {},
-        close: () => {},
-        arcToOval: () => {},
-        build: () => ({}),
-      }),
+      Make: () => {
+        const builder = {
+          _path: {
+            moveTo: () => undefined,
+            lineTo: () => undefined,
+            close: () => undefined,
+          },
+          moveTo: function(_x: number, _y: number) { return builder; },
+          lineTo: function(_x: number, _y: number) { return builder; },
+          close: function() { return builder; },
+          arcToOval: function(_oval: object, _startAngle: number, _sweepAngle: number, _forceMoveTo: boolean) { return builder; },
+          reset: function() { return builder; },
+          build: function() { return ({}); },
+        };
+        return builder;
+      },
     },
     XYWHRect: () => ({}),
     RRect: () => ({}),
