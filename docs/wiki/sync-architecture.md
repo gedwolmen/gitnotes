@@ -2,7 +2,7 @@
 
 > Deep-dive on GitNotēs' clone sync. See [Architecture](./architecture.md) for context and [Services](./services.md) for the underlying services.
 
-GitNotēs uses **clone mode**: local git working tree with commit-on-save and write-through push.
+GitNotēs uses **clone mode**: local git working tree with working-tree-first saves and user-controlled commits.
 
 ## Clone Mode
 

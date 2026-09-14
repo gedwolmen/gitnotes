@@ -97,7 +97,7 @@ GitNotēs uses a **centralized branch model** for clone-mode repositories:
 
 | File | Purpose |
 |------|---------|
-| `CloneSyncService.ts` | Clone mode sync — writes files to working tree, stages via GitEngine, triggers push. Implements commit-on-save pattern. |
+| `CloneSyncService.ts` | Clone mode sync — writes files to the local working tree. Staging and commits are performed from the Git workspace. |
 | `NoteSyncQueueService.ts` | Queues note mutations when offline. Drains queue when connectivity returns. |
 | `BackgroundSyncService.ts` | OS background task for sync — runs when app is backgrounded, syncs up to 50 files. |
 | `ForegroundSyncService.ts` | Active sync when app is in foreground — monitors file changes, triggers incremental sync. |
