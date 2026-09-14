@@ -64,7 +64,7 @@ export interface NoteCreateInput {
   accountId?: string;
   createdAt?: number;
   updatedAt?: number;
-  /** When true, skip the immediate clone-mode commit so the note goes through normal sync flow. */
+  /** Deprecated and ignored; all note creation uses the working-tree-first flow. */
   isAiCreated?: boolean;
 }
 
