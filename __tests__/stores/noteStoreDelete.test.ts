@@ -7,6 +7,7 @@ import { useNoteStore } from '@/stores/noteStore';
 jest.mock('@/services/StorageService', () => ({
   StorageService: {
     deleteNote: jest.fn(),
+    createNote: jest.fn(),
   },
 }));
 
@@ -72,6 +73,38 @@ describe('noteStore delete flows', () => {
       repoPath: 'owner/repo',
       filePath: 'notes/example.md',
       intent: 'delete',
+    }));
+    expect(CommitService.commit).not.toHaveBeenCalled();
+  });
+
+  it('writes a new note without creating a commit', async () => {
+    const createdNote: Note = {
+      id: 'note-2',
+      title: 'New note',
+      content: 'content',
+      createdAt: 1,
+      updatedAt: 1,
+      tags: [],
+      repo: 'owner/repo',
+      branch: 'main',
+      filePath: 'notes/new-note.md',
+    };
+    (StorageService.createNote as jest.Mock).mockResolvedValue(createdNote);
+    (CommitService.commit as jest.Mock).mockResolvedValue({ success: true });
+
+    await expect(useNoteStore.getState().createNote({
+      title: 'New note',
+      content: 'content',
+      repo: 'owner/repo',
+      branch: 'main',
+      format: 'markdown',
+    })).resolves.toEqual(createdNote);
+
+    expect(CloneSyncService.save).toHaveBeenCalledWith(expect.objectContaining({
+      repoPath: 'owner/repo',
+      branch: 'main',
+      filePath: 'notes/new-note.md',
+      intent: 'upsert',
     }));
     expect(CommitService.commit).not.toHaveBeenCalled();
   });
