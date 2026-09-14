@@ -10,6 +10,14 @@ All notable fixes and feature changes to GitNotēs are documented here.
 
 ## 2026-09-14
 
+### fix(canvas): render strokes during gesture updates
+
+**What:** Canvas pen and highlighter strokes could remain invisible while the finger was moving and appear only after release.
+
+**Fix:** Rebuild the live stroke path from the gesture-updated point snapshots instead of mutating a shared Skia `PathBuilder` across worklet executions.
+
+**PR:** pending
+
 ### fix(canvas): remove worklet path mutation warnings and inset launch spinner
 
 **What:** Canvas drawing worklets still constructed and mutated `Skia.Path` objects in place, and the launch spinner could render beneath the iOS status area during the initial onboarding check.
