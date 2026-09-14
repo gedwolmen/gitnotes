@@ -110,7 +110,7 @@ function buildStrokePath(points: Point[]): SkPath | null {
 
 function buildArrowPath(x1: number, y1: number, x2: number, y2: number, sw: number): SkPath {
   'worklet';
-  const p = Skia.Path.Make();
+  const p = Skia.PathBuilder.Make();
   p.moveTo(x1, y1);
   p.lineTo(x2, y2);
   const ang = Math.atan2(y2 - y1, x2 - x1);
@@ -119,28 +119,28 @@ function buildArrowPath(x1: number, y1: number, x2: number, y2: number, sw: numb
   p.lineTo(x2 - hl * Math.cos(ang - 0.4), y2 - hl * Math.sin(ang - 0.4));
   p.moveTo(x2, y2);
   p.lineTo(x2 - hl * Math.cos(ang + 0.4), y2 - hl * Math.sin(ang + 0.4));
-  return p;
+  return p.build();
 }
 
 function buildDiamondPath(x1: number, y1: number, x2: number, y2: number): SkPath {
   'worklet';
   const cx = (x1 + x2) / 2;
   const cy = (y1 + y2) / 2;
-  const p = Skia.Path.Make();
+  const p = Skia.PathBuilder.Make();
   p.moveTo(cx, y1);
   p.lineTo(x2, cy);
   p.lineTo(cx, y2);
   p.lineTo(x1, cy);
   p.close();
-  return p;
+  return p.build();
 }
 
 function buildLinePath(x1: number, y1: number, x2: number, y2: number): SkPath {
   'worklet';
-  const p = Skia.Path.Make();
+  const p = Skia.PathBuilder.Make();
   p.moveTo(x1, y1);
   p.lineTo(x2, y2);
-  return p;
+  return p.build();
 }
 
 export interface CanvasBounds {
@@ -463,7 +463,7 @@ export default function CanvasEditorContent() {
   const savedTx = useSharedValue(0);
   const savedTy = useSharedValue(0);
   const activeDrawingElement = useSharedValue<CanvasStroke | CanvasShape | null>(null);
-  const activeStrokePath = useSharedValue(Skia.Path.Make().setIsVolatile(true));
+  const activeStrokePathBuilder = useSharedValue(Skia.PathBuilder.Make());
   const contentBounds = useMemo(() => getCanvasContentBounds(elements), [elements]);
   const shouldAutoFitRef = useRef(true);
   const didAutoFitRef = useRef(!!canvasId);
@@ -864,19 +864,22 @@ export default function CanvasEditorContent() {
     const element = activeDrawingElement.value;
     return element?.type === 'stroke' ? element.width : 0;
   });
+  const activeStrokePath = useDerivedValue(() => {
+    return activeStrokePathBuilder.value.build();
+  });
   const activeLinePath = useDerivedValue(() => {
     const element = activeDrawingElement.value;
-    if (!element || element.type !== 'shape' || element.shape !== 'line') return Skia.Path.Make();
+    if (!element || element.type !== 'shape' || element.shape !== 'line') return Skia.PathBuilder.Make().build();
     return buildLinePath(element.x1, element.y1, element.x2, element.y2);
   });
   const activeArrowPath = useDerivedValue(() => {
     const element = activeDrawingElement.value;
-    if (!element || element.type !== 'shape' || element.shape !== 'arrow') return Skia.Path.Make();
+    if (!element || element.type !== 'shape' || element.shape !== 'arrow') return Skia.PathBuilder.Make().build();
     return buildArrowPath(element.x1, element.y1, element.x2, element.y2, element.width);
   });
   const activeDiamondPath = useDerivedValue(() => {
     const element = activeDrawingElement.value;
-    if (!element || element.type !== 'shape' || element.shape !== 'diamond') return Skia.Path.Make();
+    if (!element || element.type !== 'shape' || element.shape !== 'diamond') return Skia.PathBuilder.Make().build();
     return buildDiamondPath(element.x1, element.y1, element.x2, element.y2);
   });
   const activeShapeRect = useDerivedValue(() => {
@@ -968,12 +971,8 @@ export default function CanvasEditorContent() {
           if (tool === 'eraser') {
             runOnJS(eraseElementsAtPoint)(pt, size * 3);
           } else if (tool === 'pen' || tool === 'highlighter') {
-            try {
-              activeStrokePath.value.rewind();
-              activeStrokePath.value.moveTo(pt.x, pt.y);
-} catch {
-            activeStrokePath.value = Skia.Path.Make().setIsVolatile(true);
-          }
+            activeStrokePathBuilder.value.reset();
+            activeStrokePathBuilder.value.moveTo(pt.x, pt.y);
             activeDrawingElement.value = {
               type: 'stroke',
               id: uid(),
@@ -983,7 +982,7 @@ export default function CanvasEditorContent() {
               points: [pt],
             };
           } else {
-            activeStrokePath.value.rewind();
+            activeStrokePathBuilder.value.reset();
             activeDrawingElement.value = {
               type: 'shape',
               id: uid(),
@@ -1015,16 +1014,7 @@ export default function CanvasEditorContent() {
           if (!active) return;
 
           if (active.type === 'stroke') {
-            try {
-              activeStrokePath.value.lineTo(pt.x, pt.y);
-            } catch {
-              activeStrokePath.value = Skia.Path.Make().setIsVolatile(true);
-              activeStrokePath.value.moveTo(pt.x, pt.y);
-              for (let i = 1; i < active.points.length; i++) {
-                activeStrokePath.value.lineTo(active.points[i].x, active.points[i].y);
-              }
-              activeStrokePath.value.lineTo(pt.x, pt.y);
-            }
+            activeStrokePathBuilder.value.lineTo(pt.x, pt.y);
             const newPoints = [...active.points, pt];
             activeDrawingElement.value = { ...active, points: newPoints };
           } else {
@@ -1039,25 +1029,17 @@ export default function CanvasEditorContent() {
 
           const completedElement = activeDrawingElement.value;
           activeDrawingElement.value = null;
-          try {
-            activeStrokePath.value.rewind();
-} catch {
-              activeStrokePath.value = Skia.Path.Make().setIsVolatile(true);
-            }
+          activeStrokePathBuilder.value.reset();
           runOnJS(commitActiveDrawing)(completedElement);
         })
         .onFinalize(() => {
           'worklet';
           if (activeDrawingElement.value !== null && tool !== 'eraser') {
             activeDrawingElement.value = null;
-            try {
-              activeStrokePath.value.rewind();
-            } catch {
-              activeStrokePath.value = Skia.Path.Make().setIsVolatile(true);
-            }
+            activeStrokePathBuilder.value.reset();
           }
         }),
-    [tool, color, size, filled, saveHistory, startTextPlacement, startChartPlacement, startImagePlacement, commitActiveDrawing, activeDrawingElement, activeStrokePath, eraseElementsAtPoint],
+    [tool, color, size, filled, saveHistory, startTextPlacement, startChartPlacement, startImagePlacement, commitActiveDrawing, activeDrawingElement, activeStrokePathBuilder, eraseElementsAtPoint],
   );
 
   const addTextElement = useCallback(() => {
@@ -1691,12 +1673,12 @@ export default function CanvasEditorContent() {
                   >
                     {(() => {
                       const pts = lassoPointsRef.current;
-                      const p = Skia.Path.Make();
-                      p.moveTo(pts[0].x, pts[0].y);
+                      const pb = Skia.PathBuilder.Make();
+                      pb.moveTo(pts[0].x, pts[0].y);
                       for (let i = 1; i < pts.length; i++) {
-                        p.lineTo(pts[i].x, pts[i].y);
+                        pb.lineTo(pts[i].x, pts[i].y);
                       }
-                      return <Path path={p} color="#007AFF" style="stroke" strokeWidth={1.5} strokeCap="round" />;
+                      return <Path path={pb.build()} color="#007AFF" style="stroke" strokeWidth={1.5} strokeCap="round" />;
                     })()}
                   </Canvas>
                 )}
