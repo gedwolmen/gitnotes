@@ -315,23 +315,23 @@ export default function GraphViewScreen() {
   );
 
   const { pageEdgePath, blockEdgePath } = useMemo(() => {
-    const pagePath = Skia.Path.Make();
-    const blockPath = Skia.Path.Make();
+    const pagePathBuilder = Skia.PathBuilder.Make();
+    const blockPathBuilder = Skia.PathBuilder.Make();
     const nodeById = new Map(localNodes.map((n) => [n.id, n]));
     edges.forEach((edge) => {
       const source = nodeById.get(edge.from);
       const target = nodeById.get(edge.to);
       if (source && target) {
         if (edge.isBlockLevel) {
-          blockPath.moveTo(source.x, source.y);
-          blockPath.lineTo(target.x, target.y);
+          blockPathBuilder.moveTo(source.x, source.y);
+          blockPathBuilder.lineTo(target.x, target.y);
         } else {
-          pagePath.moveTo(source.x, source.y);
-          pagePath.lineTo(target.x, target.y);
+          pagePathBuilder.moveTo(source.x, source.y);
+          pagePathBuilder.lineTo(target.x, target.y);
         }
       }
     });
-    return { pageEdgePath: pagePath, blockEdgePath: blockPath };
+    return { pageEdgePath: pagePathBuilder.build(), blockEdgePath: blockPathBuilder.build() };
   }, [edges, localNodes]);
 
   const pinchGesture = Gesture.Pinch()

@@ -100,12 +100,12 @@ function hexToRgba(hex: string, alpha: number): string {
 
 function buildStrokePath(points: Point[]): SkPath | null {
   if (!points || points.length === 0) return null;
-  const p = Skia.Path.Make();
+  const p = Skia.PathBuilder.Make();
   p.moveTo(points[0].x, points[0].y);
   for (let i = 1; i < points.length; i++) {
     p.lineTo(points[i].x, points[i].y);
   }
-  return p;
+  return p.build();
 }
 
 function buildArrowPath(x1: number, y1: number, x2: number, y2: number, sw: number): SkPath {
@@ -1420,13 +1420,14 @@ export default function CanvasEditorContent() {
         }
         if (el.chartType === 'line') {
           const maxVal = Math.max(...el.values, 1);
-          const linePath = Skia.Path.Make();
+          const linePathBuilder = Skia.PathBuilder.Make();
           el.values.forEach((v, i) => {
             const px = el.x + (i / Math.max(1, el.values.length - 1)) * el.width;
             const py = el.y + el.height - (v / maxVal) * el.height;
-            if (i === 0) linePath.moveTo(px, py);
-            else linePath.lineTo(px, py);
+            if (i === 0) linePathBuilder.moveTo(px, py);
+            else linePathBuilder.lineTo(px, py);
           });
+          const linePath = linePathBuilder.build();
           return (
             <Group key={el.id ?? idx}>
               <Rect x={el.x} y={el.y} width={el.width} height={el.height} color="#f5f5f5" />
@@ -1449,15 +1450,16 @@ export default function CanvasEditorContent() {
                 const startAngle = (acc / total) * Math.PI * 2 - Math.PI / 2;
                 acc += v;
                 const endAngle = (acc / total) * Math.PI * 2 - Math.PI / 2;
-                const slicePath = Skia.Path.Make();
-                slicePath.moveTo(cx, cy);
-                slicePath.arcToOval(
+                const slicePathBuilder = Skia.PathBuilder.Make();
+                slicePathBuilder.moveTo(cx, cy);
+                slicePathBuilder.arcToOval(
                   { x: cx - r, y: cy - r, width: r * 2, height: r * 2 },
                   (startAngle * 180) / Math.PI,
                   ((endAngle - startAngle) * 180) / Math.PI,
                   false,
                 );
-                slicePath.close();
+                slicePathBuilder.close();
+                const slicePath = slicePathBuilder.build();
                 return <Path key={`pie-${el.id}-${v}-${el.labels[i]}`} path={slicePath} color={chartColors[i % chartColors.length]} />;
               })}
               {isSelected && (

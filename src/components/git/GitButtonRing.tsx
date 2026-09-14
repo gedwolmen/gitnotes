@@ -18,7 +18,7 @@ interface GitButtonRingProps {
 
 const cx = GIT_RING_RADIUS + GIT_RING_STROKE_WIDTH + GIT_RING_PADDING;
 const cy = cx;
-const basePath = Skia.Path.Make().addCircle(cx, cy, GIT_RING_RADIUS).close();
+const basePath = Skia.Path.Circle(cx, cy, GIT_RING_RADIUS);
 
 export function GitButtonRing({ progress, colors }: GitButtonRingProps) {
   const canvasSize = GIT_RING_RADIUS * 2 + GIT_RING_STROKE_WIDTH * 2 + GIT_RING_PADDING * 2;
