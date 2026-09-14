@@ -104,6 +104,19 @@ describe('AppLoadingView', () => {
     expect(indicators[0]?.props?.color).toBe('#007AFF');
   });
 
+  it('centers the spinner while respecting the top safe-area inset', () => {
+    render(<AppLoadingView />);
+    const views = screen.UNSAFE_getAllByType(View);
+    const container = views.find(
+      (v) => v.props?.accessibilityRole === 'progressbar',
+    );
+    const layoutStyle = container?.props?.style?.find(
+      (s) => s?.justifyContent !== undefined || s?.alignItems !== undefined,
+    );
+    expect(layoutStyle?.justifyContent).toBe('center');
+    expect(layoutStyle?.alignItems).toBe('center');
+  });
+
   it('applies top safe-area inset as paddingTop when insets.top > 0 — regression for spinner under notch', () => {
     // Override mock insets to a known non-zero top value
     const safeAreaContext = require('react-native-safe-area-context');
