@@ -69,6 +69,10 @@ export default function ExploreFileScreen() {
 
   useEffect(() => {
     if (!storedRepo) return;
+    if (isBinary) {
+      setLoading(false);
+      return;
+    }
     let cancelled = false;
     setContent(null);
     setError(null);
@@ -99,7 +103,7 @@ export default function ExploreFileScreen() {
     return () => {
       cancelled = true;
     };
-  }, [storedRepo, filePath]);
+  }, [storedRepo, filePath, isBinary]);
 
   const handleSave = useCallback(async () => {
     if (isSaving || isCheckingOut || !isDirty || !storedRepo) return;
