@@ -18,11 +18,12 @@ function makePaint(color: string, style: 'fill' | 'stroke', strokeWidth = 1, alp
 
 function drawStrokePath(canvas: SkCanvas, points: { x: number; y: number }[], color: string, width: number, alpha = 1): void {
   if (points.length < 2) return;
-  const path = Skia.Path.Make();
-  path.moveTo(points[0].x, points[0].y);
+  const pb = Skia.PathBuilder.Make();
+  pb.moveTo(points[0].x, points[0].y);
   for (let i = 1; i < points.length; i++) {
-    path.lineTo(points[i].x, points[i].y);
+    pb.lineTo(points[i].x, points[i].y);
   }
+  const path = pb.build();
   const paint = makePaint(color, 'stroke', width, alpha);
   canvas.drawPath(path, paint);
 }
@@ -35,24 +36,24 @@ function drawShape(canvas: SkCanvas, el: Extract<CanvasElement, { type: 'shape' 
   const h = Math.abs(y2 - y1);
 
   if (shape === 'line') {
-    const path = Skia.Path.Make();
-    path.moveTo(x1, y1);
-    path.lineTo(x2, y2);
-    canvas.drawPath(path, makePaint(color, 'stroke', sw));
+    const pb = Skia.PathBuilder.Make();
+    pb.moveTo(x1, y1);
+    pb.lineTo(x2, y2);
+    canvas.drawPath(pb.build(), makePaint(color, 'stroke', sw));
     return;
   }
 
   if (shape === 'arrow') {
-    const path = Skia.Path.Make();
-    path.moveTo(x1, y1);
-    path.lineTo(x2, y2);
+    const pb = Skia.PathBuilder.Make();
+    pb.moveTo(x1, y1);
+    pb.lineTo(x2, y2);
     const ang = Math.atan2(y2 - y1, x2 - x1);
     const hl = Math.max(12, sw * 4);
-    path.moveTo(x2, y2);
-    path.lineTo(x2 - hl * Math.cos(ang - 0.4), y2 - hl * Math.sin(ang - 0.4));
-    path.moveTo(x2, y2);
-    path.lineTo(x2 - hl * Math.cos(ang + 0.4), y2 - hl * Math.sin(ang + 0.4));
-    canvas.drawPath(path, makePaint(color, 'stroke', sw));
+    pb.moveTo(x2, y2);
+    pb.lineTo(x2 - hl * Math.cos(ang - 0.4), y2 - hl * Math.sin(ang - 0.4));
+    pb.moveTo(x2, y2);
+    pb.lineTo(x2 - hl * Math.cos(ang + 0.4), y2 - hl * Math.sin(ang + 0.4));
+    canvas.drawPath(pb.build(), makePaint(color, 'stroke', sw));
     return;
   }
 
@@ -68,15 +69,15 @@ function drawShape(canvas: SkCanvas, el: Extract<CanvasElement, { type: 'shape' 
     }
     else if (shape === 'ellipse') canvas.drawOval(rect, fillPaint);
     else if (shape === 'diamond') {
-      const path = Skia.Path.Make();
+      const pb = Skia.PathBuilder.Make();
       const cx = (x1 + x2) / 2;
       const cy = (y1 + y2) / 2;
-      path.moveTo(cx, y1);
-      path.lineTo(x2, cy);
-      path.lineTo(cx, y2);
-      path.lineTo(x1, cy);
-      path.close();
-      canvas.drawPath(path, fillPaint);
+      pb.moveTo(cx, y1);
+      pb.lineTo(x2, cy);
+      pb.lineTo(cx, y2);
+      pb.lineTo(x1, cy);
+      pb.close();
+      canvas.drawPath(pb.build(), fillPaint);
     }
   }
 
@@ -88,15 +89,15 @@ function drawShape(canvas: SkCanvas, el: Extract<CanvasElement, { type: 'shape' 
   }
   else if (shape === 'ellipse') canvas.drawOval(rect, strokePaint);
   else if (shape === 'diamond') {
-    const path = Skia.Path.Make();
+    const pb = Skia.PathBuilder.Make();
     const cx = (x1 + x2) / 2;
     const cy = (y1 + y2) / 2;
-    path.moveTo(cx, y1);
-    path.lineTo(x2, cy);
-    path.lineTo(cx, y2);
-    path.lineTo(x1, cy);
-    path.close();
-    canvas.drawPath(path, strokePaint);
+    pb.moveTo(cx, y1);
+    pb.lineTo(x2, cy);
+    pb.lineTo(cx, y2);
+    pb.lineTo(x1, cy);
+    pb.close();
+    canvas.drawPath(pb.build(), strokePaint);
   }
 }
 
@@ -116,14 +117,14 @@ function drawChart(canvas: SkCanvas, el: Extract<CanvasElement, { type: 'chart' 
     });
   } else if (el.chartType === 'line') {
     const maxVal = Math.max(...el.values, 1);
-    const path = Skia.Path.Make();
+    const pb = Skia.PathBuilder.Make();
     el.values.forEach((v, i) => {
       const px = el.x + (i / Math.max(1, el.values.length - 1)) * el.width;
       const py = el.y + el.height - (v / maxVal) * el.height;
-      if (i === 0) path.moveTo(px, py);
-      else path.lineTo(px, py);
+      if (i === 0) pb.moveTo(px, py);
+      else pb.lineTo(px, py);
     });
-    canvas.drawPath(path, makePaint('#007AFF', 'stroke', 2));
+    canvas.drawPath(pb.build(), makePaint('#007AFF', 'stroke', 2));
   } else if (el.chartType === 'pie') {
     const total = el.values.reduce((sum, v) => sum + v, 0) || 1;
     let acc = 0;
