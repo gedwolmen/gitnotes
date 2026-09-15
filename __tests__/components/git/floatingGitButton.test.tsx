@@ -15,13 +15,36 @@ declare const MockReanimated: {
 
 const { __advanceBy, __resetTime } = MockReanimated;
 
+let mockPanGesture: {
+  onBegin: () => void;
+  onStart: () => void;
+  onFinalize: () => void;
+} | null = null;
+
 jest.mock('@/components/git/useFloatingGitButtonPanGesture', () => ({
-  useFloatingGitButtonPanGesture: () => ({
-    panGesture: {},
-    dragActive: { value: false },
-    translateX: { value: 0 },
-    translateY: { value: 0 },
-  }),
+  useFloatingGitButtonPanGesture: (
+    _pos: Record<string, unknown>,
+    actions: { cancelAffordances: () => void; setPanBegan: (began: boolean) => void }
+  ) => {
+    mockPanGesture = {
+      onBegin: () => {
+        actions.setPanBegan(true);
+      },
+      onStart: () => {
+        actions.cancelAffordances();
+        actions.setPanBegan(true);
+      },
+      onFinalize: () => {
+        actions.setPanBegan(false);
+      },
+    };
+    return {
+      panGesture: mockPanGesture,
+      dragActive: { value: false },
+      translateX: { value: 0 },
+      translateY: { value: 0 },
+    };
+  },
 }));
 
 jest.mock('@/components/git/useFloatingGitButtonPosition', () => ({
@@ -206,5 +229,189 @@ describe('FloatingGitButton — integration', () => {
     act(() => { result.current.handlePressOut(); });
     expect(onQuickTap).not.toHaveBeenCalled();
     expect(onReleaseSegment).not.toHaveBeenCalled();
+  });
+});
+
+describe('FloatingGitButton — handleHoldComplete wiring (failing-first)', () => {
+  beforeEach(() => {
+    __resetTime();
+    jest.useFakeTimers();
+    mockPanGesture = null;
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  // FAILING-FIRST: onLongPress absent on FloatingGitButton Pressable.
+  // fireEvent(longPress) triggers the handler — fails because handler is not wired.
+  it('FAILING-FIRST: Pressable onLongPress should trigger handleHoldComplete → push', async () => {
+    const onReleaseSegment = jest.fn();
+
+    const { getByTestId } = render(
+      React.createElement(
+        require('@/components/git/FloatingGitButton').default,
+        { onReleaseSegment }
+      )
+    );
+
+    await act(async () => { await Promise.resolve(); });
+
+    const pressable = getByTestId('gitbutton.press');
+
+    fireEvent(pressable, 'longPress');
+
+    await waitFor(() => {
+      expect(onReleaseSegment).toHaveBeenCalledWith('push');
+    });
+  });
+
+  // FIXED: onLongPress is now wired — longPress triggers handleHoldComplete → push.
+  it('Pressable onLongPress is wired — longPress produces push action', async () => {
+    const onReleaseSegment = jest.fn();
+
+    const { getByTestId } = render(
+      React.createElement(
+        require('@/components/git/FloatingGitButton').default,
+        { onReleaseSegment }
+      )
+    );
+
+    await act(async () => { await Promise.resolve(); });
+
+    const pressable = getByTestId('gitbutton.press');
+
+    fireEvent(pressable, 'longPress');
+
+    expect(onReleaseSegment).toHaveBeenCalledWith('push');
+  });
+});
+
+describe('FloatingGitButton — pan/hold mutual exclusivity (component)', () => {
+  beforeEach(() => {
+    __resetTime();
+    jest.clearAllMocks();
+    mockPanGesture = null;
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it('pan onStart during hold cancels affordances and suppresses push action', async () => {
+    const onReleaseSegment = jest.fn();
+
+    const { getByTestId } = render(
+      React.createElement(
+        require('@/components/git/FloatingGitButton').default,
+        { onReleaseSegment }
+      )
+    );
+
+    await act(async () => { await Promise.resolve(); });
+
+    const pressable = getByTestId('gitbutton.press');
+
+    // Press in — start the 3000ms hold
+    fireEvent(pressable, 'pressIn');
+    act(() => { __advanceBy(1500); });
+    act(() => { mockPanGesture!.onStart(); });
+    fireEvent(pressable, 'pressOut');
+
+    expect(onReleaseSegment).not.toHaveBeenCalled();
+  });
+
+  it('sub-threshold jitter preserves hold — push fires after 3000ms even with onBegin', async () => {
+    const onReleaseSegment = jest.fn();
+
+    const { getByTestId } = render(
+      React.createElement(
+        require('@/components/git/FloatingGitButton').default,
+        { onReleaseSegment }
+      )
+    );
+
+    await act(async () => { await Promise.resolve(); });
+
+    const pressable = getByTestId('gitbutton.press');
+
+    fireEvent(pressable, 'pressIn');
+    act(() => { __advanceBy(1500); });
+    act(() => { mockPanGesture!.onBegin(); });
+    act(() => { __advanceBy(1500); });
+    fireEvent(pressable, 'pressOut');
+    await waitFor(() => {
+      expect(onReleaseSegment).toHaveBeenCalledWith('push');
+    });
+  });
+
+  it('panBeganRef resets after gesture finalization — tap works on next press', async () => {
+    const onQuickTap = jest.fn();
+
+    const { getByTestId } = render(
+      React.createElement(
+        require('@/components/git/FloatingGitButton').default,
+        { onQuickTap }
+      )
+    );
+
+    await act(async () => { await Promise.resolve(); });
+
+    const pressable = getByTestId('gitbutton.press');
+
+    act(() => { mockPanGesture!.onBegin(); });
+    act(() => { mockPanGesture!.onStart(); });
+    act(() => { mockPanGesture!.onFinalize(); });
+
+    fireEvent(pressable, 'press');
+    act(() => { __advanceBy(200); });
+
+    await waitFor(() => {
+      expect(onQuickTap).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('disabled button suppresses onQuickTap but partial hold release still fires onPressOut', async () => {
+    const onReleaseSegment = jest.fn();
+    const onQuickTap = jest.fn();
+
+    const { getByTestId } = render(
+      React.createElement(
+        require('@/components/git/FloatingGitButton').default,
+        { onReleaseSegment, onQuickTap, disabled: true }
+      )
+    );
+
+    await act(async () => { await Promise.resolve(); });
+
+    const pressable = getByTestId('gitbutton.press');
+
+    fireEvent(pressable, 'press');
+    await act(async () => { await Promise.resolve(); });
+    expect(onQuickTap).not.toHaveBeenCalled();
+  });
+
+  it('FAILING-FIRST: longPress + pressOut emits push exactly once (no duplicate)', async () => {
+    const onReleaseSegment = jest.fn();
+
+    const { getByTestId } = render(
+      React.createElement(
+        require('@/components/git/FloatingGitButton').default,
+        { onReleaseSegment }
+      )
+    );
+
+    await act(async () => { await Promise.resolve(); });
+
+    const pressable = getByTestId('gitbutton.press');
+
+    fireEvent(pressable, 'longPress');
+    fireEvent(pressable, 'pressOut');
+
+    await waitFor(() => {
+      expect(onReleaseSegment).toHaveBeenCalledTimes(1);
+      expect(onReleaseSegment).toHaveBeenCalledWith('push');
+    });
   });
 });

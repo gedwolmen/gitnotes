@@ -299,3 +299,117 @@ describe('useFloatingGitButtonAffordances', () => {
     expect(result.current.holdProgress.value).toBeLessThan(0.1);
   });
 });
+
+describe('useFloatingGitButtonAffordances — physical-device sub-threshold jitter', () => {
+  beforeEach(() => { __resetTime(); });
+
+  const defaultOptions = {
+    reduceMotionEnabled: false,
+    reduceMotionResolved: true,
+    menuOpen: false,
+    onReleaseSegment: undefined as ((s: 'stage' | 'commit' | 'push') => void) | undefined,
+  };
+
+  it('sub-threshold jitter does NOT suppress hold — push fires after full 3000ms', () => {
+    let emitted: string | undefined;
+    const { result } = renderHook(() =>
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      require('@/components/git/useFloatingGitButtonAffordances').useFloatingGitButtonAffordances({
+        ...defaultOptions,
+        onReleaseSegment: (s) => { emitted = s; },
+      })
+    );
+
+    act(() => { result.current.handlePressIn(); });
+    act(() => { __advanceBy(1000); });
+    expect(result.current.holdProgress.value).toBeCloseTo(1 / 3, 2);
+
+    act(() => { __advanceBy(1000); });
+    expect(result.current.holdProgress.value).toBeCloseTo(2 / 3, 2);
+
+    act(() => { __advanceBy(1000); });
+    expect(result.current.holdProgress.value).toBe(1);
+
+    act(() => { result.current.handlePressOut(); });
+    expect(emitted).toBe('push');
+  });
+
+  it('brief cancel during hold + immediate re-press continues hold to push', () => {
+    let emitted: string | undefined;
+    const { result } = renderHook(() =>
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      require('@/components/git/useFloatingGitButtonAffordances').useFloatingGitButtonAffordances({
+        ...defaultOptions,
+        onReleaseSegment: (s) => { emitted = s; },
+      })
+    );
+
+    act(() => { result.current.handlePressIn(); });
+    act(() => { __advanceBy(1500); });
+    expect(result.current.holdProgress.value).toBeCloseTo(0.5, 1);
+
+    act(() => { result.current.cancelAffordances(); });
+    expect(result.current.holdProgress.value).toBe(0);
+
+    act(() => { result.current.handlePressIn(); });
+    act(() => { __advanceBy(3000); });
+    expect(result.current.holdProgress.value).toBe(1);
+
+    act(() => { result.current.handlePressOut(); });
+    expect(emitted).toBe('push');
+  });
+
+  it('hold reaches exactly 1.0 at 3000ms — proving monotonic fill contract', () => {
+    const { result } = renderHook(() =>
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      require('@/components/git/useFloatingGitButtonAffordances').useFloatingGitButtonAffordances(defaultOptions)
+    );
+
+    act(() => { result.current.handlePressIn(); });
+    act(() => { __advanceBy(3000); });
+    expect(result.current.holdProgress.value).toBe(1);
+  });
+
+  it('1000ms partial release fires stage exactly once', () => {
+    let emitted: string | undefined;
+    const { result } = renderHook(() =>
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      require('@/components/git/useFloatingGitButtonAffordances').useFloatingGitButtonAffordances({
+        ...defaultOptions,
+        onReleaseSegment: (s) => { emitted = s; },
+      })
+    );
+
+    act(() => { result.current.handlePressIn(); });
+    act(() => { __advanceBy(1000); });
+    act(() => { result.current.handlePressOut(); });
+    expect(emitted).toBe('stage');
+  });
+
+  it('2000ms partial release fires commit exactly once', () => {
+    let emitted: string | undefined;
+    const { result } = renderHook(() =>
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      require('@/components/git/useFloatingGitButtonAffordances').useFloatingGitButtonAffordances({
+        ...defaultOptions,
+        onReleaseSegment: (s) => { emitted = s; },
+      })
+    );
+
+    act(() => { result.current.handlePressIn(); });
+    act(() => { __advanceBy(2000); });
+    act(() => { result.current.handlePressOut(); });
+    expect(emitted).toBe('commit');
+  });
+
+  it('GIT_BUTTON_DRAG_MIN_DISTANCE = 10px — below-threshold movement does not call cancelAffordances', () => {
+    const { result } = renderHook(() =>
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      require('@/components/git/useFloatingGitButtonAffordances').useFloatingGitButtonAffordances(defaultOptions)
+    );
+
+    act(() => { result.current.handlePressIn(); });
+    act(() => { __advanceBy(3000); });
+    expect(result.current.holdProgress.value).toBe(1);
+  });
+});

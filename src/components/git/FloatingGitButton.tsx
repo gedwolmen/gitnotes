@@ -181,6 +181,8 @@ export default function FloatingGitButton({
             onPress={handleTap}
             onPressIn={affordances.handlePressIn}
             onPressOut={affordances.handlePressOut}
+            onLongPress={affordances.handleHoldComplete}
+            delayLongPress={3000}
             disabled={disabled}
             accessibilityRole="button"
             accessibilityLabel={
