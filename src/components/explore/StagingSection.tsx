@@ -17,6 +17,7 @@ import { GitFsService } from '@/services/git/GitFsService';
 import type { RootStackParamList } from '@/navigation/types';
 import type { SectionProps } from './exploreShared';
 import { useTokens } from '@/contexts/ThemeContext';
+import { useCheckoutSafety } from '@/contexts/CheckoutSafetyContext';
 
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -31,6 +32,7 @@ interface StagingData {
 export function StagingSection({ repo, active, onChanged, chromeTopInset = 0, onNavigate, branchInvalidationKey = 0 }: SectionProps) {
   const navigation = useNavigation<NavigationProp>();
   const { colors } = useTokens();
+  const { isCheckingOut } = useCheckoutSafety();
   const [data, setData] = useState<StagingData | null>(null);
   const [loading, setLoading] = useState(false);
   const [busyPath, setBusyPath] = useState<string | null>(null);
@@ -176,7 +178,7 @@ export function StagingSection({ repo, active, onChanged, chromeTopInset = 0, on
             <Button
               size="sm"
               variant="danger"
-              disabled={busyPath !== null}
+              disabled={busyPath !== null || isCheckingOut}
               onPress={() => void discardFile(item.path, item.status)}
               testID={`explore.discard.${item.path}`}
               label={busyPath === item.path ? '…' : 'Discard'}
@@ -184,7 +186,7 @@ export function StagingSection({ repo, active, onChanged, chromeTopInset = 0, on
             <Button
               size="sm"
               variant="outline"
-              disabled={busyPath !== null}
+              disabled={busyPath !== null || isCheckingOut}
               onPress={() => void unstage(item.path)}
               testID={`explore.unstage.${item.path}`}
               label={busyPath === item.path ? '…' : 'Unstage'}
@@ -193,7 +195,7 @@ export function StagingSection({ repo, active, onChanged, chromeTopInset = 0, on
         </View>
       );
     },
-    [colors, data, navigation, repo.id, unstage, discardFile, busyPath],
+    [colors, data, navigation, repo.id, unstage, discardFile, busyPath, isCheckingOut],
   );
 
   if (error) {
@@ -242,7 +244,7 @@ export function StagingSection({ repo, active, onChanged, chromeTopInset = 0, on
                 <Button size="sm" variant="primary" onPress={() => setCommitOpen(true)} testID="explore.staging.commit-open" label="Commit pending" />
               )}
               {(data?.staged.length ?? 0) > 0 && (
-                <Button size="sm" variant="outline" disabled={busyPath !== null} onPress={() => void unstageAll()}>
+                <Button size="sm" variant="outline" disabled={busyPath !== null || isCheckingOut} onPress={() => void unstageAll()}>
                   <ButtonText>Unstage all</ButtonText>
                 </Button>
               )}

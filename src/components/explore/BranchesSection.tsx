@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, RefreshControl, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, RefreshControl, Text, View } from 'react-native';
+import { FlatList } from '@/components/ui/flat-list';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Button, ButtonText } from '@/components/ui/Button';
@@ -10,6 +11,7 @@ import { GitFsService } from '@/services/git/GitFsService';
 import { GitBranchCoordinator } from '@/services/git/GitBranchCoordinator';
 import type { SectionProps } from './exploreShared';
 import { useTokens } from '@/contexts/ThemeContext';
+import { useCheckoutSafety } from '@/contexts/CheckoutSafetyContext';
 
 type BranchRow =
   | { kind: 'header'; key: string; title: string; count: number }
@@ -17,6 +19,7 @@ type BranchRow =
 
 export function BranchesSection({ repo, active, onChanged, chromeTopInset = 0, branchInvalidationKey: _branchInvalidationKey = 0 }: SectionProps) {
   const { colors } = useTokens();
+  const { isCheckingOut } = useCheckoutSafety();
   const [branches, setBranches] = useState<BranchInfo[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
@@ -167,10 +170,10 @@ export function BranchesSection({ repo, active, onChanged, chromeTopInset = 0, b
                   />
                 </Input>
               </View>
-              <Button size="sm" disabled={busy !== null || !renameValue.trim()} onPress={() => void saveRename(item.name)}>
+              <Button size="sm" disabled={busy !== null || !renameValue.trim() || isCheckingOut} onPress={() => void saveRename(item.name)}>
                 Save
               </Button>
-              <Button size="sm" variant="outline" disabled={busy !== null} onPress={() => setRenaming(null)}>
+              <Button size="sm" variant="outline" disabled={busy !== null || isCheckingOut} onPress={() => setRenaming(null)}>
                 <ButtonText>Cancel</ButtonText>
               </Button>
             </View>
@@ -207,7 +210,7 @@ export function BranchesSection({ repo, active, onChanged, chromeTopInset = 0, b
                 <Button
                   size="sm"
                   variant="outline"
-                  disabled={busy !== null}
+                  disabled={busy !== null || isCheckingOut}
                   onPress={() => void checkout(item.name)}
                   testID={`explore.branch.checkout.${item.name}`}
                 >
@@ -216,7 +219,7 @@ export function BranchesSection({ repo, active, onChanged, chromeTopInset = 0, b
                 <Button
                   size="sm"
                   variant="outline"
-                  disabled={busy !== null}
+                  disabled={busy !== null || isCheckingOut}
                   onPress={() => {
                     setRenaming(item.name);
                     setRenameValue('');
@@ -228,7 +231,7 @@ export function BranchesSection({ repo, active, onChanged, chromeTopInset = 0, b
                 <Button
                   size="sm"
                   variant="outline"
-                  disabled={busy !== null}
+                  disabled={busy !== null || isCheckingOut}
                   onPress={() => remove(item.name)}
                   testID={`explore.branch.delete.${item.name}`}
                 >
@@ -240,7 +243,7 @@ export function BranchesSection({ repo, active, onChanged, chromeTopInset = 0, b
               <Button
                 size="sm"
                 variant="outline"
-                disabled={busy !== null}
+                disabled={busy !== null || isCheckingOut}
                 onPress={() => {
                   setRenaming(item.name);
                   setRenameValue('');
@@ -254,7 +257,7 @@ export function BranchesSection({ repo, active, onChanged, chromeTopInset = 0, b
               <Button
                 size="sm"
                 variant="outline"
-                disabled={busy !== null}
+                disabled={busy !== null || isCheckingOut}
                 onPress={() => void checkout(item.name)}
                 testID={`explore.branch.checkout-locally.${item.name}`}
               >
@@ -265,7 +268,7 @@ export function BranchesSection({ repo, active, onChanged, chromeTopInset = 0, b
         </View>
       );
     },
-    [branches, busy, checkout, renaming, renameValue, saveRename],
+    [branches, busy, checkout, renaming, renameValue, saveRename, isCheckingOut],
   );
 
   const renderItem = useCallback(
@@ -329,7 +332,7 @@ export function BranchesSection({ repo, active, onChanged, chromeTopInset = 0, b
                 />
               </Input>
             </View>
-            <Button size="sm" disabled={busy !== null || !newName.trim()} onPress={() => void create()}>
+            <Button size="sm" disabled={busy !== null || !newName.trim() || isCheckingOut} onPress={() => void create()}>
               {busy === 'create' ? <ActivityIndicator size="small" color={colors.text} /> : null}
               <ButtonText>Create</ButtonText>
             </Button>
