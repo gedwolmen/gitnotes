@@ -36,6 +36,7 @@ let capturedPanActions: {
 // Exposed for tests: the pan gesture object whose callbacks can be triggered
 let mockPanGesture: {
   onBegin: () => void;
+  onStart: () => void;
   onFinalize: () => void;
 } | null = null;
 
@@ -62,6 +63,9 @@ jest.mock('@/components/ai/useFloatingAIButtonPanGesture', () => ({
     // Wire up callbacks that invoke the actions so tests can trigger them
     mockPanGesture = {
       onBegin: () => {
+        /* noop — onBegin is pre-activation; actions belong in onStart */
+      },
+      onStart: () => {
         actions.cancelAffordances();
         actions.setPanBeganDuringPress(true);
       },
@@ -173,7 +177,7 @@ describe('FloatingAIButton — pan/hold mutual exclusivity (component)', () => {
     jest.useRealTimers();
   });
 
-  it('setPanBeganDuringPress is wired and called when pan gesture onBegin fires', async () => {
+  it('setPanBeganDuringPress is wired and called when pan gesture onStart fires', async () => {
     const { getByTestId } = render(
       React.createElement(
         require('@/components/ai/FloatingAIButton').FloatingAIButton,
@@ -199,7 +203,7 @@ describe('FloatingAIButton — pan/hold mutual exclusivity (component)', () => {
     };
 
     act(() => {
-      mockPanGesture!.onBegin();
+      mockPanGesture!.onStart();
     });
 
     expect(receivedValue).toBe(true);
@@ -280,10 +284,10 @@ describe('FloatingAIButton — pan/hold mutual exclusivity (component)', () => {
     // 1. Press in — starts the 450ms native onLongPress timer
     fireEvent(button, 'pressIn');
 
-    // 2. Pan gesture begins during press — sets panBeganDuringPressRef = true
+    // 2. Pan gesture recognized (onStart) during press — sets panBeganDuringPressRef = true
     //    This must happen before the 450ms timer fires
     act(() => {
-      mockPanGesture!.onBegin();
+      mockPanGesture!.onStart();
     });
 
     // 3. Advance past the 450ms long-press boundary — onLongPress fires

@@ -61,11 +61,11 @@ export function useFloatingAIButtonPanGesture(
     .onBegin(() => {
       dragActive.value = true;
       runOnJS(markPositionInteractionStarted)();
-      runOnJS(actions.cancelAffordances)();
-      runOnJS(actions.setPanBeganDuringPress)(true);
     })
     .onStart(() => {
       runOnJS(actions.closeMenu)();
+      runOnJS(actions.cancelAffordances)();
+      runOnJS(actions.setPanBeganDuringPress)(true);
     })
     .onUpdate((event) => {
       translateX.value = savedTranslateX.value + event.translationX;
