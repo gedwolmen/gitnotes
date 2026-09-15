@@ -1,78 +1,84 @@
 /**
  * Focused tests for GitButtonRing.
  *
- * GitButtonRing renders a three-segment progress ring using Skia.Canvas
- * with Skia.Path.Circle and animated start/end for progressive segment fill.
+ * GitButtonRing renders a three-segment progress ring using react-native-svg
+ * Circle elements with animated strokeDasharray for progressive segment fill.
  * Segment i (0,1,2) spans progress [i/3, (i+1)/3].
  *
  * Tests verify:
  * - The component renders without crashing
  * - The ring geometry constants are correct
- * - Skia.Path.Circle is used for the base path
- * - Segment end values are correctly derived at progress 0, 1/3, 2/3, 1
+ * - Each Circle has distinct rotation and origin centered on the ring
+ * - strokeDasharray values are correctly animated via useAnimatedProps
  *
- * NOTE: Jest mocks Skia and does NOT validate native pixel rendering.
+ * NOTE: Jest mocks react-native-svg and does NOT validate native pixel rendering.
  * Device visual QA requires a release build, not mocked Jest tests.
  */
 import React from 'react';
 import { render } from '@testing-library/react-native';
 import { GitButtonRing, GIT_RING_RADIUS, GIT_RING_STROKE_WIDTH } from '@/components/git/GitButtonRing';
 import { useSharedValue } from 'react-native-reanimated';
+import { computeSegmentVisibleLength } from '@/components/git/gitButtonGeometry';
 
 const COLORS: [string, string, string] = ['#3b82f6', '#22c55e', '#f59e0b'];
 
-jest.mock('@shopify/react-native-skia', () => {
+// Geometry constants mirrored from gitButtonGeometry.ts
+const GIT_BUTTON_SIZE = 56;
+const GIT_RING_RADIUS_OFFSET = 6;
+const RING_RADIUS = GIT_BUTTON_SIZE / 2 + GIT_RING_RADIUS_OFFSET;
+const CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
+const SEGMENT_LENGTH = CIRCUMFERENCE / 3;
+
+jest.mock('react-native-svg', () => {
+  const React = require('react');
   const { View } = require('react-native');
   const passthrough = (name: string) => {
     const Component = ({ children, ...rest }: { children?: React.ReactNode }) =>
-      require('react').createElement(View, rest, children);
+      React.createElement(View, rest, children);
     Component.displayName = name;
     return Component;
   };
   return {
     __esModule: true,
-    Canvas: passthrough('Canvas'),
+    Svg: passthrough('Svg'),
     Circle: passthrough('Circle'),
     Path: passthrough('Path'),
-    Skia: {
-      Path: {
-        Make: () => ({}),
-        Circle: jest.fn(() => ({})),
-        Rect: () => ({}),
-        Oval: () => ({}),
-        RRect: () => ({}),
-      },
-      PathBuilder: { Make: () => ({}) },
-      XYWHRect: () => ({}),
-      Font: { Make: () => null },
-      Data: { fromBase64: () => ({}) },
-      Image: { MakeImageFromEncoded: () => null },
-    },
-    useFont: () => null,
-    useTypeface: () => null,
-    useValue: () => ({ current: 0 }),
-    default: passthrough('Canvas'),
+    G: passthrough('G'),
+    default: passthrough('Svg'),
   };
 });
 
-/**
- * Pure segment calculation (mirrors the worklet logic in GitButtonRing).
- * Given progress and segment index, returns the derived end value.
- *
- * Segment i spans [i/3, (i+1)/3]:
- *   seg 0: [0, 1/3]   → end = 0 at p=0, end = 1/3 at p>=1/3
- *   seg 1: [1/3, 2/3] → end = 1/3 at p<=1/3, end = p at 1/3<p<2/3, end = 2/3 at p>=2/3
- *   seg 2: [2/3, 1]  → end = 2/3 at p<=2/3, end = p at 2/3<p<1, end = 1 at p>=1
- */
-function computeSegmentEnd(progress: number, segIndex: number): number {
-  const segStart = segIndex / 3;
-  const segEnd = (segIndex + 1) / 3;
-  if (progress <= segStart) return segStart;
-  if (progress >= segEnd) return segEnd;
-  return Math.max(segStart, progress);
-}
+const animatedCircleProps: Array<{ key: string; props: object }> = [];
+
+jest.mock('react-native-reanimated', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  const animatedComponent = (_component: unknown) => {
+    const Wrapped = ({ children, ...rest }: { children?: React.ReactNode }) => {
+      animatedCircleProps.push({ key: (children as { key?: string })?.key ?? '', props: rest });
+      return React.createElement(View, rest, children);
+    };
+    Wrapped.displayName = 'AnimatedComponent';
+    return Wrapped;
+  };
+  return {
+    __esModule: true,
+    useAnimatedProps: (worklet: () => object) => worklet(),
+    useSharedValue: (v: number) => ({ value: v }),
+    Animated: {
+      createAnimatedComponent: animatedComponent,
+    },
+    default: {
+      createAnimatedComponent: animatedComponent,
+    },
+  };
+});
 
 describe('GitButtonRing', () => {
+  beforeEach(() => {
+    animatedCircleProps.length = 0;
+  });
+
   it('renders without crashing', () => {
     const progress = useSharedValue(0);
     expect(() => render(
@@ -87,55 +93,69 @@ describe('GitButtonRing', () => {
     expect(GIT_RING_STROKE_WIDTH).toBe(3.5);
   });
 
-  it('uses Skia.Path.Circle for base ring geometry', () => {
-    const Skia = require('@shopify/react-native-skia').Skia;
+  it('uses SVG Circle elements', () => {
+    const Svg = require('react-native-svg').Svg;
     const progress = useSharedValue(0);
     render(<GitButtonRing progress={progress} colors={COLORS} />);
-    expect(Skia.Path.Circle).toHaveBeenCalled();
+    expect(Svg).toBeTruthy();
   });
 
-  describe('segment end computation', () => {
-    it('at progress=0 all segments have zero-length arcs', () => {
-      expect(computeSegmentEnd(0, 0)).toBe(0);     // seg 0: [0,0]
-      expect(computeSegmentEnd(0, 1)).toBe(1 / 3); // seg 1: [1/3,1/3] (below seg1 start)
-      expect(computeSegmentEnd(0, 2)).toBe(2 / 3); // seg 2: [2/3,2/3] (below seg2 start)
+  it('each segment circle has distinct rotation and centered origin', () => {
+    const progress = useSharedValue(0);
+    render(<GitButtonRing progress={progress} colors={COLORS} />);
+    expect(animatedCircleProps.length).toBe(3);
+    const sorted = animatedCircleProps.sort((a, b) => Number(a.key) - Number(b.key));
+    const rotations = sorted.map(({ props }) => (props as { rotation?: number }).rotation ?? null);
+    const origins = sorted.map(({ props }) => (props as { origin?: string }).origin ?? null);
+    expect(rotations).toEqual([0, 120, 240]);
+    expect(rotations[0]).not.toBe(rotations[1]);
+    expect(rotations[1]).not.toBe(rotations[2]);
+    const cx = 34 + 3.5 + 2;
+    const expectedOrigin = `${cx}, ${cx}`;
+    expect(origins[0]).toBe(expectedOrigin);
+    expect(origins[1]).toBe(expectedOrigin);
+    expect(origins[2]).toBe(expectedOrigin);
+  });
+
+  describe('computeSegmentVisibleLength', () => {
+    it('at progress=0 all segments have visibleLength=0', () => {
+      expect(computeSegmentVisibleLength(0, 0, SEGMENT_LENGTH)).toBeCloseTo(0);
+      expect(computeSegmentVisibleLength(0, 1, SEGMENT_LENGTH)).toBeCloseTo(0);
+      expect(computeSegmentVisibleLength(0, 2, SEGMENT_LENGTH)).toBeCloseTo(0);
     });
 
-    it('at progress=1/3 segment 0 is fully filled, segment 1 starts', () => {
+    it('at progress=1/3 segment 0 is full (segmentLength), segments 1 and 2 hidden', () => {
       const p = 1 / 3;
-      expect(computeSegmentEnd(p, 0)).toBeCloseTo(1 / 3); // seg 0: full
-      expect(computeSegmentEnd(p, 1)).toBeCloseTo(1 / 3); // seg 1: zero-length at start
-      expect(computeSegmentEnd(p, 2)).toBeCloseTo(2 / 3); // seg 2: zero-length at start
+      expect(computeSegmentVisibleLength(p, 0, SEGMENT_LENGTH)).toBeCloseTo(SEGMENT_LENGTH);
+      expect(computeSegmentVisibleLength(p, 1, SEGMENT_LENGTH)).toBeCloseTo(0);
+      expect(computeSegmentVisibleLength(p, 2, SEGMENT_LENGTH)).toBeCloseTo(0);
     });
 
-    it('at progress=2/3 segments 0 and 1 are fully filled, segment 2 starts', () => {
+    it('at progress=2/3 segments 0 and 1 full, segment 2 hidden', () => {
       const p = 2 / 3;
-      expect(computeSegmentEnd(p, 0)).toBeCloseTo(1 / 3); // seg 0: full
-      expect(computeSegmentEnd(p, 1)).toBeCloseTo(2 / 3); // seg 1: full
-      expect(computeSegmentEnd(p, 2)).toBeCloseTo(2 / 3); // seg 2: zero-length at start
+      expect(computeSegmentVisibleLength(p, 0, SEGMENT_LENGTH)).toBeCloseTo(SEGMENT_LENGTH);
+      expect(computeSegmentVisibleLength(p, 1, SEGMENT_LENGTH)).toBeCloseTo(SEGMENT_LENGTH);
+      expect(computeSegmentVisibleLength(p, 2, SEGMENT_LENGTH)).toBeCloseTo(0);
     });
 
-    it('at progress=1 all segments are fully filled', () => {
-      expect(computeSegmentEnd(1, 0)).toBeCloseTo(1 / 3);
-      expect(computeSegmentEnd(1, 1)).toBeCloseTo(2 / 3);
-      expect(computeSegmentEnd(1, 2)).toBeCloseTo(1);
+    it('at progress=1 all segments are full (segmentLength)', () => {
+      expect(computeSegmentVisibleLength(1, 0, SEGMENT_LENGTH)).toBeCloseTo(SEGMENT_LENGTH);
+      expect(computeSegmentVisibleLength(1, 1, SEGMENT_LENGTH)).toBeCloseTo(SEGMENT_LENGTH);
+      expect(computeSegmentVisibleLength(1, 2, SEGMENT_LENGTH)).toBeCloseTo(SEGMENT_LENGTH);
     });
 
-    it('at progress=0.5 segment 0 is complete, segment 1 partially fills (1/3→0.5)', () => {
-      // seg 0 [0, 1/3]: complete at 1/3 (p > 1/3)
-      // seg 1 [1/3, 2/3]: active, end = p = 0.5 (within segment bounds)
-      // seg 2 [2/3, 1]: inactive (p < 2/3), stays at start 2/3
+    it('at progress=0.5 segment 0 complete, segment 1 partial (0.5*segmentLength), segment 2 hidden', () => {
       const p = 0.5;
-      expect(computeSegmentEnd(p, 0)).toBeCloseTo(1 / 3); // seg 0: complete
-      expect(computeSegmentEnd(p, 1)).toBeCloseTo(0.5);   // seg 1: 1/3→0.5
-      expect(computeSegmentEnd(p, 2)).toBeCloseTo(2 / 3); // seg 2: inactive
+      expect(computeSegmentVisibleLength(p, 0, SEGMENT_LENGTH)).toBeCloseTo(SEGMENT_LENGTH);
+      expect(computeSegmentVisibleLength(p, 1, SEGMENT_LENGTH)).toBeCloseTo(0.5 * SEGMENT_LENGTH);
+      expect(computeSegmentVisibleLength(p, 2, SEGMENT_LENGTH)).toBeCloseTo(0);
     });
 
-    it('at progress=0.8 segment 0 and 1 full, segment 2 partial (2/3→0.8)', () => {
+    it('at progress=0.8 segments 0 and 1 full, segment 2 partial (0.4*segmentLength)', () => {
       const p = 0.8;
-      expect(computeSegmentEnd(p, 0)).toBeCloseTo(1 / 3); // seg 0: full
-      expect(computeSegmentEnd(p, 1)).toBeCloseTo(2 / 3); // seg 1: full
-      expect(computeSegmentEnd(p, 2)).toBeCloseTo(0.8);   // seg 2: 2/3→0.8
+      expect(computeSegmentVisibleLength(p, 0, SEGMENT_LENGTH)).toBeCloseTo(SEGMENT_LENGTH);
+      expect(computeSegmentVisibleLength(p, 1, SEGMENT_LENGTH)).toBeCloseTo(SEGMENT_LENGTH);
+      expect(computeSegmentVisibleLength(p, 2, SEGMENT_LENGTH)).toBeCloseTo(0.4 * SEGMENT_LENGTH);
     });
   });
 

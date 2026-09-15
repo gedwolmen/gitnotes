@@ -38,3 +38,24 @@ export const HALO_COLOR = '#3b82f6'; // tailwind blue-500 (--color-note-blue)
 
 /** Drag gesture must move at least this far before it wins over tap/hold. */
 export const GIT_BUTTON_DRAG_MIN_DISTANCE = 10;
+
+/**
+ * Computes the visible length of segment i at a given progress.
+ *
+ * Each segment i (0,1,2) fills from progress i/3 to (i+1)/3.
+ * Returns 0 before the segment begins, grows linearly within its third,
+ * and returns segmentLength after the segment completes.
+ *
+ * @param progress - Overall progress 0..1
+ * @param segIndex - Segment index 0, 1, or 2
+ * @param segmentLength - Length of one segment (circumference / 3)
+ */
+export function computeSegmentVisibleLength(
+  progress: number,
+  segIndex: number,
+  segmentLength: number,
+): number {
+  'worklet';
+  const clamped = Math.max(0, Math.min(1, 3 * progress - segIndex));
+  return clamped * segmentLength;
+}
