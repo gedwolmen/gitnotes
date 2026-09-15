@@ -15,6 +15,7 @@ import { GitFsService } from '@/services/git/GitFsService';
 import type { RootStackParamList } from '@/navigation/types';
 import { resolveStatusTone, STATUS_META, type SectionProps } from './exploreShared';
 import { useTokens } from '@/contexts/ThemeContext';
+import { useCheckoutSafety } from '@/contexts/CheckoutSafetyContext';
 
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -27,6 +28,7 @@ interface ChangesData {
 export function ChangesSection({ repo, active, onChanged, chromeTopInset = 0, onNavigate, branchInvalidationKey = 0 }: SectionProps) {
   const navigation = useNavigation<NavigationProp>();
   const { colors } = useTokens();
+  const { isCheckingOut } = useCheckoutSafety();
   const [data, setData] = useState<ChangesData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -161,18 +163,18 @@ export function ChangesSection({ repo, active, onChanged, chromeTopInset = 0, on
               <Button
                 size="sm"
                 variant="danger"
-                disabled={busyPath !== null}
+                disabled={busyPath !== null || isCheckingOut}
                 onPress={() => void discardFile(item.path, item.status)}
                 testID={`explore.discard.${item.path}`}
                 label={busyPath === item.path ? '…' : 'Discard'}
               />
-              <Button size="sm" variant="outline" onPress={() => void stageFile(item.path)} label="Stage" />
+              <Button size="sm" variant="outline" disabled={busyPath !== null || isCheckingOut} onPress={() => void stageFile(item.path)} label="Stage" />
             </View>
           )}
         </View>
       );
     },
-    [data, navigation, repo.id, stageFile, discardFile, busyPath],
+    [data, navigation, repo.id, stageFile, discardFile, busyPath, isCheckingOut],
   );
 
   if (error) {
@@ -215,7 +217,7 @@ export function ChangesSection({ repo, active, onChanged, chromeTopInset = 0, on
           </Text>
           <View className="flex-row items-center gap-2">
             {data && data.statuses.some((s) => !s.staged) && (
-              <Button size="xs" variant="outline" onPress={() => void stageAll()}>
+              <Button size="xs" variant="outline" disabled={isCheckingOut} onPress={() => void stageAll()}>
                 <ButtonText>Stage All</ButtonText>
               </Button>
             )}
