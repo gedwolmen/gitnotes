@@ -1,11 +1,12 @@
 import { Note, NoteColor, NoteFormat } from '../../models/Note';
 import { GitRepository } from '../../services/GitService';
 
-export const NOTE_FORMAT_LABELS: Record<Exclude<NoteFormat, 'json'>, string> = {
+export type NotesFilterFormat = Exclude<NoteFormat, 'json' | 'pdf'>;
+
+export const NOTE_FORMAT_LABELS: Record<NotesFilterFormat, string> = {
   markdown: '.md',
   neorg: '.norg',
   org: '.org',
-  pdf: '.pdf',
 };
 
 export interface FolderTree {
@@ -18,7 +19,7 @@ export interface NotesListFilters {
   [key: string]: unknown;
   selectedRepo: GitRepository | null;
   selectedBranch: string | null;
-  selectedFormat: NoteFormat | null;
+  selectedFormat: NotesFilterFormat | null;
   selectedFolder: string | null;
   selectedTags: string[];
   selectedColors: NoteColor[];

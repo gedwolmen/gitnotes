@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useEntityList } from '../../hooks/useEntityList';
-import { Note, NoteColor, NOTE_COLOR_VALUES, NoteFormat } from '../../models/Note';
+import { Note, NoteColor, NOTE_COLOR_VALUES } from '../../models/Note';
 import { SortMode } from '../../types/SortTypes';
 import { GitRepository } from '../../services/GitService';
 import { DocumentService } from '../../services/documents/DocumentService';
 import {
   INITIAL_NOTES_LIST_FILTERS,
   NotesListFilters,
+  NotesFilterFormat,
   getActiveNotesFilterCount,
   noteMatchesListFilters,
 } from './notesShared';
@@ -187,7 +188,7 @@ export function useNotesListFilters({
   );
 
   const handleSelectFormat = useCallback(
-    (format: NoteFormat | null) => {
+    (format: NotesFilterFormat | null) => {
       updateFilters((previous) => ({ ...previous, selectedFormat: format }));
     },
     [updateFilters],

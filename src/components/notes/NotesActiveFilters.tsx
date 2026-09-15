@@ -4,7 +4,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '../../contexts/ThemeContext';
-import { NoteFormat } from '../../models/Note';
 import { NotesListFilters, NOTE_FORMAT_LABELS } from './notesShared';
 
 interface NotesActiveFiltersProps {
@@ -51,7 +50,7 @@ export function NotesActiveFilters({
           ? renderChip(
               'format',
               'document-outline',
-              NOTE_FORMAT_LABELS[selectedFormat as Exclude<NoteFormat, 'json'>],
+              NOTE_FORMAT_LABELS[selectedFormat],
               onClearFormat,
             )
           : null}

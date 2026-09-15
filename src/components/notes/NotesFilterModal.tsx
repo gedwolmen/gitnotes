@@ -5,9 +5,9 @@ import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../contexts/ThemeContext';
 import { HapticService } from '../../utils/haptics';
 import { GitRepository } from '../../services/GitService';
-import { NoteColor, NOTE_COLOR_VALUES, NoteFormat } from '../../models/Note';
+import { NoteColor, NOTE_COLOR_VALUES } from '../../models/Note';
 import { NOTE_COLORS } from '../../theme/tokens';
-import { NOTE_FORMAT_LABELS, NotesListFilters } from './notesShared';
+import { NOTE_FORMAT_LABELS, NotesFilterFormat, NotesListFilters } from './notesShared';
 
 interface NotesFilterModalProps {
   visible: boolean;
@@ -22,7 +22,7 @@ interface NotesFilterModalProps {
   onClose: () => void;
   onClearFilters: () => void;
   onSelectRepo: (repo: GitRepository | null) => void;
-  onSelectFormat: (format: NoteFormat | null) => void;
+  onSelectFormat: (format: NotesFilterFormat | null) => void;
   onSelectBranch: (branch: string | null) => void;
   onSelectFolder: (folder: string | null) => void;
   onToggleTag: (tag: string) => void;
@@ -144,7 +144,7 @@ export function NotesFilterModal({
               >
                 <Text style={[styles.chipText, { color: !selectedFormat ? colors.primary : colors.text }]}>{t('common.all')}</Text>
               </TouchableOpacity>
-              {(Object.entries(NOTE_FORMAT_LABELS) as [Exclude<NoteFormat, 'json'>, string][]).map(
+              {(Object.entries(NOTE_FORMAT_LABELS) as [NotesFilterFormat, string][]).map(
                 ([format, label]) => {
                   const isSelected = selectedFormat === format;
                   return (
