@@ -1,10 +1,9 @@
 /**
- * GitButtonRing - Three-segment hold progress ring.
+ * GitButtonRing - Three-segment hold progress ring using react-native-svg.
  *
- * Each segment uses Skia.Path with animated start/end to progressively
- * fill the active segment's arc. Segment i (0,1,2) spans progress
- * [i/3, (i+1)/3]. The active segment's end is interpolated from
- * progress; completed segments are fully drawn.
+ * Each segment uses an SVG Circle with animated strokeDasharray to
+ * progressively fill the arc. Segment i (0,1,2) spans progress [i/3, (i+1)/3].
+ * The strokeDasharray is driven by a SharedValue<number> through useAnimatedProps.
  *
  * Geometry constants:
  * - GIT_BUTTON_SIZE = 56
@@ -12,36 +11,41 @@
  * - GIT_RING_STROKE_WIDTH = 3.5
  */
 import { StyleSheet } from 'react-native';
-import { Canvas, Path, Skia } from '@shopify/react-native-skia';
-import {
-  useDerivedValue,
+import Animated, {
+  useAnimatedProps,
   type SharedValue,
 } from 'react-native-reanimated';
-import { GIT_BUTTON_SIZE } from './gitButtonGeometry';
+import { Circle, Svg } from 'react-native-svg';
+
+import { computeSegmentVisibleLength, GIT_BUTTON_SIZE } from './gitButtonGeometry';
 
 export const GIT_RING_STROKE_WIDTH = 3.5;
 const GIT_RING_PADDING = 2;
 const GIT_RING_RADIUS_OFFSET = 6;
 export const GIT_RING_RADIUS = GIT_BUTTON_SIZE / 2 + GIT_RING_RADIUS_OFFSET;
 
-interface GitButtonRingProps {
-  readonly progress: SharedValue<number>;
-  readonly colors: [string, string, string];
-}
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 const cx = GIT_RING_RADIUS + GIT_RING_STROKE_WIDTH + GIT_RING_PADDING;
 const cy = cx;
 const canvasSize = GIT_RING_RADIUS * 2 + GIT_RING_STROKE_WIDTH * 2 + GIT_RING_PADDING * 2;
 
-// Module-level base circle path (computed once)
-const basePath = Skia.Path.Circle(cx, cy, GIT_RING_RADIUS);
+const CIRCUMFERENCE = 2 * Math.PI * GIT_RING_RADIUS;
+const SEGMENT_LENGTH = CIRCUMFERENCE / 3;
+
+interface GitButtonRingProps {
+  readonly progress: SharedValue<number>;
+  readonly colors: [string, string, string];
+}
 
 export function GitButtonRing({ progress, colors }: GitButtonRingProps) {
   return (
-    <Canvas
+    <Svg
+      width={canvasSize}
+      height={canvasSize}
       pointerEvents="none"
       style={[
-        styles.canvas,
+        styles.svg,
         {
           width: canvasSize,
           height: canvasSize,
@@ -50,37 +54,59 @@ export function GitButtonRing({ progress, colors }: GitButtonRingProps) {
         },
       ]}
     >
-      {[0, 1, 2].map((i) => {
-        const segStart = i / 3;
-        const segEnd = (i + 1) / 3;
+      {[0, 1, 2].map((i) => (
+        <AnimatedSegmentCircle
+          key={i}
+          segIndex={i}
+          progress={progress}
+          color={colors[i]}
+        />
+      ))}
+    </Svg>
+  );
+}
 
-        const segEndVal = useDerivedValue(() => {
-          'worklet';
-          const p = progress.value;
-          if (p <= segStart) return segStart;
-          if (p >= segEnd) return segEnd;
-          return Math.max(segStart, p);
-        }, [i]);
+interface AnimatedSegmentCircleProps {
+  segIndex: number;
+  progress: SharedValue<number>;
+  color: string;
+}
 
-        return (
-          <Path
-            key={i}
-            path={basePath}
-            color={colors[i]}
-            style="stroke"
-            strokeWidth={GIT_RING_STROKE_WIDTH}
-            strokeCap="round"
-            start={segStart}
-            end={segEndVal}
-          />
-        );
-      })}
-    </Canvas>
+function AnimatedSegmentCircle({
+  segIndex,
+  progress,
+  color,
+}: AnimatedSegmentCircleProps) {
+  const animatedProps = useAnimatedProps(() => {
+    'worklet';
+    const visibleLength = computeSegmentVisibleLength(
+      progress.value,
+      segIndex,
+      SEGMENT_LENGTH,
+    );
+    return {
+      strokeDasharray: [visibleLength, CIRCUMFERENCE - visibleLength],
+    };
+  });
+
+  return (
+    <AnimatedCircle
+      cx={cx}
+      cy={cy}
+      r={GIT_RING_RADIUS}
+      stroke={color}
+      strokeWidth={GIT_RING_STROKE_WIDTH}
+      strokeLinecap="round"
+      fill="none"
+      rotation={segIndex * 120}
+      origin={`${cx}, ${cy}`}
+      animatedProps={animatedProps}
+    />
   );
 }
 
 const styles = StyleSheet.create({
-  canvas: {
+  svg: {
     position: 'absolute',
   },
 });
