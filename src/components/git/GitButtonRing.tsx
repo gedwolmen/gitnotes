@@ -84,8 +84,10 @@ function AnimatedSegmentCircle({
       segIndex,
       SEGMENT_LENGTH,
     );
+    const opacity = visibleLength > 0 ? 1 : 0;
     return {
       strokeDasharray: [visibleLength, CIRCUMFERENCE - visibleLength],
+      strokeOpacity: opacity,
     };
   });
 
@@ -98,8 +100,7 @@ function AnimatedSegmentCircle({
       strokeWidth={GIT_RING_STROKE_WIDTH}
       strokeLinecap="round"
       fill="none"
-      rotation={segIndex * 120}
-      origin={`${cx}, ${cy}`}
+      transform={`rotate(${segIndex * 120}, ${cx}, ${cy})`}
       animatedProps={animatedProps}
     />
   );

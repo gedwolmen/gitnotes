@@ -105,16 +105,19 @@ describe('GitButtonRing', () => {
     render(<GitButtonRing progress={progress} colors={COLORS} />);
     expect(animatedCircleProps.length).toBe(3);
     const sorted = animatedCircleProps.sort((a, b) => Number(a.key) - Number(b.key));
-    const rotations = sorted.map(({ props }) => (props as { rotation?: number }).rotation ?? null);
-    const origins = sorted.map(({ props }) => (props as { origin?: string }).origin ?? null);
+    const transforms = sorted.map(({ props }) => (props as { transform?: string }).transform ?? null);
+    const rotations = transforms.map((t) => {
+      if (!t) return null;
+      const match = t.match(/rotate\((\d+),/);
+      return match ? Number(match[1]) : null;
+    });
+    const cx = 34 + 3.5 + 2;
     expect(rotations).toEqual([0, 120, 240]);
     expect(rotations[0]).not.toBe(rotations[1]);
     expect(rotations[1]).not.toBe(rotations[2]);
-    const cx = 34 + 3.5 + 2;
-    const expectedOrigin = `${cx}, ${cx}`;
-    expect(origins[0]).toBe(expectedOrigin);
-    expect(origins[1]).toBe(expectedOrigin);
-    expect(origins[2]).toBe(expectedOrigin);
+    expect(transforms[0]).toContain(`rotate(0, ${cx}, ${cx})`);
+    expect(transforms[1]).toContain(`rotate(120, ${cx}, ${cx})`);
+    expect(transforms[2]).toContain(`rotate(240, ${cx}, ${cx})`);
   });
 
   describe('computeSegmentVisibleLength', () => {
