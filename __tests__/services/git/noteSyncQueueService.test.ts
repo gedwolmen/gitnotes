@@ -358,6 +358,7 @@ describe('NoteSyncQueueService', () => {
       ];
 
       mockAsyncStorageGetItem.mockResolvedValueOnce(JSON.stringify(existingQueue));
+      mockAsyncStorageGetItem.mockResolvedValueOnce(JSON.stringify(existingQueue));
 
       const mainPending = await NoteSyncQueueService.pendingCount('repo-1', 'main');
       const featurePending = await NoteSyncQueueService.pendingCount('repo-1', 'feature');

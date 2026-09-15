@@ -79,12 +79,12 @@ describe('GitBranchCoordinator', () => {
 
   describe('state machine states', () => {
     it('starts in idle state', async () => {
-      const { GitBranchCoordinator } = await import('@/services/git/GitBranchCoordinator');
+
       expect(GitBranchCoordinator.getState()).toBe('idle');
     });
 
     it('transitions to checkout-running when checkout starts', async () => {
-      const { GitBranchCoordinator } = await import('@/services/git/GitBranchCoordinator');
+
       GitEngineMock.statuses.mockResolvedValue([]);
       GitEngineMock.checkoutBranch.mockResolvedValue(undefined);
 
@@ -97,7 +97,7 @@ describe('GitBranchCoordinator', () => {
     });
 
     it('transitions back to idle after successful checkout', async () => {
-      const { GitBranchCoordinator } = await import('@/services/git/GitBranchCoordinator');
+
       GitEngineMock.statuses.mockResolvedValue([]);
       GitEngineMock.checkoutBranch.mockResolvedValue(undefined);
 
@@ -107,7 +107,7 @@ describe('GitBranchCoordinator', () => {
     });
 
     it('transitions to failed when checkout throws', async () => {
-      const { GitBranchCoordinator } = await import('@/services/git/GitBranchCoordinator');
+
       GitEngineMock.statuses.mockResolvedValue([]);
       GitEngineMock.checkoutBranch.mockRejectedValue(new Error('Checkout failed'));
 
@@ -119,7 +119,7 @@ describe('GitBranchCoordinator', () => {
     });
 
     it('can recover from failed state via explicit reset', async () => {
-      const { GitBranchCoordinator } = await import('@/services/git/GitBranchCoordinator');
+
       GitEngineMock.statuses.mockResolvedValue([]);
       GitEngineMock.checkoutBranch.mockRejectedValue(new Error('Checkout failed'));
 
@@ -135,7 +135,7 @@ describe('GitBranchCoordinator', () => {
     });
 
     it('transitions to mutation-running when mutation starts', async () => {
-      const { GitBranchCoordinator } = await import('@/services/git/GitBranchCoordinator');
+
       GitEngineMock.statuses.mockResolvedValue([]);
       GitEngineMock.checkoutBranch.mockResolvedValue(undefined);
 
@@ -148,7 +148,7 @@ describe('GitBranchCoordinator', () => {
 
   describe('working tree safety checks', () => {
     it('accepts the requested branch after checkout changes HEAD', async () => {
-      const { GitBranchCoordinator } = await import('@/services/git/GitBranchCoordinator');
+
       GitEngineMock.statuses.mockResolvedValue([]);
       GitEngineMock.checkoutBranch.mockResolvedValue(undefined);
 
@@ -168,7 +168,7 @@ describe('GitBranchCoordinator', () => {
     });
 
     it('fails when checkout postflight finds a different branch', async () => {
-      const { GitBranchCoordinator } = await import('@/services/git/GitBranchCoordinator');
+
       GitEngineMock.statuses.mockResolvedValue([]);
       GitEngineMock.checkoutBranch.mockResolvedValue(undefined);
       GitSyncGateMock.verifyCheckoutPostflight.mockResolvedValue({
@@ -183,7 +183,7 @@ describe('GitBranchCoordinator', () => {
     });
 
     it('allows checkout when all files are Unmodified (clean tree)', async () => {
-      const { GitBranchCoordinator } = await import('@/services/git/GitBranchCoordinator');
+
       GitEngineMock.statuses.mockResolvedValue([
         { path: 'notes/readme.md', status: 'Unmodified', staged: false, conflicted: false, indexStatus: '', workdirStatus: '' },
       ]);
@@ -201,7 +201,7 @@ describe('GitBranchCoordinator', () => {
     });
 
     it('rejects checkout when any file is staged', async () => {
-      const { GitBranchCoordinator } = await import('@/services/git/GitBranchCoordinator');
+
       GitEngineMock.statuses.mockResolvedValue([
         { path: 'notes/readme.md', status: 'Modified', staged: true, conflicted: false, indexStatus: 'Modified', workdirStatus: '' },
       ]);
@@ -214,7 +214,7 @@ describe('GitBranchCoordinator', () => {
     });
 
     it('rejects checkout when any file is modified (dirty tree)', async () => {
-      const { GitBranchCoordinator } = await import('@/services/git/GitBranchCoordinator');
+
       GitEngineMock.statuses.mockResolvedValue([
         { path: 'notes/readme.md', status: 'Modified', staged: false, conflicted: false, indexStatus: '', workdirStatus: 'Modified' },
       ]);
@@ -227,7 +227,7 @@ describe('GitBranchCoordinator', () => {
     });
 
     it('rejects checkout when any file is untracked', async () => {
-      const { GitBranchCoordinator } = await import('@/services/git/GitBranchCoordinator');
+
       GitEngineMock.statuses.mockResolvedValue([
         { path: 'notes/new-file.md', status: 'Untracked', staged: false, conflicted: false, indexStatus: '', workdirStatus: 'Untracked' },
       ]);
@@ -240,7 +240,7 @@ describe('GitBranchCoordinator', () => {
     });
 
     it('rejects checkout when file is conflicted', async () => {
-      const { GitBranchCoordinator } = await import('@/services/git/GitBranchCoordinator');
+
       GitEngineMock.statuses.mockResolvedValue([
         { path: 'notes/conflicted.md', status: 'Conflicted', staged: false, conflicted: true, indexStatus: '', workdirStatus: '' },
       ]);
@@ -255,7 +255,7 @@ describe('GitBranchCoordinator', () => {
 
   describe('cycle gate acquisition', () => {
     it('acquires repo cycle gate BEFORE checking statuses', async () => {
-      const { GitBranchCoordinator } = await import('@/services/git/GitBranchCoordinator');
+
       GitEngineMock.statuses.mockResolvedValue([]);
       GitEngineMock.checkoutBranch.mockResolvedValue(undefined);
 
@@ -268,7 +268,7 @@ describe('GitBranchCoordinator', () => {
     });
 
     it('releases cycle gate even when statuses check fails', async () => {
-      const { GitBranchCoordinator } = await import('@/services/git/GitBranchCoordinator');
+
       GitEngineMock.statuses.mockRejectedValue(new Error('Status check failed'));
 
       await expect(
@@ -279,7 +279,7 @@ describe('GitBranchCoordinator', () => {
     });
 
     it('releases cycle gate even when checkout fails', async () => {
-      const { GitBranchCoordinator } = await import('@/services/git/GitBranchCoordinator');
+
       GitEngineMock.statuses.mockResolvedValue([]);
       GitEngineMock.checkoutBranch.mockRejectedValue(new Error('Checkout failed'));
 
@@ -293,7 +293,7 @@ describe('GitBranchCoordinator', () => {
 
   describe('gitOperationStore integration', () => {
     it('registers checkout operation in gitOperationStore', async () => {
-      const { GitBranchCoordinator } = await import('@/services/git/GitBranchCoordinator');
+
       GitEngineMock.statuses.mockResolvedValue([]);
       GitEngineMock.checkoutBranch.mockResolvedValue(undefined);
 
@@ -313,7 +313,7 @@ describe('GitBranchCoordinator', () => {
     });
 
     it('marks checkout as failed in gitOperationStore on error', async () => {
-      const { GitBranchCoordinator } = await import('@/services/git/GitBranchCoordinator');
+
       GitEngineMock.statuses.mockResolvedValue([]);
       GitEngineMock.checkoutBranch.mockRejectedValue(new Error('Checkout failed'));
 
@@ -332,7 +332,7 @@ describe('GitBranchCoordinator', () => {
 
   describe('concurrent mutation blocking', () => {
     it('rejects mutation when checkout is running', async () => {
-      const { GitBranchCoordinator } = await import('@/services/git/GitBranchCoordinator');
+
       GitEngineMock.statuses.mockResolvedValue([]);
       GitEngineMock.checkoutBranch.mockImplementation(
         () => new Promise((resolve) => setTimeout(resolve, 100))
@@ -352,7 +352,7 @@ describe('GitBranchCoordinator', () => {
     });
 
     it('allows mutation after checkout completes', async () => {
-      const { GitBranchCoordinator } = await import('@/services/git/GitBranchCoordinator');
+
       GitEngineMock.statuses.mockResolvedValue([]);
       GitEngineMock.checkoutBranch.mockResolvedValue(undefined);
 
@@ -365,7 +365,7 @@ describe('GitBranchCoordinator', () => {
 
   describe('checkout-during-mutation race', () => {
     it('rejects checkout when mutation is running', async () => {
-      const { GitBranchCoordinator } = await import('@/services/git/GitBranchCoordinator');
+
       GitEngineMock.statuses.mockResolvedValue([]);
       GitEngineMock.checkoutBranch.mockResolvedValue(undefined);
 
@@ -382,7 +382,7 @@ describe('GitBranchCoordinator', () => {
     });
 
     it('allows checkout after mutation completes', async () => {
-      const { GitBranchCoordinator } = await import('@/services/git/GitBranchCoordinator');
+
       GitEngineMock.statuses.mockResolvedValue([]);
       GitEngineMock.checkoutBranch.mockResolvedValue(undefined);
 
@@ -406,7 +406,7 @@ describe('GitBranchCoordinator', () => {
     });
 
     it('recovers from leaked checkout state after watchdog timeout', async () => {
-      const { GitBranchCoordinator } = await import('@/services/git/GitBranchCoordinator');
+
       GitEngineMock.statuses.mockResolvedValue([]);
       GitEngineMock.checkoutBranch.mockImplementation(
         () => new Promise<void>(() => { /* intentionally unresolved */ })
@@ -425,7 +425,7 @@ describe('GitBranchCoordinator', () => {
     });
 
     it('clears watchdog on successful checkout', async () => {
-      const { GitBranchCoordinator } = await import('@/services/git/GitBranchCoordinator');
+
       GitEngineMock.statuses.mockResolvedValue([]);
       GitEngineMock.checkoutBranch.mockResolvedValue(undefined);
 
@@ -435,7 +435,7 @@ describe('GitBranchCoordinator', () => {
     });
 
     it('clears watchdog on failed checkout', async () => {
-      const { GitBranchCoordinator } = await import('@/services/git/GitBranchCoordinator');
+
       GitEngineMock.statuses.mockResolvedValue([]);
       GitEngineMock.checkoutBranch.mockRejectedValue(new Error('Checkout failed'));
 
@@ -449,7 +449,7 @@ describe('GitBranchCoordinator', () => {
 
   describe('checkout failure atomicity', () => {
     it('leaves branch unchanged after checkout failure', async () => {
-      const { GitBranchCoordinator } = await import('@/services/git/GitBranchCoordinator');
+
       GitEngineMock.statuses.mockResolvedValue([]);
       GitEngineMock.checkoutBranch.mockRejectedValue(new Error('Checkout failed'));
 
@@ -462,7 +462,7 @@ describe('GitBranchCoordinator', () => {
     });
 
     it('leaves working tree unchanged after checkout failure', async () => {
-      const { GitBranchCoordinator } = await import('@/services/git/GitBranchCoordinator');
+
       GitEngineMock.statuses.mockResolvedValue([]);
       GitEngineMock.checkoutBranch.mockRejectedValue(new Error('Checkout failed'));
 
