@@ -10,6 +10,12 @@ export CARGO_HOME="${CARGO_HOME:-$HOME/.cargo}"
 export PATH="$CARGO_HOME/bin:$PATH"
 export RUST_PROFILE="${RUST_PROFILE:-release}"
 
+# Force macOS deployment target to a stable version so that native C dependencies
+# (pcre2 inside libgit2-sys) compile against the correct SDK headers.
+# Without this, macOS 26.x beta + Xcode 26 beta produce -mmacosx-version-min=26
+# which causes header not found failures during native C compilation.
+export MACOSX_DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET:-15.0}"
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(dirname "$(dirname "$SCRIPT_DIR")")"
 RUST_DIR="$ROOT_DIR/rust"
