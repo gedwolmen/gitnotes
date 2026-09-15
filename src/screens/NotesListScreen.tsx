@@ -44,6 +44,62 @@ import { useTranslation } from 'react-i18next';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
+interface NotesListRowProps {
+  item: Note;
+  prevDateKey?: string;
+  viewMode: ViewMode;
+  selected: boolean;
+  selectionMode: boolean;
+  onToggleSelect: (id: string) => void;
+  onPress: (note: Note) => void;
+  onLongPress: (note: Note) => void;
+  highlighted: boolean;
+  isOffline: boolean;
+  isCached: boolean;
+  onTagPress: (tag: string) => void;
+  index: number;
+}
+
+const NotesListRow = React.memo(function NotesListRow({
+  item,
+  prevDateKey,
+  viewMode,
+  selected,
+  selectionMode,
+  onToggleSelect,
+  onPress,
+  onLongPress,
+  highlighted,
+  isOffline,
+  isCached,
+  onTagPress,
+  index,
+}: NotesListRowProps) {
+  const handleToggleSelect = useCallback(() => onToggleSelect(item.id), [item.id, onToggleSelect]);
+
+  return (
+    <SwipeableListItem
+      itemId={item.id}
+      selected={selected}
+      selectionMode={selectionMode}
+      onToggleSelect={handleToggleSelect}
+    >
+      <NotesListCard
+        note={item}
+        viewMode={viewMode}
+        onPress={onPress}
+        onLongPress={onLongPress}
+        highlighted={highlighted}
+        isOffline={isOffline}
+        isCached={isCached}
+        onTagPress={onTagPress}
+        prevDateKey={prevDateKey}
+        index={index}
+      />
+    </SwipeableListItem>
+  );
+});
+
 export default function NotesListScreen() {
   const { t } = useTranslation();
   const navigation = useNavigation<NavigationProp>();
@@ -372,31 +428,36 @@ export default function NotesListScreen() {
     [handleToggleTag],
   );
 
+  const listExtraData = useMemo(
+    () => ({
+      searchActive: hasActiveSearch,
+      searchIndex: currentSearchMatchIndex,
+      selectionCount: selectedIds.size,
+    }),
+    [currentSearchMatchIndex, hasActiveSearch, selectedIds.size],
+  );
+
   const renderNote = useCallback(
     ({ item, index }: { item: Note; index: number }) => {
       const prev = index > 0 ? displayNotes[index - 1] : undefined;
       const prevDateKey =
         viewMode === 'journal' && prev?.updatedAt ? formatJournalDate(new Date(prev.updatedAt)) : undefined;
       return (
-        <SwipeableListItem
-          itemId={item.id}
+        <NotesListRow
+          item={item}
+          prevDateKey={prevDateKey}
+          viewMode={viewMode}
           selected={selectedIds.has(item.id)}
           selectionMode={selectionMode}
-          onToggleSelect={() => toggleSelected(item.id)}
-        >
-          <NotesListCard
-            note={item}
-            viewMode={viewMode}
-            onPress={handleNotePress}
-            onLongPress={handleNoteLongPress}
-            highlighted={hasActiveSearch && index === currentSearchMatchIndex}
-            isOffline={isConnected === false}
-            isCached={!!item.content?.trim()}
-            onTagPress={handleTagPress}
-            prevDateKey={prevDateKey}
-            index={index}
-          />
-        </SwipeableListItem>
+          onToggleSelect={toggleSelected}
+          onPress={handleNotePress}
+          onLongPress={handleNoteLongPress}
+          highlighted={hasActiveSearch && index === currentSearchMatchIndex}
+          isOffline={isConnected === false}
+          isCached={!!item.content?.trim()}
+          onTagPress={handleTagPress}
+          index={index}
+        />
       );
     },
     [
@@ -448,7 +509,7 @@ export default function NotesListScreen() {
           keyExtractor={(item) => item.id}
           key={`${viewMode}-${columnCount}`}
           numColumns={viewMode === 'journal' ? 1 : columnCount}
-          extraData={{ searchActive: hasActiveSearch, searchIndex: currentSearchMatchIndex, selectionCount: selectedIds.size }}
+          extraData={listExtraData}
           initialNumToRender={10}
           maxToRenderPerBatch={6}
           windowSize={7}

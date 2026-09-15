@@ -65,7 +65,7 @@ export default function GraphViewScreen() {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [containerHeight, setContainerHeight] = useState(0);
   const containerHeightRef = useRef(0);
-  const draggingNodeIdRef = useRef<string | null>(null);
+  const draggingNodeId = useSharedValue<string | null>(null);
   const localNodesRef = useRef<GraphNode[]>([]);
   const [localNodes, setLocalNodes] = useState<GraphNode[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -235,8 +235,8 @@ export default function GraphViewScreen() {
   }, [navigation]);
 
   const handleNodeDragStart = useCallback((nodeId: string) => {
-    draggingNodeIdRef.current = nodeId;
-  }, []);
+    draggingNodeId.value = nodeId;
+  }, [draggingNodeId]);
 
   const handleNodeDrag = useCallback((nodeId: string, dx: number, dy: number) => {
     setLocalNodes((prev) =>
@@ -252,8 +252,8 @@ export default function GraphViewScreen() {
   }, [scale, canvasWidth, canvasHeight]);
 
   const handleNodeDragEnd = useCallback(() => {
-    draggingNodeIdRef.current = null;
-  }, []);
+    draggingNodeId.value = null;
+  }, [draggingNodeId]);
 
   const toggleNodeExpanded = useCallback((nodeId: string) => {
     setExpandedNodes((prev) => {
@@ -344,15 +344,16 @@ export default function GraphViewScreen() {
 
   const panGesture = Gesture.Pan()
     .onUpdate((e) => {
-      if (draggingNodeIdRef.current) {
-        runOnJS(handleNodeDrag)(draggingNodeIdRef.current, e.translationX, e.translationY);
+      const nodeId = draggingNodeId.value;
+      if (nodeId) {
+        runOnJS(handleNodeDrag)(nodeId, e.translationX, e.translationY);
       } else {
         translateX.value = savedTranslateX.value + e.translationX;
         translateY.value = savedTranslateY.value + e.translationY;
       }
     })
     .onEnd(() => {
-      if (draggingNodeIdRef.current) {
+      if (draggingNodeId.value) {
         runOnJS(handleNodeDragEnd)();
       } else {
         savedTranslateX.value = translateX.value;
