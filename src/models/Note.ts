@@ -165,7 +165,7 @@ export function filterNotesBySearch(notes: Note[], searchQuery: string): Note[] 
   return notes.filter(
     (note) =>
       note.title.toLowerCase().includes(query) ||
-      note.content.toLowerCase().includes(query) ||
+      (note.format !== 'pdf' && note.content.toLowerCase().includes(query)) ||
       note.tags.some((tag) => tag.toLowerCase().includes(query))
   );
 }

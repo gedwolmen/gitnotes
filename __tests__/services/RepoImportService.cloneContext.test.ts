@@ -22,6 +22,8 @@ jest.mock('@/services/AuthService', () => ({
 jest.mock('@/services/StorageService', () => ({
   StorageService: {
     getSavedRepositories: jest.fn(),
+    getAllNotes: jest.fn(),
+    saveAllNotes: jest.fn(),
   },
 }));
 
@@ -30,6 +32,9 @@ jest.mock('@/services/git/GitFsService', () => ({
     isCloned: jest.fn(),
     cloneExclusive: jest.fn(),
     getCommitOid: jest.fn(),
+    listTree: jest.fn(),
+    readFile: jest.fn(),
+    pullWithFastForward: jest.fn(),
   },
 }));
 
@@ -41,13 +46,24 @@ jest.mock('@/services/git/engine/GitEngine', () => ({
   setCredential: jest.fn(),
 }));
 
+jest.mock('@/services/GitHubService', () => ({
+  GitHubService: {
+    isAuthenticated: jest.fn(() => true),
+    getPathCommitDates: jest.fn(() => Promise.resolve({})),
+  },
+}));
+
+const mockPullFromSingleRepo = jest.fn();
 jest.mock('@/services/RepoPullService', () => ({
-  pullFromSingleRepo: jest.fn(),
+  pullFromSingleRepo: (...args: unknown[]) => mockPullFromSingleRepo(...args),
 }));
 
 describe('importRepoAtAdd clone context', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockPullFromSingleRepo.mockResolvedValue({
+      repos: 1, notes: 0, canvases: 0, todos: 0, templates: 0,
+    });
     jest.mocked(AuthService.getToken).mockResolvedValue('gitlab-token');
     jest.mocked(StorageService.getSavedRepositories).mockResolvedValue([
       {
@@ -76,7 +92,10 @@ describe('importRepoAtAdd clone context', () => {
     jest.mocked(AccountStorage.getHostUseSsh).mockResolvedValue(false);
     jest.mocked(GitFsService.isCloned).mockResolvedValue(false);
     jest.mocked(GitFsService.cloneExclusive).mockResolvedValue(undefined);
-    jest.mocked(GitFsService.getCommitOid).mockResolvedValue(null);
+    jest.mocked(GitFsService.getCommitOid).mockResolvedValue('abc123head');
+    jest.mocked(GitFsService.listTree).mockResolvedValue([]);
+    jest.mocked(StorageService.getAllNotes).mockResolvedValue([]);
+    jest.mocked(StorageService.saveAllNotes).mockResolvedValue(undefined);
   });
 
   it('uses the repository host metadata when no active host is selected', async () => {
@@ -90,5 +109,39 @@ describe('importRepoAtAdd clone context', () => {
         instanceBaseUrl: 'https://gitlab.example.com',
       }),
     );
+  });
+
+  it('BASELINE: cloneExclusive completes before pullFromSingleRepo is called', async () => {
+    const callOrder: string[] = [];
+
+    jest.mocked(GitFsService.cloneExclusive).mockImplementation(async () => {
+      callOrder.push('cloneExclusive');
+    });
+    mockPullFromSingleRepo.mockImplementation(async () => {
+      callOrder.push('pullFromSingleRepo');
+      return { repos: 1, notes: 0, canvases: 0, todos: 0, templates: 0 };
+    });
+
+    await importRepoAtAdd('group/project', 'project');
+
+    expect(callOrder).toEqual(['cloneExclusive', 'pullFromSingleRepo']);
+  });
+
+  it('BASELINE: pullFromSingleRepo is NOT called when getCommitOid returns null (empty repo)', async () => {
+    jest.mocked(GitFsService.getCommitOid).mockResolvedValue(null);
+
+    const result = await importRepoAtAdd('group/project', 'project');
+
+    expect(result).toEqual({ ok: true, counts: { repos: 1, notes: 0, canvases: 0, todos: 0, templates: 0 } });
+    expect(mockPullFromSingleRepo).not.toHaveBeenCalled();
+  });
+
+  it('BASELINE: cloneExclusive is skipped when repo is already cloned', async () => {
+    jest.mocked(GitFsService.isCloned).mockResolvedValue(true);
+
+    await importRepoAtAdd('group/project', 'project');
+
+    expect(GitFsService.cloneExclusive).not.toHaveBeenCalled();
+    expect(mockPullFromSingleRepo).toHaveBeenCalled();
   });
 });

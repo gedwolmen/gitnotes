@@ -196,7 +196,7 @@ async function fetchDirectoryFiles(
   return fetched.filter((f): f is { path: string; content: string } => f !== null);
 }
 
-const NOTE_EXTS = ['md', 'markdown', 'norg', 'org', 'pdf', 'txt'] as const;
+const NOTE_EXTS = ['md', 'markdown', 'norg', 'org', 'txt'] as const;
 
 /**
  * Paths that exist locally (staged but not yet pushed) and must be immune to
@@ -217,10 +217,9 @@ async function collectPendingPaths(
   }
 }
 
-function noteFormatFromExt(ext: string): 'markdown' | 'neorg' | 'org' | 'pdf' {
+function noteFormatFromExt(ext: string): 'markdown' | 'neorg' | 'org' {
   if (ext === 'norg') return 'neorg';
   if (ext === 'org') return 'org';
-  if (ext === 'pdf') return 'pdf';
   return 'markdown';
 }
 
@@ -267,7 +266,7 @@ function extractTagsFromNeorg(content: string): string[] {
   return match[1].split(',').map((tag) => tag.trim()).filter(Boolean);
 }
 
-function extractTagsFromContent(content: string, format: 'markdown' | 'neorg' | 'org' | 'pdf' | 'json'): string[] {
+function extractTagsFromContent(content: string, format: 'markdown' | 'neorg' | 'org'): string[] {
   if (!canPersistNoteTags(format)) return [];
   if (format === 'markdown') return extractTagsFromMarkdown(content);
   if (format === 'org') return extractTagsFromOrg(content);
@@ -301,7 +300,7 @@ function extractColorFromNeorg(content: string): string | undefined {
 
 function extractColorFromContent(
   content: string,
-  format: 'markdown' | 'neorg' | 'org' | 'pdf' | 'json',
+  format: 'markdown' | 'neorg' | 'org',
 ): NoteColor | undefined {
   if (!canPersistNoteTags(format)) return undefined;
   let raw: string | undefined;

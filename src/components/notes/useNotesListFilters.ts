@@ -101,7 +101,7 @@ export function useNotesListFilters({
           }
         });
     }, 300);
-  }, [searchQuery, filteredNotes]);
+  }, [searchQuery]);
 
   const filters = rawFilters as NotesListFilters;
   const hasActiveSearch = searchQuery.trim().length > 0;

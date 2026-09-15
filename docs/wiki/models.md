@@ -20,6 +20,9 @@ interface Note {
   filePath?: string;             // Full path relative to repo root: 'Work/Projects/my-note.md'
   isPinned?: boolean;
   format?: NoteFormat;           // 'markdown' | 'neorg' | 'org' | 'pdf' | 'json'
+  // NOTE: 'pdf' is retained in the type for legacy records that may exist in storage.
+  // New PDF files are NOT imported as text notes (PDF was removed from NOTE_EXTS in RepoPullService).
+  // Legacy PDF notes are searchable by title and tags only — body content is not scanned.
   attachments?: Attachment[];
   accountId?: string;             // Which account's repo this note belongs to
   createdAt: number;             // Unix timestamp ms
@@ -30,6 +33,8 @@ interface Note {
 **NoteColor:** `'red' | 'orange' | 'yellow' | 'green' | 'blue' | 'purple' | 'pink' | 'gray'`
 
 **NoteFormat:** `'markdown' | 'neorg' | 'org' | 'pdf' | 'json'`
+
+> **Legacy PDF note behaviour:** `'pdf'` is kept in the type to support records created by earlier versions of the app. New PDF files are **not** imported as text notes (the `pdf` extension was removed from `NOTE_EXTS` in `RepoPullService`). Legacy `'pdf'` notes are searchable by title and tags but their binary body content is skipped by `filterNotesBySearch` (the `note.format !== 'pdf'` guard).
 
 **Key functions:** `createNote()`, `updateNote()`, `sortNotesByUpdated()`, `sortNotesWithPinnedFirst()`, `filterNotesBySearch()`, `filterNotesByFolder()`, `getNoteFileExtension()`
 

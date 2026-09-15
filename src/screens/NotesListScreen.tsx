@@ -448,7 +448,7 @@ export default function NotesListScreen() {
           keyExtractor={(item) => item.id}
           key={`${viewMode}-${columnCount}`}
           numColumns={viewMode === 'journal' ? 1 : columnCount}
-          extraData={displayNotes}
+          extraData={{ searchActive: hasActiveSearch, searchIndex: currentSearchMatchIndex, selectionCount: selectedIds.size }}
           initialNumToRender={10}
           maxToRenderPerBatch={6}
           windowSize={7}
