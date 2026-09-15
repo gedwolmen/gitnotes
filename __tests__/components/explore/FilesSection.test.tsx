@@ -2,8 +2,6 @@ import React from 'react';
 import { act, render, fireEvent, waitFor } from '@testing-library/react-native';
 import { Text } from 'react-native';
 
-jest.mock('expo-file-system', () => ({}));
-
 const TEST_FILES = [
   'readme.md',
   'test.txt',
@@ -26,6 +24,37 @@ jest.mock('@/components/explore/exploreShared', () => {
   };
 });
 
+jest.mock('@/components/ui/flat-list', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  return {
+    FlatList: React.forwardRef(function MockFlatList({
+      data,
+      renderItem,
+      ListHeaderComponent,
+      ListEmptyComponent,
+      testID,
+      ...props
+    }: {
+      data?: unknown[];
+      renderItem?: (args: { item: unknown; index: number }) => React.ReactElement | null;
+      ListHeaderComponent?: React.ReactElement | null;
+      ListEmptyComponent?: React.ReactElement | null;
+      testID?: string;
+      [key: string]: unknown;
+    }, _ref: React.Ref<unknown>) {
+      const items = data ?? [];
+      return React.createElement(View, { testID, ...props },
+        ListHeaderComponent,
+        items.length === 0 && ListEmptyComponent,
+        items.map((item, index) =>
+          renderItem ? React.createElement(React.Fragment, { key: index }, renderItem({ item, index })) : null
+        )
+      );
+    }),
+  };
+});
+
 jest.mock('@/services/git/engine/GitEngine', () => {
   const actual = jest.requireActual('@/services/git/engine/GitEngine');
   return { ...actual, statuses: jest.fn(), stage: jest.fn() };
@@ -36,10 +65,10 @@ jest.mock('@/services/git/GitFsService', () => ({
 }));
 
 jest.mock('@/services/GitHubService', () => {
-  const mockGetTreeRecursiveOrThrow = jest.fn();
   return {
-    getTreeRecursiveOrThrow: mockGetTreeRecursiveOrThrow,
-    GitHubService: { getTreeRecursiveOrThrow: mockGetTreeRecursiveOrThrow },
+    GitHubService: {
+      getTreeRecursiveOrThrow: jest.fn(() => Promise.resolve([])),
+    },
   };
 });
 
