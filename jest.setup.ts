@@ -113,9 +113,31 @@ jest.mock('expo-blur', () => {
 // (which guards the hold-animation start) runs without returning early.
 jest.mock('react-native', () => {
   const React = require('react');
+
+  // Text must be a proper native text element so @testing-library/react-native's
+  // getByText can locate it. Using a string type ('Text') allows the testing
+  // library to find text content rendered by <Text>children</Text>.
+  const Text = ({ children, ...props }: { children?: React.ReactNode } & Record<string, unknown>) =>
+    React.createElement('Text', props, children);
+  Text.displayName = 'Text';
+
+  const TextInput = ({
+    children,
+    placeholder,
+    value,
+    ...props
+  }: {
+    children?: React.ReactNode;
+    placeholder?: string;
+    value?: string;
+  } & Record<string, unknown>) =>
+    React.createElement('TextInput', { ...props, placeholder, value }, children);
+  TextInput.displayName = 'TextInput';
+
   const View = (props: object & { children?: React.ReactNode }) =>
     React.createElement('View', props, props?.children);
   View.displayName = 'View';
+
   return {
     AccessibilityInfo: {
       isReduceMotionEnabled: () => Promise.resolve(false),
@@ -129,13 +151,13 @@ jest.mock('react-native', () => {
     PixelRatio: { get: () => 2 },
     Dimensions: { get: () => ({ width: 375, height: 812 }) },
     Image: View,
-    Text: View,
+    Text,
     TouchableOpacity: View,
     Pressable: View,
     ScrollView: View,
     FlatList: View,
     SectionList: View,
-    TextInput: View,
+    TextInput,
     Switch: View,
     ActivityIndicator: View,
     RefreshControl: View,
@@ -144,7 +166,7 @@ jest.mock('react-native', () => {
     View,
     useWindowDimensions: () => ({ width: 375, height: 812, scale: 2, fontScale: 1 }),
     Alert: {
-      alert: jest.fn((_title?: string, _message?: string, _buttons?: any[]) => {}),
+      alert: jest.fn((_title?: string, _message?: string, _buttons?: unknown[]) => {}),
     },
   };
 });
@@ -540,10 +562,33 @@ jest.mock('expo-modules-core', () => ({
   requireOptionalNativeModule: jest.fn(),
 }));
 
+// expo-sqlite ships a native module that crashes in Jest because
+// requireNativeModule is a jest.fn() stub rather than a real native getter.
+// Mock the async DB API surface that DocumentIndex (and consumers like
+// GitBranchCoordinator via DocumentIndex imports) actually call.
+jest.mock('expo-sqlite', () => {
+  const mockDb = {
+    execAsync: jest.fn(async () => { /* noop */ }),
+    runAsync: jest.fn(async () => ({ lastInsertRowId: 0 })),
+    getFirstAsync: jest.fn(async () => null),
+    getAllAsync: jest.fn(async () => []),
+    withExclusiveTransactionAsync: jest.fn(async (fn: (txn: {
+      runAsync: jest.Mock<Promise<{ lastInsertRowId: number }>, []>;
+    }) => Promise<void>) => {
+      await fn({ runAsync: jest.fn(async () => ({ lastInsertRowId: 0 })) });
+    }),
+  };
+  return {
+    __esModule: true,
+    openDatabaseAsync: jest.fn(async () => mockDb),
+  };
+});
+
 jest.mock('expo', () => ({
   fetch: jest.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve({}) })),
   FileSystem: { readAsStringAsync: jest.fn(async () => '') },
   Crypto: { randomUUID: () => 'test-uuid' },
+  requireNativeModule: jest.fn(() => ({})),
 }));
 
 jest.mock('expo-notifications', () => ({
