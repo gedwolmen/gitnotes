@@ -38,7 +38,7 @@ export function PullRequestsSection({ repo, active, chromeTopInset = 0 }: Sectio
     setIsPermissionError(false);
     try {
       const result = await HostService.listPullRequests(repo, repo.accountId, stateFilter);
-      if ('kind' in result && 'message' in result) {
+      if (!result.ok) {
         setError(String(result.message));
         setIsPermissionError(result.kind === 'permission');
       } else {
