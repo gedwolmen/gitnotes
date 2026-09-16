@@ -7,6 +7,7 @@ import { getGitHostService } from './gitHostFactory';
 import type { GitHostUser } from './GitHost';
 import { repairHeadRef } from './GitFsService';
 import { useGitActivityStore } from '../../stores/gitActivityStore';
+import { StorageService } from '../StorageService';
 
 // ─── minimal git stub (no-op until Rust engine is wired) ───────────────────
 const git = {
@@ -107,6 +108,23 @@ export class CommitService {
    */
   static async resolveAuthor(): Promise<{ name: string; email: string }> {
     return resolveStageAuthor();
+  }
+
+  /**
+   * Generate a context-aware commit message for auto-commit operations.
+   * Looks up the repo by ID to produce per-repo messages like
+   * "Update 3 notes in owner/repo". Falls back to a generic message
+   * if the repo is not found.
+   */
+  static async generateCommitMessage(repoId: string, changedFileCount: number): Promise<string> {
+    try {
+      const repos = await StorageService.getSavedRepositories();
+      const repo = repos.find((r) => r.id === repoId);
+      if (repo) {
+        return `Update ${changedFileCount} note${changedFileCount !== 1 ? 's' : ''} in ${repo.path}`;
+      }
+    } catch { /* fall through */ }
+    return `Sync: stage ${changedFileCount} file(s)`;
   }
 
   static async commit(params: CommitParams): Promise<CommitResult> {
