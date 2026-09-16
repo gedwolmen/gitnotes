@@ -8,8 +8,10 @@ import { GitSyncGate } from './git/GitSyncGate';
 import { NotificationService } from './NotificationService';
 
 const TASK_NAME = 'background-sync';
+const MIN_BACKGROUND_INTERVAL_MS = 30 * 60 * 1000;
 
 let taskRegistered = false;
+let lastBackgroundPullAt = 0;
 
 // Must live in module-global scope per expo-background-task docs: the OS may
 // re-launch the app cold to run the task, and the bundle's top-level code is
@@ -25,6 +27,11 @@ TaskManager.defineTask(TASK_NAME, async () => {
 
     const repos = await StorageService.getSavedRepositories();
     if (repos.length === 0) {
+      return BackgroundTask.BackgroundTaskResult.Success;
+    }
+
+    // Throttle: skip if less than 30 minutes since last background pull
+    if (lastBackgroundPullAt > 0 && Date.now() - lastBackgroundPullAt < MIN_BACKGROUND_INTERVAL_MS) {
       return BackgroundTask.BackgroundTaskResult.Success;
     }
 
@@ -51,6 +58,7 @@ TaskManager.defineTask(TASK_NAME, async () => {
       releaseCycle();
     }
 
+    lastBackgroundPullAt = Date.now();
     return BackgroundTask.BackgroundTaskResult.Success;
   } catch (error) {
     console.warn('[BackgroundSync] task failed:', error);
