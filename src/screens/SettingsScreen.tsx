@@ -111,12 +111,8 @@ export default function SettingsScreen() {
   const floatingGitButtonVisible = useFloatingGitButtonStore((s) => s.visible);
   const toggleFloatingGitButton = useFloatingGitButtonStore((s) => s.toggle);
   const {
-    syncFrequentlyEnabled,
-    syncIntervalSeconds,
     syncPaused,
     setSyncPaused,
-    setSyncFrequentlyEnabled,
-    setSyncIntervalSeconds,
   } = useForegroundSyncSettings();
   const syncHealth = useForegroundSyncHealth();
   const isAIEnabled = useAIStore((state) => state.isEnabled);
@@ -1131,10 +1127,6 @@ export default function SettingsScreen() {
         onToggleBackgroundSync={() => void toggleBackgroundSync()}
         floatingGitButtonVisible={floatingGitButtonVisible}
         onToggleFloatingGitButton={() => void toggleFloatingGitButton()}
-        syncFrequentlyEnabled={syncFrequentlyEnabled}
-        syncIntervalSeconds={syncIntervalSeconds}
-        onToggleSyncFrequently={(value) => void setSyncFrequentlyEnabled(value)}
-        onSetSyncIntervalSeconds={(value) => void setSyncIntervalSeconds(value)}
         syncPaused={syncPaused}
         onToggleSyncPaused={(value) => void setSyncPaused(value)}
         syncHealth={syncHealth}

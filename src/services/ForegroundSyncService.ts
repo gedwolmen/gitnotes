@@ -26,6 +26,7 @@ import { GitSyncGate } from './git/GitSyncGate';
 const COALESCE_WINDOW_MS = 2000;
 const SKIP_LOG_THROTTLE_MS = 10_000;
 const SKIP_BACKOFF_MAX_MS = 120_000;
+const FIXED_INTERVAL_MS = 30 * 60 * 1000;
 
 type Listener = () => void;
 
@@ -39,8 +40,6 @@ let backgroundWork: Promise<void> | null = null;
 let externalSyncCount = 0;
 let lastRunAt = 0;
 
-let currentIntervalSeconds = 0;
-let currentSyncFrequentlyEnabled = false;
 let currentSyncPaused = false;
 
 let lastNetReachable: boolean | null = null;
@@ -224,11 +223,9 @@ function scheduleIntervalTick(): void {
     clearTimeout(intervalHandle);
     intervalHandle = null;
   }
-  if (!currentSyncFrequentlyEnabled) return;
-  if (currentIntervalSeconds <= 0) return;
   if (lastAppState !== 'active') return;
 
-  const baseMs = currentIntervalSeconds * 1000;
+  const baseMs = FIXED_INTERVAL_MS;
   const busyBackoffMs =
     consecutiveSkips > 0
       ? Math.min(baseMs * Math.pow(2, consecutiveSkips), SKIP_BACKOFF_MAX_MS)
@@ -281,15 +278,11 @@ export function isForegroundSyncPaused(): boolean {
 }
 
 export interface ForegroundSyncConfig {
-  syncFrequentlyEnabled: boolean;
-  syncIntervalSeconds: number;
   syncPaused?: boolean;
 }
 
 export function startForegroundWatcher(config: ForegroundSyncConfig): void {
-  currentSyncFrequentlyEnabled = config.syncFrequentlyEnabled;
   currentSyncPaused = config.syncPaused ?? false;
-  currentIntervalSeconds = config.syncIntervalSeconds;
 
   if (!appStateSub) {
     appStateSub = AppState.addEventListener('change', handleAppStateChange);
@@ -310,9 +303,7 @@ export function startForegroundWatcher(config: ForegroundSyncConfig): void {
 }
 
 export function updateForegroundWatcherConfig(config: ForegroundSyncConfig): void {
-  currentSyncFrequentlyEnabled = config.syncFrequentlyEnabled;
   currentSyncPaused = config.syncPaused ?? false;
-  currentIntervalSeconds = config.syncIntervalSeconds;
   restartInterval();
 }
 
@@ -376,8 +367,6 @@ export function __resetForegroundSyncForTest(): void {
   backgroundWork = null;
   externalSyncCount = 0;
   lastRunAt = 0;
-  currentIntervalSeconds = 0;
-  currentSyncFrequentlyEnabled = false;
   currentSyncPaused = false;
   consecutiveFailures = 0;
   lastFailedAt = 0;

@@ -23,7 +23,6 @@ import type { GitRepository } from '../../services/GitService';
 import type { TemplateRepoPreference } from '../../services/TemplateRepoPreferenceService';
 import type { AIProviderConfig } from '../../models/AIProvider';
 import { TIMEOUT_OPTIONS, type BiometricKind, type LockTimeout } from '../../contexts/BiometricLockContext';
-import { SYNC_INTERVAL_OPTIONS, type SyncIntervalSeconds } from '../../hooks/useForegroundSyncSettings';
 import type { ForegroundSyncHealth } from '../../services/ForegroundSyncService';
 import { useProvidersAvailability } from '../../hooks/useProviderAvailability';
 import { describeAvailability } from '../../services/ai/providerAvailabilityCopy';
@@ -148,10 +147,6 @@ onRemoveAccount: (id: string, login: string) => void;
   onToggleBackgroundSync: () => void;
   floatingGitButtonVisible: boolean;
   onToggleFloatingGitButton: () => void;
-  syncFrequentlyEnabled: boolean;
-  syncIntervalSeconds: SyncIntervalSeconds;
-  onToggleSyncFrequently: (value: boolean) => void;
-  onSetSyncIntervalSeconds: (value: SyncIntervalSeconds) => void;
   syncPaused: boolean;
   onToggleSyncPaused: (value: boolean) => void;
   syncHealth: ForegroundSyncHealth;
@@ -242,10 +237,6 @@ export function SettingsContent(props: SettingsContentProps) {
     onToggleBackgroundSync,
     floatingGitButtonVisible,
     onToggleFloatingGitButton,
-    syncFrequentlyEnabled,
-    syncIntervalSeconds,
-    onToggleSyncFrequently,
-    onSetSyncIntervalSeconds,
     syncPaused,
     onToggleSyncPaused,
     syncHealth,
@@ -259,7 +250,6 @@ export function SettingsContent(props: SettingsContentProps) {
   const [languagePref, setLanguagePref] = useState<string>('system');
   const [showTimeoutPicker, setShowTimeoutPicker] = useState(false);
   const [showLanguagePicker, setShowLanguagePicker] = useState(false);
-  const [showIntervalPicker, setShowIntervalPicker] = useState(false);
   const [showResetAIMemoryModal, setShowResetAIMemoryModal] = useState(false);
   // Drop providers whose `supportedPlatforms` excludes the current OS so a
   // provider that physically can't run here (e.g. on-device Llama on iOS) is
@@ -274,8 +264,6 @@ export function SettingsContent(props: SettingsContentProps) {
     [providers],
   );
   const providerAvailability = useProvidersAvailability(visibleProviders);
-  const intervalLabel =
-    SYNC_INTERVAL_OPTIONS.find((opt) => opt.value === syncIntervalSeconds)?.label ?? t('settings.everyMinute');
 
   useEffect(() => {
     getLanguagePreference().then(setLanguagePref);
@@ -801,28 +789,6 @@ export function SettingsContent(props: SettingsContentProps) {
           trailing={
             <View className="flex-row items-center gap-2">
               <Toggle
-                testID="settings.toggle.sync-frequently"
-                value={syncFrequentlyEnabled}
-                onValueChange={onToggleSyncFrequently}
-              />
-              <HintIcon hintKey="hints.settings.syncFrequently" testID="hint.sync-frequently" />
-            </View>
-          }
-        >
-          <View className="flex-row items-center gap-2">
-            <Ionicons name="sync-outline" size={20} color={colors.text} />
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.settingLabel, { color: colors.text }]}>{t('settings.syncFrequently')}</Text>
-              <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 2 }}>
-                {t('settings.syncFrequentlySub')}
-              </Text>
-            </View>
-          </View>
-        </GroupRow>
-        <GroupRow
-          trailing={
-            <View className="flex-row items-center gap-2">
-              <Toggle
                 testID="settings.toggle.pause-sync"
                 value={syncPaused}
                 onValueChange={onToggleSyncPaused}
@@ -840,26 +806,6 @@ export function SettingsContent(props: SettingsContentProps) {
               </Text>
             </View>
           </View>
-        </GroupRow>
-        <GroupRow
-          testID="settings.button.interval-picker"
-          onPress={syncFrequentlyEnabled ? () => setShowIntervalPicker(true) : undefined}
-          disabled={!syncFrequentlyEnabled}
-          trailing={
-            <View className="flex-row items-center gap-1">
-              <Text style={[styles.settingValue, { color: colors.textSecondary }]}>{intervalLabel}</Text>
-              <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
-            </View>
-          }
-        >
-          <Text
-            style={[
-              styles.settingLabel,
-              { color: syncFrequentlyEnabled ? colors.text : colors.textSecondary },
-            ]}
-          >
-            {t('settings.syncInterval')}
-          </Text>
         </GroupRow>
         <GroupRow
           trailing={
@@ -1258,38 +1204,6 @@ export function SettingsContent(props: SettingsContentProps) {
               onPress={() => {
                 onSetLockTimeout(opt.value);
                 setShowTimeoutPicker(false);
-              }}
-              trailing={isActive ? <Ionicons name="checkmark" size={20} color={colors.primary} /> : null}
-            >
-              <Text style={{ color: isActive ? colors.primary : colors.text, fontSize: 16 }}>{opt.label}</Text>
-            </GroupRow>
-          );
-        })}
-      </Group>
-    </Modal>
-
-    <Modal
-      visible={showIntervalPicker}
-      onRequestClose={() => setShowIntervalPicker(false)}
-      bottomSheet
-      contentStyle={{ padding: 16, paddingBottom: 34 }}
-    >
-      <View className="flex-row justify-between items-center mb-3">
-        <Text style={{ color: colors.text, fontSize: 17, fontWeight: '600' }}>{t('settings.syncInterval')}</Text>
-        <TouchableOpacity onPress={() => setShowIntervalPicker(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Ionicons name="close" size={22} color={colors.textSecondary} />
-        </TouchableOpacity>
-      </View>
-      <Group>
-        {SYNC_INTERVAL_OPTIONS.map((opt) => {
-          const isActive = opt.value === syncIntervalSeconds;
-          return (
-            <GroupRow
-              key={opt.value}
-              testID={`sync-interval-option-${opt.value}`}
-              onPress={() => {
-                onSetSyncIntervalSeconds(opt.value);
-                setShowIntervalPicker(false);
               }}
               trailing={isActive ? <Ionicons name="checkmark" size={20} color={colors.primary} /> : null}
             >
