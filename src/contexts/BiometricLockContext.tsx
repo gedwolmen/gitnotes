@@ -7,6 +7,7 @@ const STORAGE_KEY_ENABLED = 'biometric_lock_enabled';
 const STORAGE_KEY_TIMEOUT = 'biometric_lock_timeout';
 
 export const TIMEOUT_OPTIONS = [
+  { label: 'Immediately', value: 0 },
   { label: '1 minute', value: 60_000 },
   { label: '5 minutes', value: 300_000 },
   { label: '15 minutes', value: 900_000 },
@@ -159,10 +160,13 @@ export function BiometricLockProvider({ children }: BiometricLockProviderProps) 
 
       if (nextState === 'background') {
         backgroundTimeRef.current = Date.now();
+        if (lockTimeout === 0) {
+          setIsLocked(true);
+        }
       } else if (nextState === 'active' && backgroundTimeRef.current !== null) {
         const elapsed = Date.now() - backgroundTimeRef.current;
         backgroundTimeRef.current = null;
-        if (elapsed >= lockTimeout) {
+        if (lockTimeout === 0 || elapsed >= lockTimeout) {
           setIsLocked(true);
         }
       }
