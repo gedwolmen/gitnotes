@@ -401,6 +401,10 @@ The module is linked via Expo's autolinking system. The `package.json` entry:
 
 Expo reads `modules/GitEngine/package.json` and links the native module automatically during prebuild.
 
+## Android Release Build (R8 / minification)
+
+Release builds on Android use R8 minification (enabled via `enableMinifyInReleaseBuilds: true` in `app.json` under `expo-build-properties`). The GitEngine module depends on JNA (declared as `net.java.dev.jna:jna:5.17.0@aar` in `modules/GitEngine/android/build.gradle`), and the UniFFI Kotlin bindings call into the native cdylib through JNA's `Pointer` class. R8 stripping the `Pointer` class or its `peer` field causes `GitEngine` native library to be unavailable at runtime with the error `Can't obtain peer field ID for class com.sun.jna.Pointer`. A ProGuard/R8 keep rule `-keep class com.sun.jna.Pointer { protected long peer; }` is required to preserve the class and the field — `-keepclassmembers` alone is insufficient because it does not retain the class itself.
+
 ## Integration with JavaScript Services
 
 The TypeScript facade at `src/services/git/engine/GitEngine.ts` is the single import point for all native Git operations. Services call it directly — there is no intermediate stub layer for real operations.
