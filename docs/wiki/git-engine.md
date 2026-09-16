@@ -403,7 +403,14 @@ Expo reads `modules/GitEngine/package.json` and links the native module automati
 
 ## Android Release Build (R8 / minification)
 
-Release builds on Android use R8 minification (enabled via `enableMinifyInReleaseBuilds: true` in `app.json` under `expo-build-properties`). The GitEngine module depends on JNA (declared as `net.java.dev.jna:jna:5.17.0@aar` in `modules/GitEngine/android/build.gradle`), and the UniFFI Kotlin bindings call into the native cdylib through JNA's `Pointer` class. R8 stripping the `Pointer` class or its `peer` field causes `GitEngine` native library to be unavailable at runtime with the error `Can't obtain peer field ID for class com.sun.jna.Pointer`. A ProGuard/R8 keep rule `-keep class com.sun.jna.Pointer { protected long peer; }` is required to preserve the class and the field — `-keepclassmembers` alone is insufficient because it does not retain the class itself.
+Release builds on Android use R8 minification (enabled via `enableMinifyInReleaseBuilds: true` in `app.json` under `expo-build-properties`). The GitEngine module depends on JNA (declared as `net.java.dev.jna:jna:5.17.0@aar` in `modules/GitEngine/android/build.gradle`), and the UniFFI Kotlin bindings call into the native cdylib through JNA's `Pointer` class. R8 stripping the `Pointer` class or its `peer` field causes `GitEngine` native library to be unavailable at runtime with the error `Can't obtain peer field ID for class com.sun.jna.Pointer`. Additionally, R8 can strip JNA's `Native` class entirely, causing `Can't obtain static method dispose from class com.sun.jna.Native` at runtime. ProGuard/R8 keep rules for BOTH classes are required:
+
+```
+-keep class com.sun.jna.Native { *; }
+-keep class com.sun.jna.Pointer { protected long peer; }
+```
+
+`-keepclassmembers` alone is insufficient because it does not retain the class itself.
 
 ## Integration with JavaScript Services
 
