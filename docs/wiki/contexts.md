@@ -24,7 +24,9 @@ App
 │                                   └── BiometricLockContext.Provider
 │                                       ├── StatusBar
 │                                       ├── StartupSyncGate
-│                                       │   └── AppNavigator
+│                                       │   ├── CheckoutSafetyProvider
+│                                       │   │   └── AppNavigator
+│                                       │   │       └── ExploreScreen
 │                                       ├── GitHubActivityIndicator
 │                                       ├── SyncBlockOverlay
 │                                       └── BiometricLockScreen
