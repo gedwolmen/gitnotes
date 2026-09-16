@@ -4,6 +4,9 @@ import { GitSyncGate } from './GitSyncGate';
 import { gitOperationRegistry } from '@/stores/gitOperationStore';
 import type { GitRepository } from '@/services/GitService';
 import type { Author } from '@/services/git/engine/GitEngine';
+import { classifyPushError, type PushErrorKind } from '@/components/git/pushErrors';
+
+export type { PushErrorKind };
 
 export interface RepoOpOutcome {
   repoId: string;
@@ -12,6 +15,8 @@ export interface RepoOpOutcome {
   ok: boolean;
   actedCount: number;
   error?: string;
+  /** Push-specific failure kind, present when ok === false and the op was a push. */
+  failureKind?: PushErrorKind;
 }
 
 export interface AggregateOpOutcome {
@@ -95,22 +100,21 @@ export async function pushAll(
           const result = await GitEngine.pushWithIntegrate(localPath, 'origin', repo.id);
           if (result.kind === 'Conflicts' || (result.conflicts?.length ?? 0) > 0) {
             gitOperationRegistry.fail(registryOpId, `Push conflicts: ${(result.conflicts ?? []).map((c) => c.path).join(', ')}`);
-            return { repoId: repo.id, repoPath: repo.path, repoName: repo.name, ok: false, actedCount: 0, error: `Push conflicts: ${(result.conflicts ?? []).map((c) => c.path).join(', ')}` };
+            const conflictError = new Error(`Push conflicts: ${(result.conflicts ?? []).map((c) => c.path).join(', ')}`);
+            return { repoId: repo.id, repoPath: repo.path, repoName: repo.name, ok: false, actedCount: 0, error: conflictError.message, failureKind: 'rejected' };
           }
           const postflightResult = await GitSyncGate.verifyPostflight(preflight!, registryOpId);
           if (!postflightResult.ok) {
-            return { repoId: repo.id, repoPath: repo.path, repoName: repo.name, ok: false, actedCount: 0, error: `Branch state changed during push (${postflightResult.reason})` };
+            const reasonError = new Error(`Branch state changed during push (${postflightResult.reason})`);
+            const failure = classifyPushError(reasonError);
+            return { repoId: repo.id, repoPath: repo.path, repoName: repo.name, ok: false, actedCount: 0, error: failure.message, failureKind: failure.kind };
           }
           gitOperationRegistry.succeed(registryOpId);
           return { repoId: repo.id, repoPath: repo.path, repoName: repo.name, ok: result.pushed > 0, actedCount: result.pushed, error: result.pushed > 0 ? undefined : result.message };
         } catch (err) {
           gitOperationRegistry.fail(registryOpId, err instanceof Error ? err.message : String(err));
-          const raw = err instanceof Error ? err.message : String(err);
-          const isRejection = raw.toLowerCase().includes('non-fast-forward') || raw.toLowerCase().includes('push rejected') || raw.toLowerCase().includes('not a simple fast-forward');
-          if (isRejection) {
-            return { repoId: repo.id, repoPath: repo.path, repoName: repo.name, ok: false, actedCount: 0, error: `conflict-detected: ${raw}` };
-          }
-          return { repoId: repo.id, repoPath: repo.path, repoName: repo.name, ok: false, actedCount: 0, error: err instanceof Error ? err.message : String(err) };
+          const failure = classifyPushError(err);
+          return { repoId: repo.id, repoPath: repo.path, repoName: repo.name, ok: false, actedCount: 0, error: failure.message, failureKind: failure.kind };
         } finally {
           GitSyncGate.clearPushActive(repo.id, status.currentBranch ?? undefined);
           if (preflight) GitSyncGate.clearPreflight(repo.id);
