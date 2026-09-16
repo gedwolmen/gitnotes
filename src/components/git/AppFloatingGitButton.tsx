@@ -6,6 +6,7 @@ import { useRepoStore } from '@/stores/repoStore';
 import { useAllReposStatus } from '@/hooks/useAllReposStatus';
 import { useGitButtonActionStore } from '@/stores/gitButtonActionStore';
 import { stageAllPending, commitAll, pushAll, type RepoOpOutcome } from '@/services/git/multiRepoGitOps';
+import { CommitService } from '@/services/git/CommitService';
 import type { Author } from '@/services/git/engine/GitEngine';
 import { useAccounts } from '@/contexts/AccountsContext';
 import { emitGitContentRefresh, emitGitRefresh } from '@/hooks/useGitRefreshEvent';
@@ -105,7 +106,10 @@ export default function AppFloatingGitButton() {
           return;
         }
 
-        const message = `Sync: stage ${stageResult.totalActed} file(s)`;
+        const message = await CommitService.generateCommitMessage(
+          repos[0]?.id ?? '',
+          stageResult.totalActed,
+        );
         await commitAll(repos, message, author);
         if (segment === 'commit') {
           toast.show({
