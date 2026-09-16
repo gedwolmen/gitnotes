@@ -33,10 +33,14 @@ jest.mock('react-native-svg', () => {
     Component.displayName = name;
     return Component;
   };
+  const trackCircle = (props: { cx: number; cy: number; r: number; fill: string }) => {
+    mockCircleProps.push(props);
+    return React.createElement(View, { 'data-testid': 'circle' });
+  };
   return {
     __esModule: true,
     Svg: passthrough('Svg'),
-    Circle: passthrough('Circle'),
+    Circle: trackCircle,
     Path: passthrough('Path'),
     G: passthrough('G'),
     default: passthrough('Svg'),
@@ -45,6 +49,7 @@ jest.mock('react-native-svg', () => {
 
 let mockUseAnimatedPropsResults: object[] = [];
 let mockAnimatedPathProps: Array<{ d: string; strokeDasharray: [number, number]; animatedProps: object }> = [];
+let mockCircleProps: Array<{ cx: number; cy: number; r: number; fill: string }> = [];
 
 jest.mock('react-native-reanimated', () => {
   const React = require('react');
@@ -96,6 +101,7 @@ describe('GitButtonRing', () => {
   beforeEach(() => {
     mockUseAnimatedPropsResults = [];
     mockAnimatedPathProps = [];
+    mockCircleProps = [];
   });
 
   it('renders without crashing', () => {
@@ -225,5 +231,56 @@ describe('GitButtonRing', () => {
     const progress = useSharedValue(1);
     const { toJSON } = render(<GitButtonRing progress={progress} colors={COLORS} />);
     expect(toJSON()).toBeTruthy();
+  });
+
+  describe('score-point dots at arc endpoints', () => {
+    const GAP_OFFSET_DEGREES = 2;
+    const SEGMENT_ARC_DEGREES = 120 - 4;
+
+    const GIT_RING_PADDING = 2;
+    const computeEndpoint = (segIndex: number): { ex: number; ey: number } => {
+      const startAngleDeg = -90 + segIndex * 120 + GAP_OFFSET_DEGREES;
+      const endAngleDeg = startAngleDeg + SEGMENT_ARC_DEGREES;
+      const endAngleRad = (endAngleDeg * Math.PI) / 180;
+      const cx = GIT_RING_RADIUS + GIT_RING_STROKE_WIDTH + GIT_RING_PADDING;
+      const cy = cx;
+      const ex = cx + GIT_RING_RADIUS * Math.cos(endAngleRad);
+      const ey = cy + GIT_RING_RADIUS * Math.sin(endAngleRad);
+      return { ex, ey };
+    };
+
+    it('renders exactly three Circle dots, one per arc endpoint', () => {
+      const progress = useSharedValue(0);
+      render(<GitButtonRing progress={progress} colors={COLORS} />);
+      expect(mockCircleProps.length).toBe(3);
+    });
+
+    it('dots have colors matching the colors tuple', () => {
+      const progress = useSharedValue(0);
+      render(<GitButtonRing progress={progress} colors={COLORS} />);
+      const dotColors = mockCircleProps.map((p) => p.fill);
+      expect(dotColors).toEqual([COLORS[0], COLORS[1], COLORS[2]]);
+    });
+
+    it('dots are positioned at correct arc endpoint coordinates', () => {
+      const progress = useSharedValue(0);
+      render(<GitButtonRing progress={progress} colors={COLORS} />);
+      for (let i = 0; i < 3; i++) {
+        const { ex, ey } = computeEndpoint(i);
+        const dot = mockCircleProps[i];
+        expect(dot.cx).toBeCloseTo(ex, 3);
+        expect(dot.cy).toBeCloseTo(ey, 3);
+      }
+    });
+
+    it('dots remain visible at progress=0 (static visibility)', () => {
+      const progress = useSharedValue(0);
+      render(<GitButtonRing progress={progress} colors={COLORS} />);
+      expect(mockCircleProps.length).toBe(3);
+      for (const dot of mockCircleProps) {
+        expect(dot.r).toBeGreaterThan(0);
+        expect(dot.fill).toBeTruthy();
+      }
+    });
   });
 });

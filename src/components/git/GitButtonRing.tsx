@@ -11,7 +11,7 @@ import Animated, {
   useAnimatedProps,
   type SharedValue,
 } from 'react-native-reanimated';
-import { Path, Svg } from 'react-native-svg';
+import { Circle, Path, Svg } from 'react-native-svg';
 
 import { GIT_BUTTON_SIZE } from './gitButtonGeometry';
 
@@ -31,6 +31,7 @@ const SEGMENT_ARC_RADIANS = (SEGMENT_ARC_DEGREES * Math.PI) / 180;
 export const SEGMENT_LENGTH = SEGMENT_ARC_RADIANS * GIT_RING_RADIUS;
 
 const GAP_OFFSET_DEGREES = 2;
+const SCORE_DOT_RADIUS = 3.5;
 
 interface GitButtonRingProps {
   readonly progress: SharedValue<number>;
@@ -61,6 +62,22 @@ export function GitButtonRing({ progress, colors }: GitButtonRingProps) {
           color={colors[i]}
         />
       ))}
+      {[0, 1, 2].map((i) => {
+        const startAngleDeg = -90 + i * 120 + GAP_OFFSET_DEGREES;
+        const endAngleDeg = startAngleDeg + SEGMENT_ARC_DEGREES;
+        const endAngleRad = (endAngleDeg * Math.PI) / 180;
+        const ex = cx + GIT_RING_RADIUS * Math.cos(endAngleRad);
+        const ey = cy + GIT_RING_RADIUS * Math.sin(endAngleRad);
+        return (
+          <Circle
+            key={`dot-${i}`}
+            cx={ex}
+            cy={ey}
+            r={SCORE_DOT_RADIUS}
+            fill={colors[i]}
+          />
+        );
+      })}
     </Svg>
   );
 }
