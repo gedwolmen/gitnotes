@@ -121,7 +121,7 @@
           "android": {
             "enableMinifyInReleaseBuilds": true,
             "enableShrinkResourcesInReleaseBuilds": true,
-            "extraProguardRules": "-dontwarn java.awt.Component"
+            "extraProguardRules": "-dontwarn java.awt.Component\n-keep class com.sun.jna.Pointer { protected long peer; }"
           }
         }
       ],
