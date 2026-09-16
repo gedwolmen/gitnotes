@@ -41,7 +41,7 @@ export function Modal(props: ModalProps) {
   const { top: topInset } = useSafeAreaInsets();
 
   const pad = spacing[5];
-  const slotHeight = Math.max(0, viewportHeight - pad * 2);
+  const slotHeight = Math.max(0, viewportHeight - pad * 2 - topInset);
   const slotWidth = Math.max(0, viewportWidth - pad * 2);
   const bottomSheetSlotHeight = Math.max(0, slotHeight - topInset);
 
