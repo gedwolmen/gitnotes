@@ -103,7 +103,7 @@ export default function TemplateSelector({ visible, onClose, onSelect }: Templat
     const allTemplates = [...builtIns, ...filteredCustom];
     setTemplates(allTemplates);
     setIsLoading(false);
-  }, [searchQuery, customTemplates, loadTemplatesFromStore]);
+  }, [searchQuery, customTemplates.length, loadTemplatesFromStore]);
 
   useEffect(() => {
     if (visible) {
