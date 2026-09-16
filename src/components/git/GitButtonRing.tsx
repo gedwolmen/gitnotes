@@ -31,7 +31,7 @@ const SEGMENT_ARC_RADIANS = (SEGMENT_ARC_DEGREES * Math.PI) / 180;
 export const SEGMENT_LENGTH = SEGMENT_ARC_RADIANS * GIT_RING_RADIUS;
 
 const GAP_OFFSET_DEGREES = 2;
-const SCORE_DOT_RADIUS = 2.5;
+const SCORE_DOT_RADIUS = 0.8;
 
 interface GitButtonRingProps {
   readonly progress: SharedValue<number>;

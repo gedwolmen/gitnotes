@@ -260,12 +260,12 @@ describe('GitButtonRing', () => {
       expect(mockCircleProps.length).toBe(3);
     });
 
-    it('dots have radius 2.5 (smaller to avoid obscuring arcs)', () => {
+    it('dots have radius 0.8 (smaller to avoid obscuring arcs)', () => {
       const progress = useSharedValue(0);
       render(<GitButtonRing progress={progress} colors={COLORS} />);
       expect(mockCircleProps.length).toBe(3);
       for (const dot of mockCircleProps) {
-        expect(dot.r).toBe(2.5);
+        expect(dot.r).toBe(0.8);
       }
     });
 
@@ -292,7 +292,7 @@ describe('GitButtonRing', () => {
       render(<GitButtonRing progress={progress} colors={COLORS} />);
       expect(mockCircleProps.length).toBe(3);
       for (const dot of mockCircleProps) {
-        expect(dot.r).toBe(2.5);
+        expect(dot.r).toBe(0.8);
         expect(dot.fill).toBeTruthy();
       }
     });
