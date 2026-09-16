@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { Gesture } from 'react-native-gesture-handler';
 import { runOnJS, useSharedValue, withSpring } from 'react-native-reanimated';
 import type { FloatingGitButtonPositionState } from './useFloatingGitButtonPosition';
@@ -47,7 +47,6 @@ export function useFloatingGitButtonPanGesture(
     savePosition,
   } = position;
   const otherRect = useSharedValue<FloatingButtonRect | null>(null);
-  const panBeganRef = useRef(false);
 
   useEffect(() => {
     otherRect.value = getButtonRect('ai');
@@ -55,10 +54,6 @@ export function useFloatingGitButtonPanGesture(
       otherRect.value = getButtonRect('ai');
     });
   }, [otherRect]);
-
-  const setPanBegan = useCallback((began: boolean) => {
-    panBeganRef.current = began;
-  }, []);
 
   return Gesture.Pan()
     .minDistance(GIT_BUTTON_DRAG_MIN_DISTANCE)
@@ -69,8 +64,7 @@ export function useFloatingGitButtonPanGesture(
     .onStart(() => {
       runOnJS(actions.closeMenu)();
       runOnJS(actions.cancelAffordances)();
-      panBeganRef.current = true;
-      runOnJS(setPanBegan)(true);
+      runOnJS(actions.setPanBegan)(true);
     })
     .onUpdate((event) => {
       translateX.value = savedTranslateX.value + event.translationX;
@@ -107,8 +101,7 @@ export function useFloatingGitButtonPanGesture(
     })
     .onFinalize((_event, successful) => {
       dragActive.value = false;
-      panBeganRef.current = false;
-      runOnJS(setPanBegan)(false);
+      runOnJS(actions.setPanBegan)(false);
       if (successful) return;
 
       const savedPosition = {
