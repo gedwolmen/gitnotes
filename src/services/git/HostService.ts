@@ -27,7 +27,9 @@ export interface GitHostIssue {
   labels: string[];
 }
 
-export type HostServiceResult<T> = { data: T } | { kind: 'permission' | 'error'; message: string };
+export type HostResult<T> =
+  | { ok: true; data: T }
+  | { ok: false; kind: 'permission' | 'network' | 'auth' | 'unknown'; message: string };
 
 interface RepositoryRef {
   provider?: string;
@@ -49,13 +51,15 @@ function repositoryPath(repo: RepositoryRef): { owner: string; name: string } | 
   return match ? { owner: match[1], name: match[2] } : null;
 }
 
-function errorResult(error: unknown): { kind: 'permission' | 'error'; message: string } {
+function errorResult(error: unknown): { ok: false; kind: 'permission' | 'network' | 'auth' | 'unknown'; message: string } {
   const status = typeof error === 'object' && error !== null && 'status' in error
     ? (error.status as number | undefined)
     : undefined;
   const message = error instanceof Error ? error.message : String(error);
+  const isNetworkError = error instanceof TypeError && /network|fetch|connection/i.test(message);
   return {
-    kind: status === 401 || status === 403 ? 'permission' : 'error',
+    ok: false,
+    kind: status === 401 ? 'auth' : status === 403 ? 'permission' : isNetworkError ? 'network' : 'unknown',
     message,
   };
 }
@@ -68,9 +72,9 @@ export const HostService = {
     repo: RepositoryRef,
     _accountId?: string,
     stateFilter: PullRequestState = 'open',
-  ): Promise<HostServiceResult<PullRequest[]>> => {
+  ): Promise<HostResult<PullRequest[]>> => {
     const path = repositoryPath(repo);
-    if (!path) return { kind: 'error', message: 'Repository owner and name are unavailable.' };
+    if (!path) return { ok: false, kind: 'unknown', message: 'Repository owner and name are unavailable.' };
 
     try {
       const data = await getGitHostService(repo.provider).listPullRequests(
@@ -78,7 +82,7 @@ export const HostService = {
         path.name,
         stateFilter === 'open' ? 'open' : 'closed',
       );
-      return { data: data as unknown as PullRequest[] };
+      return { ok: true, data: data as unknown as PullRequest[] };
     } catch (error) {
       return errorResult(error);
     }
@@ -87,13 +91,13 @@ export const HostService = {
     repo: RepositoryRef,
     _accountId?: string,
     stateFilter: IssueState = 'open',
-  ): Promise<HostServiceResult<GitHostIssue[]>> => {
+  ): Promise<HostResult<GitHostIssue[]>> => {
     const path = repositoryPath(repo);
-    if (!path) return { kind: 'error', message: 'Repository owner and name are unavailable.' };
+    if (!path) return { ok: false, kind: 'unknown', message: 'Repository owner and name are unavailable.' };
 
     try {
       const data = await getGitHostService(repo.provider).listIssues(path.owner, path.name, stateFilter);
-      return { data: data as unknown as GitHostIssue[] };
+      return { ok: true, data: data as unknown as GitHostIssue[] };
     } catch (error) {
       return errorResult(error);
     }

@@ -38,7 +38,7 @@ export function IssuesSection({ repo, active, chromeTopInset = 0 }: SectionProps
     setIsPermissionError(false);
     try {
       const result = await HostService.listIssues(repo, repo.accountId, stateFilter);
-      if ('kind' in result && 'message' in result) {
+      if (!result.ok) {
         setError(String(result.message));
         setIsPermissionError(result.kind === 'permission');
       } else {
