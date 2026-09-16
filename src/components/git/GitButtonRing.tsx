@@ -31,7 +31,7 @@ const SEGMENT_ARC_RADIANS = (SEGMENT_ARC_DEGREES * Math.PI) / 180;
 export const SEGMENT_LENGTH = SEGMENT_ARC_RADIANS * GIT_RING_RADIUS;
 
 const GAP_OFFSET_DEGREES = 2;
-const SCORE_DOT_RADIUS = 3.5;
+const SCORE_DOT_RADIUS = 2.5;
 
 interface GitButtonRingProps {
   readonly progress: SharedValue<number>;
@@ -54,14 +54,6 @@ export function GitButtonRing({ progress, colors }: GitButtonRingProps) {
         },
       ]}
     >
-      {[0, 1, 2].map((i) => (
-        <AnimatedSegmentPath
-          key={i}
-          segIndex={i}
-          progress={progress}
-          color={colors[i]}
-        />
-      ))}
       {[0, 1, 2].map((i) => {
         const startAngleDeg = -90 + i * 120 + GAP_OFFSET_DEGREES;
         const endAngleDeg = startAngleDeg + SEGMENT_ARC_DEGREES;
@@ -78,6 +70,14 @@ export function GitButtonRing({ progress, colors }: GitButtonRingProps) {
           />
         );
       })}
+      {[0, 1, 2].map((i) => (
+        <AnimatedSegmentPath
+          key={i}
+          segIndex={i}
+          progress={progress}
+          color={colors[i]}
+        />
+      ))}
     </Svg>
   );
 }

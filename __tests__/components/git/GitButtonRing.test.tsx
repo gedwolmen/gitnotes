@@ -35,6 +35,7 @@ jest.mock('react-native-svg', () => {
   };
   const trackCircle = (props: { cx: number; cy: number; r: number; fill: string }) => {
     mockCircleProps.push(props);
+    mockRenderSequence.push('circle');
     return React.createElement(View, { 'data-testid': 'circle' });
   };
   return {
@@ -50,6 +51,7 @@ jest.mock('react-native-svg', () => {
 let mockUseAnimatedPropsResults: object[] = [];
 let mockAnimatedPathProps: Array<{ d: string; strokeDasharray: [number, number]; animatedProps: object }> = [];
 let mockCircleProps: Array<{ cx: number; cy: number; r: number; fill: string }> = [];
+let mockRenderSequence: string[] = [];
 
 jest.mock('react-native-reanimated', () => {
   const React = require('react');
@@ -72,6 +74,7 @@ jest.mock('react-native-reanimated', () => {
               animatedProps: props.animatedProps ?? {},
             });
           }
+          mockRenderSequence.push('arc');
           return React.createElement(View, { 'data-testid': `animated-path` });
         };
         Wrapped.displayName = 'AnimatedPath';
@@ -88,6 +91,7 @@ jest.mock('react-native-reanimated', () => {
               animatedProps: props.animatedProps ?? {},
             });
           }
+          mockRenderSequence.push('arc');
           return React.createElement(View, { 'data-testid': `animated-path` });
         };
         Wrapped.displayName = 'AnimatedPath';
@@ -102,6 +106,7 @@ describe('GitButtonRing', () => {
     mockUseAnimatedPropsResults = [];
     mockAnimatedPathProps = [];
     mockCircleProps = [];
+    mockRenderSequence = [];
   });
 
   it('renders without crashing', () => {
@@ -255,6 +260,15 @@ describe('GitButtonRing', () => {
       expect(mockCircleProps.length).toBe(3);
     });
 
+    it('dots have radius 2.5 (smaller to avoid obscuring arcs)', () => {
+      const progress = useSharedValue(0);
+      render(<GitButtonRing progress={progress} colors={COLORS} />);
+      expect(mockCircleProps.length).toBe(3);
+      for (const dot of mockCircleProps) {
+        expect(dot.r).toBe(2.5);
+      }
+    });
+
     it('dots have colors matching the colors tuple', () => {
       const progress = useSharedValue(0);
       render(<GitButtonRing progress={progress} colors={COLORS} />);
@@ -278,9 +292,15 @@ describe('GitButtonRing', () => {
       render(<GitButtonRing progress={progress} colors={COLORS} />);
       expect(mockCircleProps.length).toBe(3);
       for (const dot of mockCircleProps) {
-        expect(dot.r).toBeGreaterThan(0);
+        expect(dot.r).toBe(2.5);
         expect(dot.fill).toBeTruthy();
       }
+    });
+
+    it('renders dots before arc paths so ring arcs layer above dots', () => {
+      const progress = useSharedValue(0);
+      render(<GitButtonRing progress={progress} colors={COLORS} />);
+      expect(mockRenderSequence).toEqual(['circle', 'circle', 'circle', 'arc', 'arc', 'arc']);
     });
   });
 });
