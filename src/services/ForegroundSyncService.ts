@@ -202,9 +202,6 @@ async function runPull(reason: string): Promise<void> {
     if (pullTimeout !== null) clearTimeout(pullTimeout);
     inFlight = false;
     lastRunAt = Date.now();
-    if (watchdogTimedOut) {
-      success = false;
-    }
     if (success) {
       consecutiveFailures = 0;
       health = { ...health, status: 'ok', lastCompletedAt: Date.now(), consecutiveFailures: 0 };
