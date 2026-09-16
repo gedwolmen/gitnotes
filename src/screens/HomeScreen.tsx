@@ -149,11 +149,10 @@ export default function HomeScreen() {
     });
   }, [navigation]);
 
-  const recentLimit = deviceType === 'mac' ? 16 : deviceType === 'desktop' ? 12 : isTablet ? 12 : 10;
   const pinnedLimit = deviceType === 'mac' ? 16 : deviceType === 'desktop' ? 12 : isTablet ? 12 : 6;
   const recentItems = useMemo(
-    () => buildRecentFeed(notes, canvases, { excludePinned: true, limit: recentLimit }),
-    [notes, canvases, recentLimit],
+    () => buildRecentFeed(notes, canvases, { excludePinned: true }),
+    [notes, canvases],
   );
   const pinnedItems = useMemo(
     () => buildPinnedFeed(notes, canvases, pinnedLimit),
