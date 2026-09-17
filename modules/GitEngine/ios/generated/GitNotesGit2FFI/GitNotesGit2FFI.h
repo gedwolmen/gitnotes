@@ -319,6 +319,11 @@ RustBuffer uniffi_gitnotes_git2_fn_func_commit_changes(RustBuffer path, RustBuff
 RustBuffer uniffi_gitnotes_git2_fn_func_commit_diff(RustBuffer path, RustBuffer commit_id, RustCallStatus *_Nonnull out_status
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_FN_FUNC_CONFIGURE_ANDROID_CA
+#define UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_FN_FUNC_CONFIGURE_ANDROID_CA
+void uniffi_gitnotes_git2_fn_func_configure_android_ca(RustCallStatus *_Nonnull out_status
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_FN_FUNC_CREATE_BRANCH
 #define UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_FN_FUNC_CREATE_BRANCH
 RustBuffer uniffi_gitnotes_git2_fn_func_create_branch(RustBuffer path, RustBuffer name, RustBuffer source, RustCallStatus *_Nonnull out_status
@@ -814,6 +819,11 @@ uint16_t uniffi_gitnotes_git2_checksum_func_commit_diff(void
     
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_CONFIGURE_ANDROID_CA
+#define UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_CONFIGURE_ANDROID_CA
+uint16_t uniffi_gitnotes_git2_checksum_func_configure_android_ca(void
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_CREATE_BRANCH
 #define UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_CREATE_BRANCH
 uint16_t uniffi_gitnotes_git2_checksum_func_create_branch(void
@@ -1048,4 +1058,3 @@ uint32_t ffi_gitnotes_git2_uniffi_contract_version(void
     
 );
 #endif
-

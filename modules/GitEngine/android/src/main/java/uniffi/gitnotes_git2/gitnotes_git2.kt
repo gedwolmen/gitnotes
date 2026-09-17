@@ -710,6 +710,8 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_gitnotes_git2_checksum_func_commit_diff(
     ): Int
+    external fun uniffi_gitnotes_git2_checksum_func_configure_android_ca(
+    ): Int
     external fun uniffi_gitnotes_git2_checksum_func_create_branch(
     ): Int
     external fun uniffi_gitnotes_git2_checksum_func_delete_branch(
@@ -829,6 +831,8 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_gitnotes_git2_fn_func_commit_diff(`path`: RustBuffer.ByValue,`commitId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_gitnotes_git2_fn_func_configure_android_ca(uniffi_out_err: UniffiRustCallStatus,
+    ): Unit
     external fun uniffi_gitnotes_git2_fn_func_create_branch(`path`: RustBuffer.ByValue,`name`: RustBuffer.ByValue,`source`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_gitnotes_git2_fn_func_delete_branch(`path`: RustBuffer.ByValue,`name`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
@@ -1573,7 +1577,7 @@ open class ProgressListenerImpl: Disposable, AutoCloseable, ProgressListener
     }
 
     override fun `onProgress`(`event`: ProgressEvent)
-        = 
+        =
     callWithHandle {
     uniffiRustCall() { _status ->
     UniffiLib.uniffi_gitnotes_git2_fn_method_progresslistener_on_progress(
@@ -1582,10 +1586,7 @@ open class ProgressListenerImpl: Disposable, AutoCloseable, ProgressListener
         FfiConverterTypeProgressEvent.lower(`event`),_status)
 }
     }
-    
-    
 
-    
 
     
 
@@ -4132,6 +4133,26 @@ public object FfiConverterSequenceTypeRemoteInfo: FfiConverterRustBuffer<List<Re
     
 
         /**
+         * Configure git2's SSL CA certificate directory for Android.
+         *
+         * This **must** be called from the host app's module-initialization entry point
+         * (`OnCreate` / `applicationDidFinishLaunching`) **before** any engine operation
+         * is dispatched. On Android it detects the CA store path and configures git2's
+         * OpenSSL adapter; on other platforms it is a no-op.
+         *
+         * This function is safe to call redundantly — the underlying `set_ssl_cert_dir`
+         * call is idempotent beyond its first invocation.
+         *
+         * Returns `Ok(())` when the CA dir was configured successfully or when neither
+         * Android CA path exists (no-op). Returns `Err(BridgeError)` when the directory
+         * was found but `set_ssl_cert_dir` failed.
+         */
+    @Throws(BridgeException::class) fun `configureAndroidCa`() =
+        uniffiRustCallWithError(BridgeException) { _status ->
+            UniffiLib.uniffi_gitnotes_git2_fn_func_configure_android_ca(_status)
+        }
+
+        /**
          * Create a branch (from `source` or current HEAD) without switching.
          */
     @Throws(BridgeException::class) fun `createBranch`(`path`: kotlin.String, `name`: kotlin.String, `source`: kotlin.String?): BranchInfo {
@@ -4707,5 +4728,3 @@ public object FfiConverterSequenceTypeRemoteInfo: FfiConverterRustBuffer<List<Re
     )
     }
     
-
-

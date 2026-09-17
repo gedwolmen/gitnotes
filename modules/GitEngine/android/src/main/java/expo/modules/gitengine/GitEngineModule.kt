@@ -101,6 +101,11 @@ class GitEngineModule : Module() {
       engineLoadError = try {
         System.loadLibrary("gitnotes_git2")
         uniffiEnsureInitialized()
+        // Configure Android CA store for git2's OpenSSL adapter before any
+        // engine operation is dispatched. Safe to call on non-Android platforms
+        // (no-op there). Must happen after the cdylib is loaded and UniFFI
+        // is initialized, but before any engine op uses the TLS stack.
+        configureAndroidCa()
         null
       } catch (error: Throwable) {
         // Throwable catches Error (e.g. ExceptionInInitializerError) and Exception

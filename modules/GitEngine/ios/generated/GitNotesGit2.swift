@@ -3810,6 +3810,27 @@ public func commitDiff(path: String, commitId: String)throws  -> [FileDiff]  {
 })
 }
 /**
+ * Configure git2's SSL CA certificate directory for Android.
+ *
+ * This **must** be called from the host app's module-initialization entry point
+ * (`OnCreate` / `applicationDidFinishLaunching`) **before** any engine operation
+ * is dispatched. On Android it detects the CA store path and configures git2's
+ * OpenSSL adapter; on other platforms it is a no-op.
+ *
+ * This function is safe to call redundantly — the underlying `set_ssl_cert_dir`
+ * call is idempotent beyond its first invocation.
+ *
+ * Returns `Ok(())` when the CA dir was configured successfully or when neither
+ * Android CA path exists (no-op). Returns `Err(BridgeError)` when the directory
+ * was found but `set_ssl_cert_dir` failed.
+ */
+public func configureAndroidCa()throws   {try rustCallWithError(FfiConverterTypeBridgeError_lift) {
+        uniffiCallStatus in
+    uniffi_gitnotes_git2_fn_func_configure_android_ca(uniffiCallStatus
+    )
+}
+}
+/**
  * Create a branch (from `source` or current HEAD) without switching.
  */
 public func createBranch(path: String, name: String, source: String?)throws  -> BranchInfo  {
@@ -4281,6 +4302,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_gitnotes_git2_checksum_func_commit_diff() != 37128) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_gitnotes_git2_checksum_func_configure_android_ca() != 33917) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_gitnotes_git2_checksum_func_create_branch() != 34002) {
