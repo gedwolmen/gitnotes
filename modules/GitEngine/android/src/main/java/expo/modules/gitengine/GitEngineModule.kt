@@ -20,34 +20,53 @@ class GitEngineModule : Module() {
     private const val CA_BUNDLE_FILENAME = "gitnotes_ca_bundle.pem"
   }
 
-  /// Builds a PEM bundle from the Android system CA directories and passes
-  /// the path to Rust via `setSslCertFile`. Writes atomically to app-private
-  /// storage and skips rebuild if the bundle already exists and is non-empty.
   private fun configureAndroidCaBundle() {
-    val caBundlePath = buildAndroidCaBundle() ?: return
-    setSslCertFile(caBundlePath)
+    val caDir = findAndroidCaDir() ?: run {
+      android.util.Log.e("GitEngine", "configureAndroidCaBundle: no CA directory found")
+      return
+    }
+    val bundlePath = buildAndroidCaBundle() ?: run {
+      android.util.Log.e("GitEngine", "configureAndroidCaBundle: PEM bundle unavailable")
+      return
+    }
+    android.util.Log.i("GitEngine", "configureAndroidCaBundle: bundle=$bundlePath dir=${caDir.absolutePath}")
+    setSslCertLocations(bundlePath, caDir.absolutePath)
   }
 
   /// Returns the path to the CA bundle, building it if necessary.
   /// Returns null if neither Android CA directory exists (not on Android).
   private fun buildAndroidCaBundle(): String? {
-    val filesDir = appContext.reactContext?.filesDir ?: return null
+    val filesDir = appContext.reactContext?.filesDir ?: run {
+      android.util.Log.e("GitEngine", "buildAndroidCaBundle: filesDir is null (reactContext not ready)")
+      return null
+    }
     val bundleFile = java.io.File(filesDir, CA_BUNDLE_FILENAME)
+    android.util.Log.i("GitEngine", "buildAndroidCaBundle: filesDir=$filesDir bundle=${bundleFile.absolutePath}")
 
     // Skip rebuild if bundle already exists and is non-empty.
     if (bundleFile.isFile && bundleFile.length() > 0) {
+      android.util.Log.i("GitEngine", "buildAndroidCaBundle: using existing bundle (${bundleFile.length()} bytes)")
       return bundleFile.absolutePath
     }
 
     // Find the best available CA directory.
-    val caDir = findAndroidCaDir() ?: return null
+    val caDir = findAndroidCaDir() ?: run {
+      android.util.Log.e("GitEngine", "buildAndroidCaBundle: findAndroidCaDir returned null")
+      return null
+    }
+    android.util.Log.i("GitEngine", "buildAndroidCaBundle: found caDir=${caDir.absolutePath}")
 
     // Read all readable regular files (Android CA files are named like "01419da9.0").
     val caFiles = caDir.listFiles { file ->
       file.isFile && file.canRead()
-    }?.sortedBy { it.name } ?: return null
+    }?.sortedBy { it.name } ?: run {
+      android.util.Log.e("GitEngine", "buildAndroidCaBundle: listFiles returned null")
+      return null
+    }
+    android.util.Log.i("GitEngine", "buildAndroidCaBundle: found ${caFiles.size} CA files")
 
     if (caFiles.isEmpty()) {
+      android.util.Log.e("GitEngine", "buildAndroidCaBundle: no CA files found")
       return null
     }
 
@@ -66,15 +85,18 @@ class GitEngineModule : Module() {
         throw java.io.IOException("Failed to atomically rename $tempFile to $bundleFile")
       }
     } catch (e: Throwable) {
+      android.util.Log.e("GitEngine", "buildAndroidCaBundle: write failed", e)
       tempFile.delete()
       throw e
     }
 
     if (bundleFile.length() == 0L) {
+      android.util.Log.e("GitEngine", "buildAndroidCaBundle: bundle is empty after write")
       bundleFile.delete()
       return null
     }
 
+    android.util.Log.i("GitEngine", "buildAndroidCaBundle: success, bundle size=${bundleFile.length()}")
     return bundleFile.absolutePath
   }
 

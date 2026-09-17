@@ -4200,12 +4200,32 @@ public func setRemoteUrl(path: String, name: String, url: String)throws   {try r
 }
 }
 /**
+ * Sets the SSL certificate directory for Android.
+ *
+ * On Android, this is preferred over `set_ssl_cert_file` because OpenSSL's
+ * directory mode uses hash-based certificate lookup, which works directly
+ * with Android's `/apex/com.android.conscrypt/cacerts` directory without
+ * requiring a bundled PEM file.
+ *
+ * This must be called from the host app's module-initialization entry point
+ * (`OnCreate` / `applicationDidFinishLaunching`) **before** any engine operation
+ * is dispatched.
+ */
+public func setSslCertDirectory(certDir: String)throws   {try rustCallWithError(FfiConverterTypeBridgeError_lift) {
+        uniffiCallStatus in
+    uniffi_gitnotes_git2_fn_func_set_ssl_cert_directory(
+        FfiConverterString.lower(certDir),uniffiCallStatus
+    )
+}
+}
+/**
  * Configure git2's SSL CA certificate file for Android.
  *
  * This **must** be called from the host app's module-initialization entry point
  * (`OnCreate` / `applicationDidFinishLaunching`) **before** any engine operation
- * is dispatched. On Android the Kotlin host builds a PEM bundle from the system
- * CA directories and passes the path here; on other platforms this is a no-op.
+ * is dispatched. The Kotlin host builds a PEM bundle from the Android system CA
+ * directories and passes the path here; on non-Android platforms the equivalent
+ * bundle path from the host platform's CA store should be passed.
  *
  * Returns `Ok(())` when the certificate file was configured successfully.
  * Returns `Err(BridgeError)` when `set_ssl_cert_file` failed.
@@ -4214,6 +4234,14 @@ public func setSslCertFile(certFile: String)throws   {try rustCallWithError(FfiC
         uniffiCallStatus in
     uniffi_gitnotes_git2_fn_func_set_ssl_cert_file(
         FfiConverterString.lower(certFile),uniffiCallStatus
+    )
+}
+}
+public func setSslCertLocations(certFile: String, certDir: String)throws   {try rustCallWithError(FfiConverterTypeBridgeError_lift) {
+        uniffiCallStatus in
+    uniffi_gitnotes_git2_fn_func_set_ssl_cert_locations(
+        FfiConverterString.lower(certFile),
+        FfiConverterString.lower(certDir),uniffiCallStatus
     )
 }
 }
@@ -4400,7 +4428,13 @@ private let initializationResult: InitializationResult = {
     if (uniffi_gitnotes_git2_checksum_func_set_remote_url() != 54340) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_gitnotes_git2_checksum_func_set_ssl_cert_file() != 41418) {
+    if (uniffi_gitnotes_git2_checksum_func_set_ssl_cert_directory() != 34027) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_gitnotes_git2_checksum_func_set_ssl_cert_file() != 26244) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_gitnotes_git2_checksum_func_set_ssl_cert_locations() != 57313) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_gitnotes_git2_checksum_func_stage_file_lines() != 26625) {

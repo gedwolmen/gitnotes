@@ -245,7 +245,7 @@ typedef void (*UniffiForeignFutureCompleteVoid)(uint64_t, UniffiForeignFutureRes
 #endif
 #ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_PROGRESS_LISTENER_METHOD0
 #define UNIFFI_FFIDEF_CALLBACK_INTERFACE_PROGRESS_LISTENER_METHOD0
-typedef void (*UniffiCallbackInterfaceProgressListenerMethod0)(uint64_t, RustBuffer, void* _Nonnull,
+typedef void (*UniffiCallbackInterfaceProgressListenerMethod0)(uint64_t, RustBuffer, void* _Nonnull, 
         RustCallStatus *_Nonnull uniffiCallStatus
     );
 
@@ -347,7 +347,7 @@ void uniffi_gitnotes_git2_fn_func_discard_files(RustBuffer path, RustBuffer path
 #ifndef UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_FN_FUNC_ENGINE_NAME
 #define UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_FN_FUNC_ENGINE_NAME
 RustBuffer uniffi_gitnotes_git2_fn_func_engine_name(RustCallStatus *_Nonnull out_status
-
+    
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_FN_FUNC_FETCH_REPO_WITH_PROGRESS
@@ -485,9 +485,19 @@ void uniffi_gitnotes_git2_fn_func_set_credential(RustBuffer repo_id, RustBuffer 
 void uniffi_gitnotes_git2_fn_func_set_remote_url(RustBuffer path, RustBuffer name, RustBuffer url, RustCallStatus *_Nonnull out_status
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_FN_FUNC_SET_SSL_CERT_DIRECTORY
+#define UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_FN_FUNC_SET_SSL_CERT_DIRECTORY
+void uniffi_gitnotes_git2_fn_func_set_ssl_cert_directory(RustBuffer cert_dir, RustCallStatus *_Nonnull out_status
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_FN_FUNC_SET_SSL_CERT_FILE
 #define UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_FN_FUNC_SET_SSL_CERT_FILE
 void uniffi_gitnotes_git2_fn_func_set_ssl_cert_file(RustBuffer cert_file, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_FN_FUNC_SET_SSL_CERT_LOCATIONS
+#define UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_FN_FUNC_SET_SSL_CERT_LOCATIONS
+void uniffi_gitnotes_git2_fn_func_set_ssl_cert_locations(RustBuffer cert_file, RustBuffer cert_dir, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_FN_FUNC_STAGE_FILE_LINES
@@ -508,7 +518,7 @@ void uniffi_gitnotes_git2_fn_func_unstage_paths(RustBuffer path, RustBuffer path
 #ifndef UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_FN_FUNC_VERSION
 #define UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_FN_FUNC_VERSION
 RustBuffer uniffi_gitnotes_git2_fn_func_version(RustCallStatus *_Nonnull out_status
-
+    
 );
 #endif
 #ifndef UNIFFI_FFIDEF_FFI_GITNOTES_GIT2_RUSTBUFFER_ALLOC
@@ -774,288 +784,301 @@ void ffi_gitnotes_git2_rust_future_complete_void(uint64_t handle, RustCallStatus
 #ifndef UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_ADD_REMOTE
 #define UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_ADD_REMOTE
 uint16_t uniffi_gitnotes_git2_checksum_func_add_remote(void
-
+    
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_BACKUP_CORRUPT_REPO
 #define UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_BACKUP_CORRUPT_REPO
 uint16_t uniffi_gitnotes_git2_checksum_func_backup_corrupt_repo(void
-
+    
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_CHECKOUT_BRANCH
 #define UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_CHECKOUT_BRANCH
 uint16_t uniffi_gitnotes_git2_checksum_func_checkout_branch(void
-
+    
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_CHECKOUT_COMMIT
 #define UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_CHECKOUT_COMMIT
 uint16_t uniffi_gitnotes_git2_checksum_func_checkout_commit(void
-
+    
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_CLEAR_CREDENTIAL
 #define UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_CLEAR_CREDENTIAL
 uint16_t uniffi_gitnotes_git2_checksum_func_clear_credential(void
-
+    
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_CLONE_REPO_WITH_PROGRESS
 #define UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_CLONE_REPO_WITH_PROGRESS
 uint16_t uniffi_gitnotes_git2_checksum_func_clone_repo_with_progress(void
-
+    
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_COMMIT_CHANGES
 #define UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_COMMIT_CHANGES
 uint16_t uniffi_gitnotes_git2_checksum_func_commit_changes(void
-
+    
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_COMMIT_DIFF
 #define UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_COMMIT_DIFF
 uint16_t uniffi_gitnotes_git2_checksum_func_commit_diff(void
-
+    
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_CREATE_BRANCH
 #define UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_CREATE_BRANCH
 uint16_t uniffi_gitnotes_git2_checksum_func_create_branch(void
-
+    
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_DELETE_BRANCH
 #define UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_DELETE_BRANCH
 uint16_t uniffi_gitnotes_git2_checksum_func_delete_branch(void
-
+    
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_DIFF_ALL
 #define UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_DIFF_ALL
 uint16_t uniffi_gitnotes_git2_checksum_func_diff_all(void
-
+    
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_DIFF_FILE
 #define UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_DIFF_FILE
 uint16_t uniffi_gitnotes_git2_checksum_func_diff_file(void
-
+    
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_DISCARD_FILES
 #define UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_DISCARD_FILES
 uint16_t uniffi_gitnotes_git2_checksum_func_discard_files(void
-
+    
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_ENGINE_NAME
 #define UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_ENGINE_NAME
 uint16_t uniffi_gitnotes_git2_checksum_func_engine_name(void
-
+    
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_FETCH_REPO_WITH_PROGRESS
 #define UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_FETCH_REPO_WITH_PROGRESS
 uint16_t uniffi_gitnotes_git2_checksum_func_fetch_repo_with_progress(void
-
+    
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_GENERATE_SSH_KEY
 #define UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_GENERATE_SSH_KEY
 uint16_t uniffi_gitnotes_git2_checksum_func_generate_ssh_key(void
-
+    
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_GET_CONFLICT_BLOBS
 #define UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_GET_CONFLICT_BLOBS
 uint16_t uniffi_gitnotes_git2_checksum_func_get_conflict_blobs(void
-
+    
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_GET_CONFLICTS
 #define UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_GET_CONFLICTS
 uint16_t uniffi_gitnotes_git2_checksum_func_get_conflicts(void
-
+    
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_GET_CREDENTIAL
 #define UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_GET_CREDENTIAL
 uint16_t uniffi_gitnotes_git2_checksum_func_get_credential(void
-
+    
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_INIT_REPO
 #define UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_INIT_REPO
 uint16_t uniffi_gitnotes_git2_checksum_func_init_repo(void
-
+    
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_IS_REPO_LOCKED
 #define UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_IS_REPO_LOCKED
 uint16_t uniffi_gitnotes_git2_checksum_func_is_repo_locked(void
-
+    
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_LIST_BRANCHES
 #define UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_LIST_BRANCHES
 uint16_t uniffi_gitnotes_git2_checksum_func_list_branches(void
-
+    
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_LIST_REMOTES
 #define UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_LIST_REMOTES
 uint16_t uniffi_gitnotes_git2_checksum_func_list_remotes(void
-
+    
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_LIST_STATUSES
 #define UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_LIST_STATUSES
 uint16_t uniffi_gitnotes_git2_checksum_func_list_statuses(void
-
+    
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_MARK_CONFLICT_RESOLVED
 #define UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_MARK_CONFLICT_RESOLVED
 uint16_t uniffi_gitnotes_git2_checksum_func_mark_conflict_resolved(void
-
+    
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_PULL_REPO
 #define UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_PULL_REPO
 uint16_t uniffi_gitnotes_git2_checksum_func_pull_repo(void
-
+    
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_PUSH_REPO
 #define UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_PUSH_REPO
 uint16_t uniffi_gitnotes_git2_checksum_func_push_repo(void
-
+    
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_PUSH_REPO_WITH_INTEGRATE
 #define UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_PUSH_REPO_WITH_INTEGRATE
 uint16_t uniffi_gitnotes_git2_checksum_func_push_repo_with_integrate(void
-
+    
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_RECENT_COMMITS
 #define UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_RECENT_COMMITS
 uint16_t uniffi_gitnotes_git2_checksum_func_recent_commits(void
-
+    
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_REMOVE_PATHS
 #define UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_REMOVE_PATHS
 uint16_t uniffi_gitnotes_git2_checksum_func_remove_paths(void
-
+    
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_REMOVE_REMOTE
 #define UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_REMOVE_REMOTE
 uint16_t uniffi_gitnotes_git2_checksum_func_remove_remote(void
-
+    
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_REMOVE_REPO
 #define UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_REMOVE_REPO
 uint16_t uniffi_gitnotes_git2_checksum_func_remove_repo(void
-
+    
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_RENAME_BRANCH
 #define UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_RENAME_BRANCH
 uint16_t uniffi_gitnotes_git2_checksum_func_rename_branch(void
-
+    
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_REPAIR_REPO
 #define UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_REPAIR_REPO
 uint16_t uniffi_gitnotes_git2_checksum_func_repair_repo(void
-
+    
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_REPO_INFO
 #define UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_REPO_INFO
 uint16_t uniffi_gitnotes_git2_checksum_func_repo_info(void
-
+    
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_REPO_STATUS
 #define UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_REPO_STATUS
 uint16_t uniffi_gitnotes_git2_checksum_func_repo_status(void
-
+    
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_RESET_SOFT
 #define UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_RESET_SOFT
 uint16_t uniffi_gitnotes_git2_checksum_func_reset_soft(void
-
+    
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_RESOLVE_CONFLICT
 #define UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_RESOLVE_CONFLICT
 uint16_t uniffi_gitnotes_git2_checksum_func_resolve_conflict(void
-
+    
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_REVERT_COMMIT
 #define UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_REVERT_COMMIT
 uint16_t uniffi_gitnotes_git2_checksum_func_revert_commit(void
-
+    
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_SET_CREDENTIAL
 #define UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_SET_CREDENTIAL
 uint16_t uniffi_gitnotes_git2_checksum_func_set_credential(void
-
+    
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_SET_REMOTE_URL
 #define UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_SET_REMOTE_URL
 uint16_t uniffi_gitnotes_git2_checksum_func_set_remote_url(void
-
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_SET_SSL_CERT_DIRECTORY
+#define UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_SET_SSL_CERT_DIRECTORY
+uint16_t uniffi_gitnotes_git2_checksum_func_set_ssl_cert_directory(void
+    
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_SET_SSL_CERT_FILE
 #define UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_SET_SSL_CERT_FILE
 uint16_t uniffi_gitnotes_git2_checksum_func_set_ssl_cert_file(void
-
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_SET_SSL_CERT_LOCATIONS
+#define UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_SET_SSL_CERT_LOCATIONS
+uint16_t uniffi_gitnotes_git2_checksum_func_set_ssl_cert_locations(void
+    
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_STAGE_FILE_LINES
 #define UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_STAGE_FILE_LINES
 uint16_t uniffi_gitnotes_git2_checksum_func_stage_file_lines(void
-
+    
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_STAGE_PATHS
 #define UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_STAGE_PATHS
 uint16_t uniffi_gitnotes_git2_checksum_func_stage_paths(void
-
+    
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_UNSTAGE_PATHS
 #define UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_UNSTAGE_PATHS
 uint16_t uniffi_gitnotes_git2_checksum_func_unstage_paths(void
-
+    
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_VERSION
 #define UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_VERSION
 uint16_t uniffi_gitnotes_git2_checksum_func_version(void
-
+    
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_METHOD_PROGRESSLISTENER_ON_PROGRESS
 #define UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_METHOD_PROGRESSLISTENER_ON_PROGRESS
 uint16_t uniffi_gitnotes_git2_checksum_method_progresslistener_on_progress(void
-
+    
 );
 #endif
 #ifndef UNIFFI_FFIDEF_FFI_GITNOTES_GIT2_UNIFFI_CONTRACT_VERSION
 #define UNIFFI_FFIDEF_FFI_GITNOTES_GIT2_UNIFFI_CONTRACT_VERSION
 uint32_t ffi_gitnotes_git2_uniffi_contract_version(void
-
+    
 );
 #endif
+

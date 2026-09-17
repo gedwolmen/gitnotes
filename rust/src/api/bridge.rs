@@ -29,6 +29,44 @@ pub fn set_ssl_cert_file(cert_file: String) -> Result<(), BridgeError> {
     })
 }
 
+/// Sets the SSL certificate directory for Android.
+///
+/// On Android, this is preferred over `set_ssl_cert_file` because OpenSSL's
+/// directory mode uses hash-based certificate lookup, which works directly
+/// with Android's `/apex/com.android.conscrypt/cacerts` directory without
+/// requiring a bundled PEM file.
+///
+/// This must be called from the host app's module-initialization entry point
+/// (`OnCreate` / `applicationDidFinishLaunching`) **before** any engine operation
+/// is dispatched.
+#[uniffi::export]
+pub fn set_ssl_cert_directory(cert_dir: String) -> Result<(), BridgeError> {
+    let path = std::path::Path::new(&cert_dir);
+    android_ca::set_ssl_cert_directory(path).map_err(|e| BridgeError::Other {
+        message: e.to_string(),
+        corruption: false,
+    })
+}
+
+#[uniffi::export]
+pub fn set_ssl_cert_locations(
+    cert_file: String,
+    cert_dir: String,
+) -> Result<(), BridgeError> {
+    let file_path = std::path::Path::new(&cert_file);
+    let dir_path = std::path::Path::new(&cert_dir);
+    let file_exists = file_path.exists();
+    let dir_exists = dir_path.exists();
+    android_ca::set_ssl_cert_locations(
+        file_exists.then_some(file_path),
+        dir_exists.then_some(dir_path),
+    )
+    .map_err(|e| BridgeError::Other {
+        message: e.to_string(),
+        corruption: false,
+    })
+}
+
 /// Errors surfaced across the FFI boundary.
 ///
 /// Kept separate from `EngineError` because UniFFI error types must be
