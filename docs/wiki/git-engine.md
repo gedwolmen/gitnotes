@@ -412,6 +412,54 @@ Release builds on Android use R8 minification (enabled via `enableMinifyInReleas
 
 `-keepclassmembers` alone is insufficient because it does not retain the class itself.
 
+## Android CA Store Configuration
+
+GitHub HTTPS clones use TLS certificate verification. The vendored OpenSSL build in the Rust cdylib does not auto-detect Android's system CA certificate directories. On Android, git2's OpenSSL adapter must be explicitly pointed at the platform's CA store before any network operation.
+
+### How it works
+
+The Kotlin `GitEngineModule.OnCreate` calls `configureAndroidCa()` — a UniFFI-exported function backed by `engine::android_ca::configure_android_ca()` in `rust/src/engine/android_ca.rs`. That function:
+
+1. Checks for `/apex/com.android.conscrypt/cacerts` (Android 10+, **preferred** — Conscrypt APEX module).
+2. Falls back to `/system/etc/security/cacerts` (legacy path) only if the APEX path does not exist.
+3. Validates the directory is readable and non-empty before passing it to `git2::opts::set_ssl_cert_dir`.
+4. If validation fails, the function returns silently and **does not** configure the directory — git2's default behaviour (system CA store) remains active.
+
+On non-Android platforms the function is a no-op.
+
+### Safety contract
+
+`git2::opts::set_ssl_cert_dir` calls into `git_libgit2_opts(GIT_OPT_SET_SSL_CERT_LOCATIONS, …)` which mutates a C global (`git__ssl_ctx`) inside libgit2's OpenSSL adapter. This is **process-global state, not thread-local**. The function is therefore `unsafe`, and the Kotlin call site must satisfy these conditions:
+
+- The call runs **once**, on the **main thread**, before any async engine operations are dispatched.
+- No other thread can be inside a git2 call at the moment of invocation.
+
+`GitEngineModule.OnCreate` satisfies both: it runs on the Android main thread during app startup, before the React Native JS thread has posted any engine work.
+
+### Certificate verification
+
+No certificate bypass is involved. `set_ssl_cert_dir` directs OpenSSL to the Android CA directory; it does not disable verification. GitHub's TLS certificate remains validated against trusted system CAs.
+
+### Rust module: `rust/src/engine/android_ca.rs`
+
+```rust
+// Errors from Android CA configuration.
+pub enum AndroidCaError {
+    SetCertDir(git2::Error),
+    NotReadable(std::io::Error),
+}
+
+// Returns the best available Android CA certificate directory.
+// Pass None for both to use the hardcoded defaults.
+pub fn android_ca_dir(apex_override: Option<&Path>, legacy_override: Option<&Path>) -> Option<PathBuf>
+
+// Configures git2's SSL CA directory for Android.
+// SAFETY: must be called from main thread before any git2 operations.
+pub fn configure_android_ca() -> Result<(), AndroidCaError>
+```
+
+The `#[uniffi::export]` wrapper in `rust/src/api/bridge.rs` exposes `configure_android_ca` as `configureAndroidCa()` to Kotlin. The UniFFI layer maps `AndroidCaError` to `BridgeError::Other`, so Kotlin callers can catch `BridgeException` if the CA configuration fails.
+
 ## Integration with JavaScript Services
 
 The TypeScript facade at `src/services/git/engine/GitEngine.ts` is the single import point for all native Git operations. Services call it directly — there is no intermediate stub layer for real operations.
