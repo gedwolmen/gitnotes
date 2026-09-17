@@ -29,6 +29,15 @@ pub fn set_ssl_cert_file(cert_file: String) -> Result<(), BridgeError> {
     })
 }
 
+#[uniffi::export]
+pub fn set_ssl_cert_directory(cert_dir: String) -> Result<(), BridgeError> {
+    let path = std::path::Path::new(&cert_dir);
+    android_ca::set_ssl_cert_directory(path).map_err(|e| BridgeError::Other {
+        message: e.to_string(),
+        corruption: false,
+    })
+}
+
 /// Errors surfaced across the FFI boundary.
 ///
 /// Kept separate from `EngineError` because UniFFI error types must be

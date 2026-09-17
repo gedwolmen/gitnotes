@@ -4199,13 +4199,21 @@ public func setRemoteUrl(path: String, name: String, url: String)throws   {try r
     )
 }
 }
+public func setSslCertDirectory(certDir: String)throws   {try rustCallWithError(FfiConverterTypeBridgeError_lift) {
+        uniffiCallStatus in
+    uniffi_gitnotes_git2_fn_func_set_ssl_cert_directory(
+        FfiConverterString.lower(certDir),uniffiCallStatus
+    )
+}
+}
 /**
  * Configure git2's SSL CA certificate file for Android.
  *
  * This **must** be called from the host app's module-initialization entry point
  * (`OnCreate` / `applicationDidFinishLaunching`) **before** any engine operation
- * is dispatched. On Android the Kotlin host builds a PEM bundle from the system
- * CA directories and passes the path here; on other platforms this is a no-op.
+ * is dispatched. The Kotlin host builds a PEM bundle from the Android system CA
+ * directories and passes the path here; on non-Android platforms the equivalent
+ * bundle path from the host platform's CA store should be passed.
  *
  * Returns `Ok(())` when the certificate file was configured successfully.
  * Returns `Err(BridgeError)` when `set_ssl_cert_file` failed.
@@ -4400,7 +4408,10 @@ private let initializationResult: InitializationResult = {
     if (uniffi_gitnotes_git2_checksum_func_set_remote_url() != 54340) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_gitnotes_git2_checksum_func_set_ssl_cert_file() != 41418) {
+    if (uniffi_gitnotes_git2_checksum_func_set_ssl_cert_directory() != 50547) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_gitnotes_git2_checksum_func_set_ssl_cert_file() != 26244) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_gitnotes_git2_checksum_func_stage_file_lines() != 26625) {

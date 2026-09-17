@@ -94,6 +94,22 @@ pub fn set_ssl_cert_file(cert_file: &Path) -> Result<(), AndroidCaError> {
     Ok(())
 }
 
+pub fn set_ssl_cert_directory(cert_dir: &Path) -> Result<(), AndroidCaError> {
+    if !cert_dir.is_dir() {
+        return Err(AndroidCaError::NotReadable(std::io::Error::new(
+            std::io::ErrorKind::NotFound,
+            "certificate directory not found",
+        )));
+    }
+
+    // SAFETY: Same contract as `set_ssl_cert_file` — single main-thread call
+    // before any engine operations.
+    unsafe {
+        git2::opts::set_ssl_cert_dir(cert_dir.to_string_lossy().as_ref())?;
+    }
+    Ok(())
+}
+
 /// Returns the best available Android CA certificate directory.
 ///
 /// Prefers the APEX path (`/apex/com.android.conscrypt/cacerts`) when it
