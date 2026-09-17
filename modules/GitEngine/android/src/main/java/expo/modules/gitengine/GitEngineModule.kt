@@ -30,7 +30,10 @@ class GitEngineModule : Module() {
       return
     }
     android.util.Log.i("GitEngine", "configureAndroidCaBundle: bundle=$bundlePath dir=${caDir.absolutePath}")
-    setSslCertLocations(bundlePath, caDir.absolutePath)
+    // setSslCertLocations(bundlePath, caDir.absolutePath) // Omit: SSL_CTX_set_default_verify_paths
+    // (called in openssl_init) already populates the X509 store from /apex/com.android.conscrypt/cacerts.
+    // Calling setSslCertLocations afterward causes X509_R_LOADED_CERT (error:05880020) because
+    // the store is already populated. Android OpenSSL no-stdio cannot load certs via file mode.
   }
 
   /// Returns the path to the CA bundle, building it if necessary.
