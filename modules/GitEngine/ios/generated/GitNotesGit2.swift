@@ -4199,18 +4199,6 @@ public func setRemoteUrl(path: String, name: String, url: String)throws   {try r
     )
 }
 }
-/**
- * Sets the SSL certificate directory for Android.
- *
- * On Android, this is preferred over `set_ssl_cert_file` because OpenSSL's
- * directory mode uses hash-based certificate lookup, which works directly
- * with Android's `/apex/com.android.conscrypt/cacerts` directory without
- * requiring a bundled PEM file.
- *
- * This must be called from the host app's module-initialization entry point
- * (`OnCreate` / `applicationDidFinishLaunching`) **before** any engine operation
- * is dispatched.
- */
 public func setSslCertDirectory(certDir: String)throws   {try rustCallWithError(FfiConverterTypeBridgeError_lift) {
         uniffiCallStatus in
     uniffi_gitnotes_git2_fn_func_set_ssl_cert_directory(
@@ -4234,14 +4222,6 @@ public func setSslCertFile(certFile: String)throws   {try rustCallWithError(FfiC
         uniffiCallStatus in
     uniffi_gitnotes_git2_fn_func_set_ssl_cert_file(
         FfiConverterString.lower(certFile),uniffiCallStatus
-    )
-}
-}
-public func setSslCertLocations(certFile: String, certDir: String)throws   {try rustCallWithError(FfiConverterTypeBridgeError_lift) {
-        uniffiCallStatus in
-    uniffi_gitnotes_git2_fn_func_set_ssl_cert_locations(
-        FfiConverterString.lower(certFile),
-        FfiConverterString.lower(certDir),uniffiCallStatus
     )
 }
 }
@@ -4428,13 +4408,10 @@ private let initializationResult: InitializationResult = {
     if (uniffi_gitnotes_git2_checksum_func_set_remote_url() != 54340) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_gitnotes_git2_checksum_func_set_ssl_cert_directory() != 34027) {
+    if (uniffi_gitnotes_git2_checksum_func_set_ssl_cert_directory() != 50547) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_gitnotes_git2_checksum_func_set_ssl_cert_file() != 26244) {
-        return InitializationResult.apiChecksumMismatch
-    }
-    if (uniffi_gitnotes_git2_checksum_func_set_ssl_cert_locations() != 57313) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_gitnotes_git2_checksum_func_stage_file_lines() != 26625) {
