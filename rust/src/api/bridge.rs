@@ -8,7 +8,25 @@ use crate::api::types::{
     FileStatus, GeneratedKey, HunkSelection, ProgressEvent, PullResult, PushIntegrateResult,
     PushResult, RemoteInfo, RepairReport, RepoInfo, RepoStatus,
 };
-use crate::engine::{self, EngineError};
+use crate::engine::{self, android_ca, EngineError};
+
+/// Configure git2's SSL CA certificate directory for Android.
+///
+/// This **must** be called from the host app's module-initialization entry point
+/// (`OnCreate` / `applicationDidFinishLaunching`) **before** any engine operation
+/// is dispatched. On Android it detects the CA store path and configures git2's
+/// OpenSSL adapter; on other platforms it is a no-op.
+///
+/// Returns `Ok(())` when the CA dir was configured successfully or when neither
+/// Android CA path exists (no-op). Returns `Err(BridgeError)` when the directory
+/// was found but `set_ssl_cert_dir` failed.
+#[uniffi::export]
+pub fn configure_android_ca() -> Result<(), BridgeError> {
+    android_ca::configure_android_ca().map_err(|e| BridgeError::Other {
+        message: e.to_string(),
+        corruption: false,
+    })
+}
 
 /// Errors surfaced across the FFI boundary.
 ///
