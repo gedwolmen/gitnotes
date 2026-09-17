@@ -10,19 +10,20 @@ use crate::api::types::{
 };
 use crate::engine::{self, android_ca, EngineError};
 
-/// Configure git2's SSL CA certificate directory for Android.
+/// Configure git2's SSL CA certificate file for Android.
 ///
 /// This **must** be called from the host app's module-initialization entry point
 /// (`OnCreate` / `applicationDidFinishLaunching`) **before** any engine operation
-/// is dispatched. On Android it detects the CA store path and configures git2's
-/// OpenSSL adapter; on other platforms it is a no-op.
+/// is dispatched. The Kotlin host builds a PEM bundle from the Android system CA
+/// directories and passes the path here; on non-Android platforms the equivalent
+/// bundle path from the host platform's CA store should be passed.
 ///
-/// Returns `Ok(())` when the CA dir was configured successfully or when neither
-/// Android CA path exists (no-op). Returns `Err(BridgeError)` when the directory
-/// was found but `set_ssl_cert_dir` failed.
+/// Returns `Ok(())` when the certificate file was configured successfully.
+/// Returns `Err(BridgeError)` when `set_ssl_cert_file` failed.
 #[uniffi::export]
-pub fn configure_android_ca() -> Result<(), BridgeError> {
-    android_ca::configure_android_ca().map_err(|e| BridgeError::Other {
+pub fn set_ssl_cert_file(cert_file: String) -> Result<(), BridgeError> {
+    let path = std::path::Path::new(&cert_file);
+    android_ca::set_ssl_cert_file(path).map_err(|e| BridgeError::Other {
         message: e.to_string(),
         corruption: false,
     })
