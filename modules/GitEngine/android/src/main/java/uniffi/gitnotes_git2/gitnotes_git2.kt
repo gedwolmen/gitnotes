@@ -344,7 +344,7 @@ internal inline fun<T, reified E: Throwable> uniffiTraitInterfaceCallWithError(
         }
     }
 }
-// Initial value and increment amount for handles. 
+// Initial value and increment amount for handles.
 // These ensure that Kotlin-generated handles always have the lowest bit set
 private const val UNIFFI_HANDLEMAP_INITIAL = 1.toLong()
 private const val UNIFFI_HANDLEMAP_DELTA = 2.toLong()
@@ -354,7 +354,7 @@ private const val UNIFFI_HANDLEMAP_DELTA = 2.toLong()
 // This is used pass an opaque 64-bit handle representing a foreign object to the Rust code.
 internal class UniffiHandleMap<T: Any> {
     private val map = ConcurrentHashMap<Long, T>()
-    // Start 
+    // Start
     private val counter = java.util.concurrent.atomic.AtomicLong(UNIFFI_HANDLEMAP_INITIAL)
 
     val size: Int
@@ -710,8 +710,6 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_gitnotes_git2_checksum_func_commit_diff(
     ): Int
-    external fun uniffi_gitnotes_git2_checksum_func_configure_android_ca(
-    ): Int
     external fun uniffi_gitnotes_git2_checksum_func_create_branch(
     ): Int
     external fun uniffi_gitnotes_git2_checksum_func_delete_branch(
@@ -778,6 +776,8 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_gitnotes_git2_checksum_func_set_remote_url(
     ): Int
+    external fun uniffi_gitnotes_git2_checksum_func_set_ssl_cert_file(
+    ): Int
     external fun uniffi_gitnotes_git2_checksum_func_stage_file_lines(
     ): Int
     external fun uniffi_gitnotes_git2_checksum_func_stage_paths(
@@ -791,129 +791,129 @@ internal object IntegrityCheckingUniffiLib {
     external fun ffi_gitnotes_git2_uniffi_contract_version(
     ): Int
 
-        
+
 }
 
 internal object UniffiLib {
-    
+
     // The Cleaner for the whole library
     internal val CLEANER: UniffiCleaner by lazy {
         UniffiCleaner.create()
     }
-    
+
 
     init {
         Native.register(UniffiLib::class.java, findLibraryName(componentName = "gitnotes_git2"))
         uniffiCallbackInterfaceProgressListener.register(this)
-        
+
     }
-    external fun uniffi_gitnotes_git2_fn_clone_progresslistener(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    external fun uniffi_gitnotes_git2_fn_clone_progresslistener(`handle`: Long,uniffi_out_err: UniffiRustCallStatus,
     ): Long
-    external fun uniffi_gitnotes_git2_fn_free_progresslistener(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    external fun uniffi_gitnotes_git2_fn_free_progresslistener(`handle`: Long,uniffi_out_err: UniffiRustCallStatus,
     ): Unit
     external fun uniffi_gitnotes_git2_fn_init_callback_vtable_progresslistener(`vtable`: UniffiVTableCallbackInterfaceProgressListener,
     ): Unit
-    external fun uniffi_gitnotes_git2_fn_method_progresslistener_on_progress(`ptr`: Long,`event`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    external fun uniffi_gitnotes_git2_fn_method_progresslistener_on_progress(`ptr`: Long,`event`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
     ): Unit
-    external fun uniffi_gitnotes_git2_fn_func_add_remote(`path`: RustBuffer.ByValue,`name`: RustBuffer.ByValue,`url`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    external fun uniffi_gitnotes_git2_fn_func_add_remote(`path`: RustBuffer.ByValue,`name`: RustBuffer.ByValue,`url`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
     ): Unit
-    external fun uniffi_gitnotes_git2_fn_func_backup_corrupt_repo(`path`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    external fun uniffi_gitnotes_git2_fn_func_backup_corrupt_repo(`path`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
-    external fun uniffi_gitnotes_git2_fn_func_checkout_branch(`path`: RustBuffer.ByValue,`name`: RustBuffer.ByValue,`remoteName`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    external fun uniffi_gitnotes_git2_fn_func_checkout_branch(`path`: RustBuffer.ByValue,`name`: RustBuffer.ByValue,`remoteName`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
     ): Unit
-    external fun uniffi_gitnotes_git2_fn_func_checkout_commit(`path`: RustBuffer.ByValue,`commitId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    external fun uniffi_gitnotes_git2_fn_func_checkout_commit(`path`: RustBuffer.ByValue,`commitId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
     ): Unit
-    external fun uniffi_gitnotes_git2_fn_func_clear_credential(`repoId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    external fun uniffi_gitnotes_git2_fn_func_clear_credential(`repoId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
     ): Byte
-    external fun uniffi_gitnotes_git2_fn_func_clone_repo_with_progress(`url`: RustBuffer.ByValue,`dest`: RustBuffer.ByValue,`repoId`: RustBuffer.ByValue,`credentialSource`: RustBuffer.ByValue,`listener`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    external fun uniffi_gitnotes_git2_fn_func_clone_repo_with_progress(`url`: RustBuffer.ByValue,`dest`: RustBuffer.ByValue,`repoId`: RustBuffer.ByValue,`credentialSource`: RustBuffer.ByValue,`listener`: Long,uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
-    external fun uniffi_gitnotes_git2_fn_func_commit_changes(`path`: RustBuffer.ByValue,`message`: RustBuffer.ByValue,`author`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    external fun uniffi_gitnotes_git2_fn_func_commit_changes(`path`: RustBuffer.ByValue,`message`: RustBuffer.ByValue,`author`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
-    external fun uniffi_gitnotes_git2_fn_func_commit_diff(`path`: RustBuffer.ByValue,`commitId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    external fun uniffi_gitnotes_git2_fn_func_commit_diff(`path`: RustBuffer.ByValue,`commitId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
-    external fun uniffi_gitnotes_git2_fn_func_configure_android_ca(uniffi_out_err: UniffiRustCallStatus,
+    external fun uniffi_gitnotes_git2_fn_func_create_branch(`path`: RustBuffer.ByValue,`name`: RustBuffer.ByValue,`source`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+    external fun uniffi_gitnotes_git2_fn_func_delete_branch(`path`: RustBuffer.ByValue,`name`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
     ): Unit
-    external fun uniffi_gitnotes_git2_fn_func_create_branch(`path`: RustBuffer.ByValue,`name`: RustBuffer.ByValue,`source`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    external fun uniffi_gitnotes_git2_fn_func_diff_all(`path`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
-    external fun uniffi_gitnotes_git2_fn_func_delete_branch(`path`: RustBuffer.ByValue,`name`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    external fun uniffi_gitnotes_git2_fn_func_diff_file(`path`: RustBuffer.ByValue,`filePath`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+    external fun uniffi_gitnotes_git2_fn_func_discard_files(`path`: RustBuffer.ByValue,`paths`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
     ): Unit
-    external fun uniffi_gitnotes_git2_fn_func_diff_all(`path`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    external fun uniffi_gitnotes_git2_fn_func_engine_name(uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
-    external fun uniffi_gitnotes_git2_fn_func_diff_file(`path`: RustBuffer.ByValue,`filePath`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    external fun uniffi_gitnotes_git2_fn_func_discard_files(`path`: RustBuffer.ByValue,`paths`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    external fun uniffi_gitnotes_git2_fn_func_fetch_repo_with_progress(`path`: RustBuffer.ByValue,`remoteName`: RustBuffer.ByValue,`repoId`: RustBuffer.ByValue,`credentialSource`: RustBuffer.ByValue,`listener`: Long,uniffi_out_err: UniffiRustCallStatus,
     ): Unit
-    external fun uniffi_gitnotes_git2_fn_func_engine_name(uniffi_out_err: UniffiRustCallStatus, 
+    external fun uniffi_gitnotes_git2_fn_func_generate_ssh_key(`passphrase`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
-    external fun uniffi_gitnotes_git2_fn_func_fetch_repo_with_progress(`path`: RustBuffer.ByValue,`remoteName`: RustBuffer.ByValue,`repoId`: RustBuffer.ByValue,`credentialSource`: RustBuffer.ByValue,`listener`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    external fun uniffi_gitnotes_git2_fn_func_get_conflict_blobs(`path`: RustBuffer.ByValue,`filePath`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+    external fun uniffi_gitnotes_git2_fn_func_get_conflicts(`path`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+    external fun uniffi_gitnotes_git2_fn_func_get_credential(`repoId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+    external fun uniffi_gitnotes_git2_fn_func_init_repo(`path`: RustBuffer.ByValue,`bare`: Byte,uniffi_out_err: UniffiRustCallStatus,
     ): Unit
-    external fun uniffi_gitnotes_git2_fn_func_generate_ssh_key(`passphrase`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    external fun uniffi_gitnotes_git2_fn_func_get_conflict_blobs(`path`: RustBuffer.ByValue,`filePath`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    external fun uniffi_gitnotes_git2_fn_func_get_conflicts(`path`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    external fun uniffi_gitnotes_git2_fn_func_get_credential(`repoId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    external fun uniffi_gitnotes_git2_fn_func_init_repo(`path`: RustBuffer.ByValue,`bare`: Byte,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    external fun uniffi_gitnotes_git2_fn_func_is_repo_locked(`path`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    external fun uniffi_gitnotes_git2_fn_func_is_repo_locked(`path`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
     ): Byte
-    external fun uniffi_gitnotes_git2_fn_func_list_branches(`path`: RustBuffer.ByValue,`remoteName`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    external fun uniffi_gitnotes_git2_fn_func_list_branches(`path`: RustBuffer.ByValue,`remoteName`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
-    external fun uniffi_gitnotes_git2_fn_func_list_remotes(`path`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    external fun uniffi_gitnotes_git2_fn_func_list_remotes(`path`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
-    external fun uniffi_gitnotes_git2_fn_func_list_statuses(`path`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    external fun uniffi_gitnotes_git2_fn_func_list_statuses(`path`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
-    external fun uniffi_gitnotes_git2_fn_func_mark_conflict_resolved(`path`: RustBuffer.ByValue,`filePath`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    external fun uniffi_gitnotes_git2_fn_func_mark_conflict_resolved(`path`: RustBuffer.ByValue,`filePath`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
     ): Unit
-    external fun uniffi_gitnotes_git2_fn_func_pull_repo(`path`: RustBuffer.ByValue,`remoteName`: RustBuffer.ByValue,`repoId`: RustBuffer.ByValue,`credentialSource`: RustBuffer.ByValue,`listener`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    external fun uniffi_gitnotes_git2_fn_func_pull_repo(`path`: RustBuffer.ByValue,`remoteName`: RustBuffer.ByValue,`repoId`: RustBuffer.ByValue,`credentialSource`: RustBuffer.ByValue,`listener`: Long,uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
-    external fun uniffi_gitnotes_git2_fn_func_push_repo(`path`: RustBuffer.ByValue,`remoteName`: RustBuffer.ByValue,`repoId`: RustBuffer.ByValue,`credentialSource`: RustBuffer.ByValue,`force`: Byte,`listener`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    external fun uniffi_gitnotes_git2_fn_func_push_repo(`path`: RustBuffer.ByValue,`remoteName`: RustBuffer.ByValue,`repoId`: RustBuffer.ByValue,`credentialSource`: RustBuffer.ByValue,`force`: Byte,`listener`: Long,uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
-    external fun uniffi_gitnotes_git2_fn_func_push_repo_with_integrate(`path`: RustBuffer.ByValue,`remoteName`: RustBuffer.ByValue,`repoId`: RustBuffer.ByValue,`credentialSource`: RustBuffer.ByValue,`listener`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    external fun uniffi_gitnotes_git2_fn_func_push_repo_with_integrate(`path`: RustBuffer.ByValue,`remoteName`: RustBuffer.ByValue,`repoId`: RustBuffer.ByValue,`credentialSource`: RustBuffer.ByValue,`listener`: Long,uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
-    external fun uniffi_gitnotes_git2_fn_func_recent_commits(`path`: RustBuffer.ByValue,`skip`: Int,`limit`: Int,uniffi_out_err: UniffiRustCallStatus, 
+    external fun uniffi_gitnotes_git2_fn_func_recent_commits(`path`: RustBuffer.ByValue,`skip`: Int,`limit`: Int,uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
-    external fun uniffi_gitnotes_git2_fn_func_remove_paths(`path`: RustBuffer.ByValue,`paths`: RustBuffer.ByValue,`keepWorktree`: Byte,uniffi_out_err: UniffiRustCallStatus, 
+    external fun uniffi_gitnotes_git2_fn_func_remove_paths(`path`: RustBuffer.ByValue,`paths`: RustBuffer.ByValue,`keepWorktree`: Byte,uniffi_out_err: UniffiRustCallStatus,
     ): Unit
-    external fun uniffi_gitnotes_git2_fn_func_remove_remote(`path`: RustBuffer.ByValue,`name`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    external fun uniffi_gitnotes_git2_fn_func_remove_remote(`path`: RustBuffer.ByValue,`name`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
     ): Unit
-    external fun uniffi_gitnotes_git2_fn_func_remove_repo(`path`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    external fun uniffi_gitnotes_git2_fn_func_remove_repo(`path`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
     ): Unit
-    external fun uniffi_gitnotes_git2_fn_func_rename_branch(`path`: RustBuffer.ByValue,`name`: RustBuffer.ByValue,`newName`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    external fun uniffi_gitnotes_git2_fn_func_rename_branch(`path`: RustBuffer.ByValue,`name`: RustBuffer.ByValue,`newName`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
-    external fun uniffi_gitnotes_git2_fn_func_repair_repo(`path`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    external fun uniffi_gitnotes_git2_fn_func_repair_repo(`path`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
-    external fun uniffi_gitnotes_git2_fn_func_repo_info(`path`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    external fun uniffi_gitnotes_git2_fn_func_repo_info(`path`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
-    external fun uniffi_gitnotes_git2_fn_func_repo_status(`repoId`: RustBuffer.ByValue,`path`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    external fun uniffi_gitnotes_git2_fn_func_repo_status(`repoId`: RustBuffer.ByValue,`path`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
-    external fun uniffi_gitnotes_git2_fn_func_reset_soft(`path`: RustBuffer.ByValue,`commitId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    external fun uniffi_gitnotes_git2_fn_func_reset_soft(`path`: RustBuffer.ByValue,`commitId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
     ): Unit
-    external fun uniffi_gitnotes_git2_fn_func_resolve_conflict(`path`: RustBuffer.ByValue,`filePath`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    external fun uniffi_gitnotes_git2_fn_func_resolve_conflict(`path`: RustBuffer.ByValue,`filePath`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
     ): Unit
-    external fun uniffi_gitnotes_git2_fn_func_revert_commit(`path`: RustBuffer.ByValue,`commitId`: RustBuffer.ByValue,`author`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    external fun uniffi_gitnotes_git2_fn_func_revert_commit(`path`: RustBuffer.ByValue,`commitId`: RustBuffer.ByValue,`author`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
-    external fun uniffi_gitnotes_git2_fn_func_set_credential(`repoId`: RustBuffer.ByValue,`credential`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    external fun uniffi_gitnotes_git2_fn_func_set_credential(`repoId`: RustBuffer.ByValue,`credential`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
     ): Unit
-    external fun uniffi_gitnotes_git2_fn_func_set_remote_url(`path`: RustBuffer.ByValue,`name`: RustBuffer.ByValue,`url`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    external fun uniffi_gitnotes_git2_fn_func_set_remote_url(`path`: RustBuffer.ByValue,`name`: RustBuffer.ByValue,`url`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
     ): Unit
-    external fun uniffi_gitnotes_git2_fn_func_stage_file_lines(`path`: RustBuffer.ByValue,`filePath`: RustBuffer.ByValue,`hunks`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    external fun uniffi_gitnotes_git2_fn_func_set_ssl_cert_file(`certFile`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
     ): Unit
-    external fun uniffi_gitnotes_git2_fn_func_stage_paths(`path`: RustBuffer.ByValue,`paths`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    external fun uniffi_gitnotes_git2_fn_func_stage_file_lines(`path`: RustBuffer.ByValue,`filePath`: RustBuffer.ByValue,`hunks`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
     ): Unit
-    external fun uniffi_gitnotes_git2_fn_func_unstage_paths(`path`: RustBuffer.ByValue,`paths`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    external fun uniffi_gitnotes_git2_fn_func_stage_paths(`path`: RustBuffer.ByValue,`paths`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
     ): Unit
-    external fun uniffi_gitnotes_git2_fn_func_version(uniffi_out_err: UniffiRustCallStatus, 
+    external fun uniffi_gitnotes_git2_fn_func_unstage_paths(`path`: RustBuffer.ByValue,`paths`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
+    ): Unit
+    external fun uniffi_gitnotes_git2_fn_func_version(uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
-    external fun ffi_gitnotes_git2_rustbuffer_alloc(`size`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    external fun ffi_gitnotes_git2_rustbuffer_alloc(`size`: Long,uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
-    external fun ffi_gitnotes_git2_rustbuffer_from_bytes(`bytes`: ForeignBytes.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    external fun ffi_gitnotes_git2_rustbuffer_from_bytes(`bytes`: ForeignBytes.ByValue,uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
-    external fun ffi_gitnotes_git2_rustbuffer_free(`buf`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    external fun ffi_gitnotes_git2_rustbuffer_free(`buf`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
     ): Unit
-    external fun ffi_gitnotes_git2_rustbuffer_reserve(`buf`: RustBuffer.ByValue,`additional`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    external fun ffi_gitnotes_git2_rustbuffer_reserve(`buf`: RustBuffer.ByValue,`additional`: Long,uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
     external fun ffi_gitnotes_git2_rust_future_poll_u8(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
     ): Unit
@@ -921,7 +921,7 @@ internal object UniffiLib {
     ): Unit
     external fun ffi_gitnotes_git2_rust_future_free_u8(`handle`: Long,
     ): Unit
-    external fun ffi_gitnotes_git2_rust_future_complete_u8(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    external fun ffi_gitnotes_git2_rust_future_complete_u8(`handle`: Long,uniffi_out_err: UniffiRustCallStatus,
     ): Int
     external fun ffi_gitnotes_git2_rust_future_poll_i8(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
     ): Unit
@@ -929,7 +929,7 @@ internal object UniffiLib {
     ): Unit
     external fun ffi_gitnotes_git2_rust_future_free_i8(`handle`: Long,
     ): Unit
-    external fun ffi_gitnotes_git2_rust_future_complete_i8(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    external fun ffi_gitnotes_git2_rust_future_complete_i8(`handle`: Long,uniffi_out_err: UniffiRustCallStatus,
     ): Byte
     external fun ffi_gitnotes_git2_rust_future_poll_u16(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
     ): Unit
@@ -937,7 +937,7 @@ internal object UniffiLib {
     ): Unit
     external fun ffi_gitnotes_git2_rust_future_free_u16(`handle`: Long,
     ): Unit
-    external fun ffi_gitnotes_git2_rust_future_complete_u16(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    external fun ffi_gitnotes_git2_rust_future_complete_u16(`handle`: Long,uniffi_out_err: UniffiRustCallStatus,
     ): Int
     external fun ffi_gitnotes_git2_rust_future_poll_i16(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
     ): Unit
@@ -945,7 +945,7 @@ internal object UniffiLib {
     ): Unit
     external fun ffi_gitnotes_git2_rust_future_free_i16(`handle`: Long,
     ): Unit
-    external fun ffi_gitnotes_git2_rust_future_complete_i16(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    external fun ffi_gitnotes_git2_rust_future_complete_i16(`handle`: Long,uniffi_out_err: UniffiRustCallStatus,
     ): Short
     external fun ffi_gitnotes_git2_rust_future_poll_u32(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
     ): Unit
@@ -953,7 +953,7 @@ internal object UniffiLib {
     ): Unit
     external fun ffi_gitnotes_git2_rust_future_free_u32(`handle`: Long,
     ): Unit
-    external fun ffi_gitnotes_git2_rust_future_complete_u32(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    external fun ffi_gitnotes_git2_rust_future_complete_u32(`handle`: Long,uniffi_out_err: UniffiRustCallStatus,
     ): Int
     external fun ffi_gitnotes_git2_rust_future_poll_i32(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
     ): Unit
@@ -961,7 +961,7 @@ internal object UniffiLib {
     ): Unit
     external fun ffi_gitnotes_git2_rust_future_free_i32(`handle`: Long,
     ): Unit
-    external fun ffi_gitnotes_git2_rust_future_complete_i32(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    external fun ffi_gitnotes_git2_rust_future_complete_i32(`handle`: Long,uniffi_out_err: UniffiRustCallStatus,
     ): Int
     external fun ffi_gitnotes_git2_rust_future_poll_u64(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
     ): Unit
@@ -969,7 +969,7 @@ internal object UniffiLib {
     ): Unit
     external fun ffi_gitnotes_git2_rust_future_free_u64(`handle`: Long,
     ): Unit
-    external fun ffi_gitnotes_git2_rust_future_complete_u64(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    external fun ffi_gitnotes_git2_rust_future_complete_u64(`handle`: Long,uniffi_out_err: UniffiRustCallStatus,
     ): Long
     external fun ffi_gitnotes_git2_rust_future_poll_i64(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
     ): Unit
@@ -977,7 +977,7 @@ internal object UniffiLib {
     ): Unit
     external fun ffi_gitnotes_git2_rust_future_free_i64(`handle`: Long,
     ): Unit
-    external fun ffi_gitnotes_git2_rust_future_complete_i64(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    external fun ffi_gitnotes_git2_rust_future_complete_i64(`handle`: Long,uniffi_out_err: UniffiRustCallStatus,
     ): Long
     external fun ffi_gitnotes_git2_rust_future_poll_f32(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
     ): Unit
@@ -985,7 +985,7 @@ internal object UniffiLib {
     ): Unit
     external fun ffi_gitnotes_git2_rust_future_free_f32(`handle`: Long,
     ): Unit
-    external fun ffi_gitnotes_git2_rust_future_complete_f32(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    external fun ffi_gitnotes_git2_rust_future_complete_f32(`handle`: Long,uniffi_out_err: UniffiRustCallStatus,
     ): Float
     external fun ffi_gitnotes_git2_rust_future_poll_f64(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
     ): Unit
@@ -993,7 +993,7 @@ internal object UniffiLib {
     ): Unit
     external fun ffi_gitnotes_git2_rust_future_free_f64(`handle`: Long,
     ): Unit
-    external fun ffi_gitnotes_git2_rust_future_complete_f64(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    external fun ffi_gitnotes_git2_rust_future_complete_f64(`handle`: Long,uniffi_out_err: UniffiRustCallStatus,
     ): Double
     external fun ffi_gitnotes_git2_rust_future_poll_rust_buffer(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
     ): Unit
@@ -1001,7 +1001,7 @@ internal object UniffiLib {
     ): Unit
     external fun ffi_gitnotes_git2_rust_future_free_rust_buffer(`handle`: Long,
     ): Unit
-    external fun ffi_gitnotes_git2_rust_future_complete_rust_buffer(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    external fun ffi_gitnotes_git2_rust_future_complete_rust_buffer(`handle`: Long,uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
     external fun ffi_gitnotes_git2_rust_future_poll_void(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
     ): Unit
@@ -1009,10 +1009,10 @@ internal object UniffiLib {
     ): Unit
     external fun ffi_gitnotes_git2_rust_future_free_void(`handle`: Long,
     ): Unit
-    external fun ffi_gitnotes_git2_rust_future_complete_void(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    external fun ffi_gitnotes_git2_rust_future_complete_void(`handle`: Long,uniffi_out_err: UniffiRustCallStatus,
     ): Unit
 
-        
+
 }
 
 private fun uniffiCheckContractApiVersion(lib: IntegrityCheckingUniffiLib) {
@@ -1098,7 +1098,7 @@ inline fun <T : Disposable?, R> T.use(block: (T) -> R) =
         }
     }
 
-/** 
+/**
  * Placeholder object used to signal that we're constructing an interface with a FFI handle.
  *
  * This is the first argument for interface constructors that input a raw handle. It exists is that
@@ -1109,7 +1109,7 @@ inline fun <T : Disposable?, R> T.use(block: (T) -> R) =
  * */
 object UniffiWithHandle
 
-/** 
+/**
  * Used to instantiate an interface without an actual pointer, for fakes in tests, mostly.
  *
  * @suppress
@@ -1463,9 +1463,9 @@ public object FfiConverterString: FfiConverter<String, RustBuffer.ByValue> {
  * hop to their own event-dispatch thread before touching UI/JS runtimes.
  */
 public interface ProgressListener {
-    
+
     fun `onProgress`(`event`: ProgressEvent)
-    
+
     companion object
 }
 
@@ -1582,22 +1582,25 @@ open class ProgressListenerImpl: Disposable, AutoCloseable, ProgressListener
     uniffiRustCall() { _status ->
     UniffiLib.uniffi_gitnotes_git2_fn_method_progresslistener_on_progress(
         it,
-        
+
         FfiConverterTypeProgressEvent.lower(`event`),_status)
 }
     }
 
 
-    
 
 
-    
-    
+
+
+
+
+
+
     /**
      * @suppress
      */
     companion object
-    
+
 }
 
 
@@ -1687,15 +1690,15 @@ public object FfiConverterTypeProgressListener: FfiConverter<ProgressListener, L
  */
 data class Author (
     var `name`: kotlin.String
-    , 
+    ,
     var `email`: kotlin.String
-    
+
 ){
-    
 
-    
 
-    
+
+
+
     companion object
 }
 
@@ -1731,38 +1734,38 @@ data class BranchInfo (
      * Short branch name (no `refs/heads/` prefix).
      */
     var `name`: kotlin.String
-    , 
+    ,
     /**
      * Upstream remote branch (`origin/main`), when tracking is configured.
      */
     var `upstream`: kotlin.String?
-    , 
+    ,
     /**
      * True when this branch is the current HEAD.
      */
     var `isCurrent`: kotlin.Boolean
-    , 
+    ,
     /**
      * True for remote-tracking branches.
      */
     var `isRemote`: kotlin.Boolean
-    , 
+    ,
     /**
      * Commits this branch is ahead of its upstream.
      */
     var `ahead`: kotlin.UInt
-    , 
+    ,
     /**
      * Commits this branch is behind its upstream.
      */
     var `behind`: kotlin.UInt
-    
+
 ){
-    
 
-    
 
-    
+
+
+
     companion object
 }
 
@@ -1810,52 +1813,52 @@ data class CommitInfo (
      * Full 40-char hex object id.
      */
     var `id`: kotlin.String
-    , 
+    ,
     /**
      * Short (7-char) hex id.
      */
     var `shortId`: kotlin.String
-    , 
+    ,
     /**
      * Full commit message (may contain newlines).
      */
     var `message`: kotlin.String
-    , 
+    ,
     /**
      * First paragraph of the message.
      */
     var `summary`: kotlin.String
-    , 
+    ,
     var `authorName`: kotlin.String
-    , 
+    ,
     var `authorEmail`: kotlin.String
-    , 
+    ,
     /**
      * Author timestamp, unix seconds.
      */
     var `authorTime`: kotlin.Long
-    , 
+    ,
     /**
      * Committer timestamp, unix seconds.
      */
     var `committerTime`: kotlin.Long
-    , 
+    ,
     /**
      * Number of parents (0 = root).
      */
     var `parentCount`: kotlin.UInt
-    , 
+    ,
     /**
      * Parent commit ids.
      */
     var `parents`: List<kotlin.String>
-    
+
 ){
-    
 
-    
 
-    
+
+
+
     companion object
 }
 
@@ -1918,28 +1921,28 @@ data class ConflictBlobs (
      * Repo-relative path of the conflicted file.
      */
     var `path`: kotlin.String
-    , 
+    ,
     /**
      * Stage-1 (merge base) blob content, if present.
      */
     var `base`: kotlin.String?
-    , 
+    ,
     /**
      * Stage-2 ("ours") blob content (empty when the stage is absent).
      */
     var `ours`: kotlin.String
-    , 
+    ,
     /**
      * Stage-3 ("theirs") blob content (empty when the stage is absent).
      */
     var `theirs`: kotlin.String
-    
+
 ){
-    
 
-    
 
-    
+
+
+
     companion object
 }
 
@@ -1981,33 +1984,33 @@ data class ConflictEntry (
      * Repo-relative path of the conflicted file.
      */
     var `path`: kotlin.String
-    , 
+    ,
     /**
      * Stage-2 ("ours") blob id, if present.
      */
     var `ours`: kotlin.String?
-    , 
+    ,
     /**
      * Stage-3 ("theirs") blob id, if present.
      */
     var `theirs`: kotlin.String?
-    , 
+    ,
     /**
      * Stage-1 (merge base / ancestor) blob id, if present.
      */
     var `ancestor`: kotlin.String?
-    , 
+    ,
     /**
      * Short human description of the conflict state.
      */
     var `status`: kotlin.String
-    
+
 ){
-    
 
-    
 
-    
+
+
+
     companion object
 }
 
@@ -2054,28 +2057,28 @@ data class ConflictFile (
      * Repo-relative path of the conflicted file.
      */
     var `path`: kotlin.String
-    , 
+    ,
     /**
      * Stage-1 (merge base) blob id, if present.
      */
     var `base`: kotlin.String?
-    , 
+    ,
     /**
      * Stage-2 ("ours") blob id, if present.
      */
     var `ours`: kotlin.String?
-    , 
+    ,
     /**
      * Stage-3 ("theirs") blob id, if present.
      */
     var `theirs`: kotlin.String?
-    
+
 ){
-    
 
-    
 
-    
+
+
+
     companion object
 }
 
@@ -2124,30 +2127,30 @@ data class DiffLine (
      * this index.
      */
     var `index`: kotlin.UInt
-    , 
+    ,
     var `origin`: DiffLineOrigin
-    , 
+    ,
     /**
      * 1-based line number in the old (left) file, when applicable.
      */
     var `oldLineno`: kotlin.UInt?
-    , 
+    ,
     /**
      * 1-based line number in the new (right) file, when applicable.
      */
     var `newLineno`: kotlin.UInt?
-    , 
+    ,
     /**
      * Raw line content: origin prefix + text + newline.
      */
     var `content`: kotlin.String
-    
+
 ){
-    
 
-    
 
-    
+
+
+
     companion object
 }
 
@@ -2192,29 +2195,29 @@ data class FileDiff (
      * Repo-relative path.
      */
     var `path`: kotlin.String
-    , 
+    ,
     var `status`: FileStatusKind
-    , 
+    ,
     /**
      * True when the file is binary (no line diff available).
      */
     var `isBinary`: kotlin.Boolean
-    , 
+    ,
     var `added`: kotlin.UInt
-    , 
+    ,
     var `deleted`: kotlin.UInt
-    , 
+    ,
     /**
      * Line-level changes (empty when `is_binary` or unmodified).
      */
     var `lines`: List<DiffLine>
-    
+
 ){
-    
 
-    
 
-    
+
+
+
     companion object
 }
 
@@ -2262,35 +2265,35 @@ data class FileStatus (
      * Repo-relative path, POSIX separators.
      */
     var `path`: kotlin.String
-    , 
+    ,
     var `status`: FileStatusKind
-    , 
+    ,
     /**
      * True when the change is staged in the index.
      */
     var `staged`: kotlin.Boolean
-    , 
+    ,
     /**
      * True when the path is involved in an unresolved merge conflict.
      */
     var `conflicted`: kotlin.Boolean
-    , 
+    ,
     /**
      * Raw git2 index status code as a string (e.g. `INDEX_NEW|INDEX_MODIFIED`).
      */
     var `indexStatus`: kotlin.String
-    , 
+    ,
     /**
      * Raw git2 workdir status code as a string (e.g. `WT_MODIFIED`).
      */
     var `workdirStatus`: kotlin.String
-    
+
 ){
-    
 
-    
 
-    
+
+
+
     companion object
 }
 
@@ -2338,19 +2341,19 @@ data class GeneratedKey (
      * Public key in OpenSSH `authorized_keys` format (`ssh-ed25519 AAAA…`).
      */
     var `publicKey`: kotlin.String
-    , 
+    ,
     /**
      * Private key in OpenSSH PEM format, passphrase-encrypted when the caller
      * provided a passphrase. ~400 bytes for ed25519 (fits secure-store).
      */
     var `privateKey`: kotlin.String
-    
+
 ){
-    
 
-    
 
-    
+
+
+
     companion object
 }
 
@@ -2384,13 +2387,13 @@ public object FfiConverterTypeGeneratedKey: FfiConverterRustBuffer<GeneratedKey>
  */
 data class HunkSelection (
     var `lineIndices`: List<kotlin.UInt>
-    
+
 ){
-    
 
-    
 
-    
+
+
+
     companion object
 }
 
@@ -2420,29 +2423,29 @@ public object FfiConverterTypeHunkSelection: FfiConverterRustBuffer<HunkSelectio
  */
 data class ProgressEvent (
     var `kind`: ProgressKind
-    , 
+    ,
     /**
      * Human-readable task line (e.g. sideband progress text).
      */
     var `text`: kotlin.String
-    , 
+    ,
     var `received`: kotlin.ULong
-    , 
+    ,
     var `indexed`: kotlin.ULong
-    , 
+    ,
     var `total`: kotlin.ULong
-    , 
+    ,
     /**
      * 0-100 percent of the transfer/indexing phase.
      */
     var `percent`: kotlin.UInt
-    
+
 ){
-    
 
-    
 
-    
+
+
+
     companion object
 }
 
@@ -2487,23 +2490,23 @@ public object FfiConverterTypeProgressEvent: FfiConverterRustBuffer<ProgressEven
  */
 data class PullResult (
     var `kind`: PullKind
-    , 
+    ,
     /**
      * Human-readable outcome text.
      */
     var `message`: kotlin.String
-    , 
+    ,
     /**
      * Conflicted paths when `kind == Conflict`.
      */
     var `conflicts`: List<ConflictEntry>
-    
+
 ){
-    
 
-    
 
-    
+
+
+
     companion object
 }
 
@@ -2543,28 +2546,28 @@ data class PushIntegrateResult (
      * True when the branch ended up pushed to the remote.
      */
     var `pushed`: kotlin.Boolean
-    , 
+    ,
     /**
      * True when the engine integrated local/remote history (rebase, merge, or
      * fast-forward) as part of this op.
      */
     var `integrated`: kotlin.Boolean
-    , 
+    ,
     var `kind`: PushIntegrateKind
-    , 
+    ,
     /**
      * Conflicted paths when `kind == Conflicts` (repo left mid-merge).
      */
     var `conflicts`: List<ConflictFile>
-    , 
+    ,
     var `message`: kotlin.String
-    
+
 ){
-    
 
-    
 
-    
+
+
+
     companion object
 }
 
@@ -2609,20 +2612,20 @@ data class PushResult (
      * True when the branch was pushed to the remote.
      */
     var `pushed`: kotlin.Boolean
-    , 
+    ,
     /**
      * True when the remote rejected the push as non-fast-forward.
      */
     var `nonFastForward`: kotlin.Boolean
-    , 
+    ,
     var `message`: kotlin.String
-    
+
 ){
-    
 
-    
 
-    
+
+
+
     companion object
 }
 
@@ -2658,28 +2661,28 @@ public object FfiConverterTypePushResult: FfiConverterRustBuffer<PushResult> {
  */
 data class RemoteInfo (
     var `name`: kotlin.String
-    , 
+    ,
     /**
      * Remote URL, if configured.
      */
     var `url`: kotlin.String?
-    , 
+    ,
     /**
      * Fetch refspecs.
      */
     var `fetchSpecs`: List<kotlin.String>
-    , 
+    ,
     /**
      * Push refspecs.
      */
     var `pushSpecs`: List<kotlin.String>
-    
+
 ){
-    
 
-    
 
-    
+
+
+
     companion object
 }
 
@@ -2721,38 +2724,38 @@ data class RepairReport (
      * True when a missing/corrupt index was rebuilt from HEAD.
      */
     var `indexRebuilt`: kotlin.Boolean
-    , 
+    ,
     /**
      * Number of corrupted loose objects pruned.
      */
     var `looseObjectsPruned`: kotlin.UInt
-    , 
+    ,
     /**
      * True when a stale FETCH_HEAD was deleted.
      */
     var `fetchHeadDeleted`: kotlin.Boolean
-    , 
+    ,
     /**
      * Human descriptions of repairs performed.
      */
     var `repaired`: List<kotlin.String>
-    , 
+    ,
     /**
      * Human descriptions of repair steps that failed.
      */
     var `unrecoverable`: List<kotlin.String>
-    , 
+    ,
     /**
      * True when the repository passes a final health check (`status` works).
      */
     var `isHealthy`: kotlin.Boolean
-    
+
 ){
-    
 
-    
 
-    
+
+
+
     companion object
 }
 
@@ -2797,31 +2800,31 @@ public object FfiConverterTypeRepairReport: FfiConverterRustBuffer<RepairReport>
  */
 data class RepoInfo (
     var `path`: kotlin.String
-    , 
+    ,
     var `isRepo`: kotlin.Boolean
-    , 
+    ,
     var `currentBranch`: kotlin.String?
-    , 
+    ,
     /**
      * HEAD commit id, when one exists.
      */
     var `headOid`: kotlin.String?
-    , 
+    ,
     var `remotes`: List<kotlin.String>
-    , 
+    ,
     var `totalCommits`: kotlin.ULong
-    , 
+    ,
     /**
      * True when there are no staged/unstaged/untracked changes.
      */
     var `isClean`: kotlin.Boolean
-    
+
 ){
-    
 
-    
 
-    
+
+
+
     companion object
 }
 
@@ -2872,56 +2875,56 @@ data class RepoStatus (
      * Uuid of the repo as registered by the host app.
      */
     var `repoId`: kotlin.String
-    , 
+    ,
     /**
      * Absolute path to the repository working tree.
      */
     var `path`: kotlin.String
-    , 
+    ,
     /**
      * Whether `path` contains a valid git repository.
      */
     var `isRepo`: kotlin.Boolean
-    , 
+    ,
     /**
      * Current branch short name, if any.
      */
     var `currentBranch`: kotlin.String?
-    , 
+    ,
     /**
      * Commits ahead of the upstream (pushed later).
      */
     var `ahead`: kotlin.UInt
-    , 
+    ,
     /**
      * Commits behind the upstream (pull needed).
      */
     var `behind`: kotlin.UInt
-    , 
+    ,
     var `stagedCount`: kotlin.UInt
-    , 
+    ,
     var `modifiedCount`: kotlin.UInt
-    , 
+    ,
     var `untrackedCount`: kotlin.UInt
-    , 
+    ,
     var `conflictedCount`: kotlin.UInt
-    , 
+    ,
     /**
      * True when another operation currently holds the per-repo lock.
      */
     var `isLocked`: kotlin.Boolean
-    , 
+    ,
     /**
      * Short human text of the last failed op, if any.
      */
     var `lastOpError`: kotlin.String?
-    
+
 ){
-    
 
-    
 
-    
+
+
+
     companion object
 }
 
@@ -2990,86 +2993,86 @@ public object FfiConverterTypeRepoStatus: FfiConverterRustBuffer<RepoStatus> {
  * failures into the repair flow.
  */
 sealed class BridgeException: kotlin.Exception() {
-    
+
     class Git(
-        
-        val `errorMessage`: kotlin.String, 
-        
+
+        val `errorMessage`: kotlin.String,
+
         val `corruption`: kotlin.Boolean
         ) : BridgeException() {
         override val message
             get() = "message=${ `errorMessage` }, corruption=${ `corruption` }"
     }
-    
+
     class Io(
-        
-        val `errorMessage`: kotlin.String, 
-        
+
+        val `errorMessage`: kotlin.String,
+
         val `corruption`: kotlin.Boolean
         ) : BridgeException() {
         override val message
             get() = "message=${ `errorMessage` }, corruption=${ `corruption` }"
     }
-    
+
     class Invalid(
-        
-        val `errorMessage`: kotlin.String, 
-        
+
+        val `errorMessage`: kotlin.String,
+
         val `corruption`: kotlin.Boolean
         ) : BridgeException() {
         override val message
             get() = "message=${ `errorMessage` }, corruption=${ `corruption` }"
     }
-    
+
     class Busy(
-        
-        val `errorMessage`: kotlin.String, 
-        
+
+        val `errorMessage`: kotlin.String,
+
         val `corruption`: kotlin.Boolean
         ) : BridgeException() {
         override val message
             get() = "message=${ `errorMessage` }, corruption=${ `corruption` }"
     }
-    
+
     class NotARepository(
-        
-        val `path`: kotlin.String, 
-        
+
+        val `path`: kotlin.String,
+
         val `corruption`: kotlin.Boolean
         ) : BridgeException() {
         override val message
             get() = "path=${ `path` }, corruption=${ `corruption` }"
     }
-    
-    class Unsupported(
-        
-        val `errorMessage`: kotlin.String, 
-        
-        val `corruption`: kotlin.Boolean
-        ) : BridgeException() {
-        override val message
-            get() = "message=${ `errorMessage` }, corruption=${ `corruption` }"
-    }
-    
-    class Other(
-        
-        val `errorMessage`: kotlin.String, 
-        
-        val `corruption`: kotlin.Boolean
-        ) : BridgeException() {
-        override val message
-            get() = "message=${ `errorMessage` }, corruption=${ `corruption` }"
-    }
-    
 
-    
+    class Unsupported(
+
+        val `errorMessage`: kotlin.String,
+
+        val `corruption`: kotlin.Boolean
+        ) : BridgeException() {
+        override val message
+            get() = "message=${ `errorMessage` }, corruption=${ `corruption` }"
+    }
+
+    class Other(
+
+        val `errorMessage`: kotlin.String,
+
+        val `corruption`: kotlin.Boolean
+        ) : BridgeException() {
+        override val message
+            get() = "message=${ `errorMessage` }, corruption=${ `corruption` }"
+    }
+
+
+
 
 
     companion object ErrorHandler : UniffiRustCallStatusErrorHandler<BridgeException> {
         override fun lift(error_buf: RustBuffer.ByValue): BridgeException = FfiConverterTypeBridgeError.lift(error_buf)
     }
 
-    
+
 }
 
 /**
@@ -3077,7 +3080,7 @@ sealed class BridgeException: kotlin.Exception() {
  */
 public object FfiConverterTypeBridgeError : FfiConverterRustBuffer<BridgeException> {
     override fun read(buf: ByteBuffer): BridgeException {
-        
+
 
         return when(buf.getInt()) {
             1 -> BridgeException.Git(
@@ -3214,52 +3217,52 @@ public object FfiConverterTypeBridgeError : FfiConverterRustBuffer<BridgeExcepti
  * How a credential should be resolved for a git operation.
  */
 sealed class CredentialSource {
-    
+
     /**
      * No credentials; only works for anonymous/public endpoints.
      */
     object None : CredentialSource()
-    
-    
+
+
     /**
      * HTTPS basic auth: PAT or OAuth token used as the password.
      */
     data class UserPass(
-        val `username`: kotlin.String, 
+        val `username`: kotlin.String,
         val `password`: kotlin.String) : CredentialSource()
-        
+
     {
-        
+
 
         companion object
     }
-    
+
     /**
      * SSH keypair, loaded from memory (private key PEM text).
      */
     data class SshKey(
-        val `username`: kotlin.String, 
-        val `privateKey`: kotlin.String, 
-        val `publicKey`: kotlin.String?, 
+        val `username`: kotlin.String,
+        val `privateKey`: kotlin.String,
+        val `publicKey`: kotlin.String?,
         val `passphrase`: kotlin.String?) : CredentialSource()
-        
+
     {
-        
+
 
         companion object
     }
-    
+
     /**
      * Let libgit2 try its default paths (ssh agent, config, credential helpers).
      */
     object Default : CredentialSource()
-    
-    
 
-    
 
-    
-    
+
+
+
+
+
 
 
     companion object
@@ -3357,7 +3360,7 @@ public object FfiConverterTypeCredentialSource : FfiConverterRustBuffer<Credenti
  */
 
 enum class DiffLineOrigin {
-    
+
     CONTEXT,
     ADDITION,
     DELETION,
@@ -3365,7 +3368,7 @@ enum class DiffLineOrigin {
     ADDITION_EOF,
     DELETION_EOF;
 
-    
+
 
 
     companion object
@@ -3398,7 +3401,7 @@ public object FfiConverterTypeDiffLineOrigin: FfiConverterRustBuffer<DiffLineOri
  */
 
 enum class FileStatusKind {
-    
+
     UNMODIFIED,
     UNTRACKED,
     ADDED,
@@ -3408,7 +3411,7 @@ enum class FileStatusKind {
     TYPE_CHANGE,
     CONFLICTED;
 
-    
+
 
 
     companion object
@@ -3441,7 +3444,7 @@ public object FfiConverterTypeFileStatusKind: FfiConverterRustBuffer<FileStatusK
  */
 
 enum class ProgressKind {
-    
+
     TRANSFER,
     INDEXING,
     SIDEBAND,
@@ -3450,7 +3453,7 @@ enum class ProgressKind {
     REBASE,
     MERGE;
 
-    
+
 
 
     companion object
@@ -3483,7 +3486,7 @@ public object FfiConverterTypeProgressKind: FfiConverterRustBuffer<ProgressKind>
  */
 
 enum class PullKind {
-    
+
     /**
      * Already up to date; nothing was integrated.
      */
@@ -3513,7 +3516,7 @@ enum class PullKind {
      */
     UNBORN;
 
-    
+
 
 
     companion object
@@ -3546,7 +3549,7 @@ public object FfiConverterTypePullKind: FfiConverterRustBuffer<PullKind> {
  */
 
 enum class PushIntegrateKind {
-    
+
     /**
      * Pushed on the first attempt; no integration was needed.
      */
@@ -3573,7 +3576,7 @@ enum class PushIntegrateKind {
      */
     NONE;
 
-    
+
 
 
     companion object
@@ -4006,17 +4009,17 @@ public object FfiConverterSequenceTypeRemoteInfo: FfiConverterRustBuffer<List<Re
          * Add a remote.
          */
     @Throws(BridgeException::class) fun `addRemote`(`path`: kotlin.String, `name`: kotlin.String, `url`: kotlin.String)
-        = 
+        =
     uniffiRustCallWithError(BridgeException) { _status ->
     UniffiLib.uniffi_gitnotes_git2_fn_func_add_remote(
-    
-        
+
+
         FfiConverterString.lower(`path`),
         FfiConverterString.lower(`name`),
         FfiConverterString.lower(`url`),_status)
 }
-    
-    
+
+
 
         /**
          * Rename a corrupt repo dir to `<name>-corrupt-backup-<ts>` (never delete).
@@ -4025,44 +4028,44 @@ public object FfiConverterSequenceTypeRemoteInfo: FfiConverterRustBuffer<List<Re
             return FfiConverterString.lift(
     uniffiRustCallWithError(BridgeException) { _status ->
     UniffiLib.uniffi_gitnotes_git2_fn_func_backup_corrupt_repo(
-    
-        
+
+
         FfiConverterString.lower(`path`),_status)
 }
     )
     }
-    
+
 
         /**
          * Check out a branch, creating a tracking branch from the remote if needed.
          */
     @Throws(BridgeException::class) fun `checkoutBranch`(`path`: kotlin.String, `name`: kotlin.String, `remoteName`: kotlin.String)
-        = 
+        =
     uniffiRustCallWithError(BridgeException) { _status ->
     UniffiLib.uniffi_gitnotes_git2_fn_func_checkout_branch(
-    
-        
+
+
         FfiConverterString.lower(`path`),
         FfiConverterString.lower(`name`),
         FfiConverterString.lower(`remoteName`),_status)
 }
-    
-    
+
+
 
         /**
          * Detach HEAD at a commit (requires a clean tracked tree).
          */
     @Throws(BridgeException::class) fun `checkoutCommit`(`path`: kotlin.String, `commitId`: kotlin.String)
-        = 
+        =
     uniffiRustCallWithError(BridgeException) { _status ->
     UniffiLib.uniffi_gitnotes_git2_fn_func_checkout_commit(
-    
-        
+
+
         FfiConverterString.lower(`path`),
         FfiConverterString.lower(`commitId`),_status)
 }
-    
-    
+
+
 
         /**
          * Drop the registered credential for `repo_id`. Returns true when one was
@@ -4071,13 +4074,13 @@ public object FfiConverterSequenceTypeRemoteInfo: FfiConverterRustBuffer<List<Re
             return FfiConverterBoolean.lift(
     uniffiRustCall() { _status ->
     UniffiLib.uniffi_gitnotes_git2_fn_func_clear_credential(
-    
-        
+
+
         FfiConverterString.lower(`repoId`),_status)
 }
     )
     }
-    
+
 
         /**
          * Clone `url` into `dest`, streaming progress to `listener`. Credentials come
@@ -4087,8 +4090,8 @@ public object FfiConverterSequenceTypeRemoteInfo: FfiConverterRustBuffer<List<Re
             return FfiConverterString.lift(
     uniffiRustCallWithError(BridgeException) { _status ->
     UniffiLib.uniffi_gitnotes_git2_fn_func_clone_repo_with_progress(
-    
-        
+
+
         FfiConverterString.lower(`url`),
         FfiConverterString.lower(`dest`),
         FfiConverterOptionalString.lower(`repoId`),
@@ -4097,7 +4100,7 @@ public object FfiConverterSequenceTypeRemoteInfo: FfiConverterRustBuffer<List<Re
 }
     )
     }
-    
+
 
         /**
          * Commit the staged index with `author` as identity.
@@ -4106,15 +4109,15 @@ public object FfiConverterSequenceTypeRemoteInfo: FfiConverterRustBuffer<List<Re
             return FfiConverterTypeCommitInfo.lift(
     uniffiRustCallWithError(BridgeException) { _status ->
     UniffiLib.uniffi_gitnotes_git2_fn_func_commit_changes(
-    
-        
+
+
         FfiConverterString.lower(`path`),
         FfiConverterString.lower(`message`),
         FfiConverterTypeAuthor.lower(`author`),_status)
 }
     )
     }
-    
+
 
         /**
          * Per-file diff of one commit against its first parent (`git show`-style).
@@ -4123,34 +4126,14 @@ public object FfiConverterSequenceTypeRemoteInfo: FfiConverterRustBuffer<List<Re
             return FfiConverterSequenceTypeFileDiff.lift(
     uniffiRustCallWithError(BridgeException) { _status ->
     UniffiLib.uniffi_gitnotes_git2_fn_func_commit_diff(
-    
-        
+
+
         FfiConverterString.lower(`path`),
         FfiConverterString.lower(`commitId`),_status)
 }
     )
     }
-    
 
-        /**
-         * Configure git2's SSL CA certificate directory for Android.
-         *
-         * This **must** be called from the host app's module-initialization entry point
-         * (`OnCreate` / `applicationDidFinishLaunching`) **before** any engine operation
-         * is dispatched. On Android it detects the CA store path and configures git2's
-         * OpenSSL adapter; on other platforms it is a no-op.
-         *
-         * This function is safe to call redundantly — the underlying `set_ssl_cert_dir`
-         * call is idempotent beyond its first invocation.
-         *
-         * Returns `Ok(())` when the CA dir was configured successfully or when neither
-         * Android CA path exists (no-op). Returns `Err(BridgeError)` when the directory
-         * was found but `set_ssl_cert_dir` failed.
-         */
-    @Throws(BridgeException::class) fun `configureAndroidCa`() =
-        uniffiRustCallWithError(BridgeException) { _status ->
-            UniffiLib.uniffi_gitnotes_git2_fn_func_configure_android_ca(_status)
-        }
 
         /**
          * Create a branch (from `source` or current HEAD) without switching.
@@ -4159,30 +4142,30 @@ public object FfiConverterSequenceTypeRemoteInfo: FfiConverterRustBuffer<List<Re
             return FfiConverterTypeBranchInfo.lift(
     uniffiRustCallWithError(BridgeException) { _status ->
     UniffiLib.uniffi_gitnotes_git2_fn_func_create_branch(
-    
-        
+
+
         FfiConverterString.lower(`path`),
         FfiConverterString.lower(`name`),
         FfiConverterOptionalString.lower(`source`),_status)
 }
     )
     }
-    
+
 
         /**
          * Delete a local branch.
          */
     @Throws(BridgeException::class) fun `deleteBranch`(`path`: kotlin.String, `name`: kotlin.String)
-        = 
+        =
     uniffiRustCallWithError(BridgeException) { _status ->
     UniffiLib.uniffi_gitnotes_git2_fn_func_delete_branch(
-    
-        
+
+
         FfiConverterString.lower(`path`),
         FfiConverterString.lower(`name`),_status)
 }
-    
-    
+
+
 
         /**
          * Combined file+line diff of the whole working tree.
@@ -4191,13 +4174,13 @@ public object FfiConverterSequenceTypeRemoteInfo: FfiConverterRustBuffer<List<Re
             return FfiConverterSequenceTypeFileDiff.lift(
     uniffiRustCallWithError(BridgeException) { _status ->
     UniffiLib.uniffi_gitnotes_git2_fn_func_diff_all(
-    
-        
+
+
         FfiConverterString.lower(`path`),_status)
 }
     )
     }
-    
+
 
         /**
          * Line-level diff of one file against HEAD.
@@ -4206,26 +4189,26 @@ public object FfiConverterSequenceTypeRemoteInfo: FfiConverterRustBuffer<List<Re
             return FfiConverterTypeFileDiff.lift(
     uniffiRustCallWithError(BridgeException) { _status ->
     UniffiLib.uniffi_gitnotes_git2_fn_func_diff_file(
-    
-        
+
+
         FfiConverterString.lower(`path`),
         FfiConverterString.lower(`filePath`),_status)
 }
     )
     }
-    
+
 
     @Throws(BridgeException::class) fun `discardFiles`(`path`: kotlin.String, `paths`: List<kotlin.String>)
-        = 
+        =
     uniffiRustCallWithError(BridgeException) { _status ->
     UniffiLib.uniffi_gitnotes_git2_fn_func_discard_files(
-    
-        
+
+
         FfiConverterString.lower(`path`),
         FfiConverterSequenceString.lower(`paths`),_status)
 }
-    
-    
+
+
 
         /**
          * Stable engine identifier (`gitnotes-git2`).
@@ -4233,30 +4216,30 @@ public object FfiConverterSequenceTypeRemoteInfo: FfiConverterRustBuffer<List<Re
             return FfiConverterString.lift(
     uniffiRustCall() { _status ->
     UniffiLib.uniffi_gitnotes_git2_fn_func_engine_name(
-    
+
         _status)
 }
     )
     }
-    
+
 
         /**
          * Fetch `remote_name`, streaming progress to `listener`.
          */
     @Throws(BridgeException::class) fun `fetchRepoWithProgress`(`path`: kotlin.String, `remoteName`: kotlin.String, `repoId`: kotlin.String?, `credentialSource`: CredentialSource?, `listener`: ProgressListener)
-        = 
+        =
     uniffiRustCallWithError(BridgeException) { _status ->
     UniffiLib.uniffi_gitnotes_git2_fn_func_fetch_repo_with_progress(
-    
-        
+
+
         FfiConverterString.lower(`path`),
         FfiConverterString.lower(`remoteName`),
         FfiConverterOptionalString.lower(`repoId`),
         FfiConverterOptionalTypeCredentialSource.lower(`credentialSource`),
         FfiConverterTypeProgressListener.lower(`listener`),_status)
 }
-    
-    
+
+
 
         /**
          * Generate an ed25519 SSH keypair, returning the public key (for the user to
@@ -4266,13 +4249,13 @@ public object FfiConverterSequenceTypeRemoteInfo: FfiConverterRustBuffer<List<Re
             return FfiConverterTypeGeneratedKey.lift(
     uniffiRustCallWithError(BridgeException) { _status ->
     UniffiLib.uniffi_gitnotes_git2_fn_func_generate_ssh_key(
-    
-        
+
+
         FfiConverterOptionalString.lower(`passphrase`),_status)
 }
     )
     }
-    
+
 
         /**
          * Text content of the conflict stages (base/ours/theirs) for one conflicted
@@ -4282,14 +4265,14 @@ public object FfiConverterSequenceTypeRemoteInfo: FfiConverterRustBuffer<List<Re
             return FfiConverterTypeConflictBlobs.lift(
     uniffiRustCallWithError(BridgeException) { _status ->
     UniffiLib.uniffi_gitnotes_git2_fn_func_get_conflict_blobs(
-    
-        
+
+
         FfiConverterString.lower(`path`),
         FfiConverterString.lower(`filePath`),_status)
 }
     )
     }
-    
+
 
         /**
          * Unresolved merge conflicts.
@@ -4298,13 +4281,13 @@ public object FfiConverterSequenceTypeRemoteInfo: FfiConverterRustBuffer<List<Re
             return FfiConverterSequenceTypeConflictEntry.lift(
     uniffiRustCallWithError(BridgeException) { _status ->
     UniffiLib.uniffi_gitnotes_git2_fn_func_get_conflicts(
-    
-        
+
+
         FfiConverterString.lower(`path`),_status)
 }
     )
     }
-    
+
 
         /**
          * Read back the registered credential for `repo_id` (for QA/debug screens).
@@ -4312,28 +4295,28 @@ public object FfiConverterSequenceTypeRemoteInfo: FfiConverterRustBuffer<List<Re
             return FfiConverterOptionalTypeCredentialSource.lift(
     uniffiRustCall() { _status ->
     UniffiLib.uniffi_gitnotes_git2_fn_func_get_credential(
-    
-        
+
+
         FfiConverterString.lower(`repoId`),_status)
 }
     )
     }
-    
+
 
         /**
          * Initialise a new repository at `path` (`bare` = push-ready local remote).
          */
     @Throws(BridgeException::class) fun `initRepo`(`path`: kotlin.String, `bare`: kotlin.Boolean)
-        = 
+        =
     uniffiRustCallWithError(BridgeException) { _status ->
     UniffiLib.uniffi_gitnotes_git2_fn_func_init_repo(
-    
-        
+
+
         FfiConverterString.lower(`path`),
         FfiConverterBoolean.lower(`bare`),_status)
 }
-    
-    
+
+
 
         /**
          * Whether another process currently holds the op lock for `path`.
@@ -4341,13 +4324,13 @@ public object FfiConverterSequenceTypeRemoteInfo: FfiConverterRustBuffer<List<Re
             return FfiConverterBoolean.lift(
     uniffiRustCall() { _status ->
     UniffiLib.uniffi_gitnotes_git2_fn_func_is_repo_locked(
-    
-        
+
+
         FfiConverterString.lower(`path`),_status)
 }
     )
     }
-    
+
 
         /**
          * List local + remote branches with ahead/behind counts.
@@ -4356,14 +4339,14 @@ public object FfiConverterSequenceTypeRemoteInfo: FfiConverterRustBuffer<List<Re
             return FfiConverterSequenceTypeBranchInfo.lift(
     uniffiRustCallWithError(BridgeException) { _status ->
     UniffiLib.uniffi_gitnotes_git2_fn_func_list_branches(
-    
-        
+
+
         FfiConverterString.lower(`path`),
         FfiConverterString.lower(`remoteName`),_status)
 }
     )
     }
-    
+
 
         /**
          * List configured remotes.
@@ -4372,13 +4355,13 @@ public object FfiConverterSequenceTypeRemoteInfo: FfiConverterRustBuffer<List<Re
             return FfiConverterSequenceTypeRemoteInfo.lift(
     uniffiRustCallWithError(BridgeException) { _status ->
     UniffiLib.uniffi_gitnotes_git2_fn_func_list_remotes(
-    
-        
+
+
         FfiConverterString.lower(`path`),_status)
 }
     )
     }
-    
+
 
         /**
          * Per-file working-tree statuses.
@@ -4387,29 +4370,29 @@ public object FfiConverterSequenceTypeRemoteInfo: FfiConverterRustBuffer<List<Re
             return FfiConverterSequenceTypeFileStatus.lift(
     uniffiRustCallWithError(BridgeException) { _status ->
     UniffiLib.uniffi_gitnotes_git2_fn_func_list_statuses(
-    
-        
+
+
         FfiConverterString.lower(`path`),_status)
 }
     )
     }
-    
+
 
         /**
          * Mark a conflicted path resolved: stage the working-tree content as final
          * (`index.add_path` + `index.write`), clearing its conflict state.
          */
     @Throws(BridgeException::class) fun `markConflictResolved`(`path`: kotlin.String, `filePath`: kotlin.String)
-        = 
+        =
     uniffiRustCallWithError(BridgeException) { _status ->
     UniffiLib.uniffi_gitnotes_git2_fn_func_mark_conflict_resolved(
-    
-        
+
+
         FfiConverterString.lower(`path`),
         FfiConverterString.lower(`filePath`),_status)
 }
-    
-    
+
+
 
         /**
          * Fetch + integrate remote changes into the current branch.
@@ -4418,8 +4401,8 @@ public object FfiConverterSequenceTypeRemoteInfo: FfiConverterRustBuffer<List<Re
             return FfiConverterTypePullResult.lift(
     uniffiRustCallWithError(BridgeException) { _status ->
     UniffiLib.uniffi_gitnotes_git2_fn_func_pull_repo(
-    
-        
+
+
         FfiConverterString.lower(`path`),
         FfiConverterString.lower(`remoteName`),
         FfiConverterOptionalString.lower(`repoId`),
@@ -4428,7 +4411,7 @@ public object FfiConverterSequenceTypeRemoteInfo: FfiConverterRustBuffer<List<Re
 }
     )
     }
-    
+
 
         /**
          * Push the current branch. `force` is engine-internal API parity only.
@@ -4437,8 +4420,8 @@ public object FfiConverterSequenceTypeRemoteInfo: FfiConverterRustBuffer<List<Re
             return FfiConverterTypePushResult.lift(
     uniffiRustCallWithError(BridgeException) { _status ->
     UniffiLib.uniffi_gitnotes_git2_fn_func_push_repo(
-    
-        
+
+
         FfiConverterString.lower(`path`),
         FfiConverterString.lower(`remoteName`),
         FfiConverterOptionalString.lower(`repoId`),
@@ -4448,7 +4431,7 @@ public object FfiConverterSequenceTypeRemoteInfo: FfiConverterRustBuffer<List<Re
 }
     )
     }
-    
+
 
         /**
          * Push the current branch, fetching + integrating (rebase, or merge on rebase
@@ -4458,8 +4441,8 @@ public object FfiConverterSequenceTypeRemoteInfo: FfiConverterRustBuffer<List<Re
             return FfiConverterTypePushIntegrateResult.lift(
     uniffiRustCallWithError(BridgeException) { _status ->
     UniffiLib.uniffi_gitnotes_git2_fn_func_push_repo_with_integrate(
-    
-        
+
+
         FfiConverterString.lower(`path`),
         FfiConverterString.lower(`remoteName`),
         FfiConverterOptionalString.lower(`repoId`),
@@ -4468,7 +4451,7 @@ public object FfiConverterSequenceTypeRemoteInfo: FfiConverterRustBuffer<List<Re
 }
     )
     }
-    
+
 
         /**
          * Recent commit history.
@@ -4477,57 +4460,57 @@ public object FfiConverterSequenceTypeRemoteInfo: FfiConverterRustBuffer<List<Re
             return FfiConverterSequenceTypeCommitInfo.lift(
     uniffiRustCallWithError(BridgeException) { _status ->
     UniffiLib.uniffi_gitnotes_git2_fn_func_recent_commits(
-    
-        
+
+
         FfiConverterString.lower(`path`),
         FfiConverterUInt.lower(`skip`),
         FfiConverterUInt.lower(`limit`),_status)
 }
     )
     }
-    
+
 
     @Throws(BridgeException::class) fun `removePaths`(`path`: kotlin.String, `paths`: List<kotlin.String>, `keepWorktree`: kotlin.Boolean)
-        = 
+        =
     uniffiRustCallWithError(BridgeException) { _status ->
     UniffiLib.uniffi_gitnotes_git2_fn_func_remove_paths(
-    
-        
+
+
         FfiConverterString.lower(`path`),
         FfiConverterSequenceString.lower(`paths`),
         FfiConverterBoolean.lower(`keepWorktree`),_status)
 }
-    
-    
+
+
 
         /**
          * Remove a remote.
          */
     @Throws(BridgeException::class) fun `removeRemote`(`path`: kotlin.String, `name`: kotlin.String)
-        = 
+        =
     uniffiRustCallWithError(BridgeException) { _status ->
     UniffiLib.uniffi_gitnotes_git2_fn_func_remove_remote(
-    
-        
+
+
         FfiConverterString.lower(`path`),
         FfiConverterString.lower(`name`),_status)
 }
-    
-    
+
+
 
         /**
          * Delete a repository working tree (guarded: only `.git`-bearing dirs).
          */
     @Throws(BridgeException::class) fun `removeRepo`(`path`: kotlin.String)
-        = 
+        =
     uniffiRustCallWithError(BridgeException) { _status ->
     UniffiLib.uniffi_gitnotes_git2_fn_func_remove_repo(
-    
-        
+
+
         FfiConverterString.lower(`path`),_status)
 }
-    
-    
+
+
 
         /**
          * Rename a local branch.
@@ -4536,15 +4519,15 @@ public object FfiConverterSequenceTypeRemoteInfo: FfiConverterRustBuffer<List<Re
             return FfiConverterTypeBranchInfo.lift(
     uniffiRustCallWithError(BridgeException) { _status ->
     UniffiLib.uniffi_gitnotes_git2_fn_func_rename_branch(
-    
-        
+
+
         FfiConverterString.lower(`path`),
         FfiConverterString.lower(`name`),
         FfiConverterString.lower(`newName`),_status)
 }
     )
     }
-    
+
 
         /**
          * Repair a corrupted repository. Never auto-runs.
@@ -4553,13 +4536,13 @@ public object FfiConverterSequenceTypeRemoteInfo: FfiConverterRustBuffer<List<Re
             return FfiConverterTypeRepairReport.lift(
     uniffiRustCallWithError(BridgeException) { _status ->
     UniffiLib.uniffi_gitnotes_git2_fn_func_repair_repo(
-    
-        
+
+
         FfiConverterString.lower(`path`),_status)
 }
     )
     }
-    
+
 
         /**
          * High-level repository metadata.
@@ -4568,13 +4551,13 @@ public object FfiConverterSequenceTypeRemoteInfo: FfiConverterRustBuffer<List<Re
             return FfiConverterTypeRepoInfo.lift(
     uniffiRustCallWithError(BridgeException) { _status ->
     UniffiLib.uniffi_gitnotes_git2_fn_func_repo_info(
-    
-        
+
+
         FfiConverterString.lower(`path`),_status)
 }
     )
     }
-    
+
 
         /**
          * High-level repo state (counts + ahead/behind + lock state).
@@ -4583,44 +4566,44 @@ public object FfiConverterSequenceTypeRemoteInfo: FfiConverterRustBuffer<List<Re
             return FfiConverterTypeRepoStatus.lift(
     uniffiRustCallWithError(BridgeException) { _status ->
     UniffiLib.uniffi_gitnotes_git2_fn_func_repo_status(
-    
-        
+
+
         FfiConverterString.lower(`repoId`),
         FfiConverterString.lower(`path`),_status)
 }
     )
     }
-    
+
 
         /**
          * `git reset --soft` to a commit: moves HEAD, keeps index + working tree.
          */
     @Throws(BridgeException::class) fun `resetSoft`(`path`: kotlin.String, `commitId`: kotlin.String)
-        = 
+        =
     uniffiRustCallWithError(BridgeException) { _status ->
     UniffiLib.uniffi_gitnotes_git2_fn_func_reset_soft(
-    
-        
+
+
         FfiConverterString.lower(`path`),
         FfiConverterString.lower(`commitId`),_status)
 }
-    
-    
+
+
 
         /**
          * Resolve a conflicted path by staging the working-tree content.
          */
     @Throws(BridgeException::class) fun `resolveConflict`(`path`: kotlin.String, `filePath`: kotlin.String)
-        = 
+        =
     uniffiRustCallWithError(BridgeException) { _status ->
     UniffiLib.uniffi_gitnotes_git2_fn_func_resolve_conflict(
-    
-        
+
+
         FfiConverterString.lower(`path`),
         FfiConverterString.lower(`filePath`),_status)
 }
-    
-    
+
+
 
         /**
          * `git revert` a commit and immediately commit the inverse change.
@@ -4629,92 +4612,114 @@ public object FfiConverterSequenceTypeRemoteInfo: FfiConverterRustBuffer<List<Re
             return FfiConverterTypeCommitInfo.lift(
     uniffiRustCallWithError(BridgeException) { _status ->
     UniffiLib.uniffi_gitnotes_git2_fn_func_revert_commit(
-    
-        
+
+
         FfiConverterString.lower(`path`),
         FfiConverterString.lower(`commitId`),
         FfiConverterTypeAuthor.lower(`author`),_status)
 }
     )
     }
-    
+
 
         /**
          * Register the credential the engine should use for `repo_id`'s remotes.
          * Subsequent remote ops (clone/fetch/pull/push) resolve it by repo id.
          */ fun `setCredential`(`repoId`: kotlin.String, `credential`: CredentialSource)
-        = 
+        =
     uniffiRustCall() { _status ->
     UniffiLib.uniffi_gitnotes_git2_fn_func_set_credential(
-    
-        
+
+
         FfiConverterString.lower(`repoId`),
         FfiConverterTypeCredentialSource.lower(`credential`),_status)
 }
-    
-    
+
+
 
         /**
          * Update the URL of an existing remote (`git remote set-url`).
          */
     @Throws(BridgeException::class) fun `setRemoteUrl`(`path`: kotlin.String, `name`: kotlin.String, `url`: kotlin.String)
-        = 
+        =
     uniffiRustCallWithError(BridgeException) { _status ->
     UniffiLib.uniffi_gitnotes_git2_fn_func_set_remote_url(
-    
-        
+
+
         FfiConverterString.lower(`path`),
         FfiConverterString.lower(`name`),
         FfiConverterString.lower(`url`),_status)
 }
-    
-    
+
+
+
+        /**
+         * Configure git2's SSL CA certificate file for Android.
+         *
+         * This **must** be called from the host app's module-initialization entry point
+         * (`OnCreate` / `applicationDidFinishLaunching`) **before** any engine operation
+         * is dispatched. On Android the Kotlin host builds a PEM bundle from the system
+         * CA directories and passes the path here; on other platforms this is a no-op.
+         *
+         * Returns `Ok(())` when the certificate file was configured successfully.
+         * Returns `Err(BridgeError)` when `set_ssl_cert_file` failed.
+         */
+    @Throws(BridgeException::class) fun `setSslCertFile`(`certFile`: kotlin.String)
+        =
+    uniffiRustCallWithError(BridgeException) { _status ->
+    UniffiLib.uniffi_gitnotes_git2_fn_func_set_ssl_cert_file(
+
+
+        FfiConverterString.lower(`certFile`),_status)
+}
+
+
 
         /**
          * LINE-LEVEL PARTIAL STAGING: stage only the selected diff lines.
          */
     @Throws(BridgeException::class) fun `stageFileLines`(`path`: kotlin.String, `filePath`: kotlin.String, `hunks`: List<HunkSelection>)
-        = 
+        =
     uniffiRustCallWithError(BridgeException) { _status ->
     UniffiLib.uniffi_gitnotes_git2_fn_func_stage_file_lines(
-    
-        
+
+
         FfiConverterString.lower(`path`),
         FfiConverterString.lower(`filePath`),
         FfiConverterSequenceTypeHunkSelection.lower(`hunks`),_status)
 }
-    
-    
+
+
 
         /**
          * Stage (git add) the given paths.
          */
     @Throws(BridgeException::class) fun `stagePaths`(`path`: kotlin.String, `paths`: List<kotlin.String>)
-        = 
+        =
     uniffiRustCallWithError(BridgeException) { _status ->
     UniffiLib.uniffi_gitnotes_git2_fn_func_stage_paths(
-    
-        
+
+
         FfiConverterString.lower(`path`),
         FfiConverterSequenceString.lower(`paths`),_status)
 }
-    
-    
+
+
 
         /**
          * Unstage (git reset HEAD) the given paths.
          */
     @Throws(BridgeException::class) fun `unstagePaths`(`path`: kotlin.String, `paths`: List<kotlin.String>)
-        = 
+        =
     uniffiRustCallWithError(BridgeException) { _status ->
     UniffiLib.uniffi_gitnotes_git2_fn_func_unstage_paths(
-    
-        
+
+
         FfiConverterString.lower(`path`),
         FfiConverterSequenceString.lower(`paths`),_status)
 }
-    
-    
+
+
 
         /**
          * Crate/engine version string.
@@ -4722,9 +4727,8 @@ public object FfiConverterSequenceTypeRemoteInfo: FfiConverterRustBuffer<List<Re
             return FfiConverterString.lift(
     uniffiRustCall() { _status ->
     UniffiLib.uniffi_gitnotes_git2_fn_func_version(
-    
+
         _status)
 }
     )
     }
-    

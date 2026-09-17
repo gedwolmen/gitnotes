@@ -13,6 +13,99 @@ internal class GitEngineException(message: String) : CodedException(message)
 class GitEngineModule : Module() {
   private var engineLoadError: Throwable? = null
 
+  /// Android APEX CA store path (Android 10+).
+  private companion object {
+    private const val ANDROID_CA_APEX = "/apex/com.android.conscrypt/cacerts"
+    private const val ANDROID_CA_LEGACY = "/system/etc/security/cacerts"
+    private const val CA_BUNDLE_FILENAME = "gitnotes_ca_bundle.pem"
+  }
+
+  /// Builds a PEM bundle from the Android system CA directories and passes
+  /// the path to Rust via `setSslCertFile`. Writes atomically to app-private
+  /// storage and skips rebuild if the bundle already exists and is non-empty.
+  private fun configureAndroidCaBundle() {
+    val caBundlePath = buildAndroidCaBundle() ?: return
+    setSslCertFile(caBundlePath)
+  }
+
+  /// Returns the path to the CA bundle, building it if necessary.
+  /// Returns null if neither Android CA directory exists (not on Android).
+  private fun buildAndroidCaBundle(): String? {
+    val filesDir = appContext.reactContext?.filesDir ?: return null
+    val bundleFile = java.io.File(filesDir, CA_BUNDLE_FILENAME)
+
+    // Skip rebuild if bundle already exists and is non-empty.
+    if (bundleFile.isFile && bundleFile.length() > 0) {
+      return bundleFile.absolutePath
+    }
+
+    // Find the best available CA directory.
+    val caDir = findAndroidCaDir() ?: return null
+
+    // Read all readable regular files (Android CA files are named like "01419da9.0").
+    val caFiles = caDir.listFiles { file ->
+      file.isFile && file.canRead()
+    }?.sortedBy { it.name } ?: return null
+
+    if (caFiles.isEmpty()) {
+      return null
+    }
+
+    // Write atomically: temp file + rename.
+    val tempFile = java.io.File(filesDir, "$CA_BUNDLE_FILENAME.tmp")
+    try {
+      tempFile.outputStream().buffered().writer().use { writer ->
+        for (caFile in caFiles) {
+          extractPemBlock(caFile)?.let { pem ->
+            writer.write(pem)
+            writer.write("\n")
+          }
+        }
+      }
+      if (!tempFile.renameTo(bundleFile)) {
+        throw java.io.IOException("Failed to atomically rename $tempFile to $bundleFile")
+      }
+    } catch (e: Throwable) {
+      tempFile.delete()
+      throw e
+    }
+
+    if (bundleFile.length() == 0L) {
+      bundleFile.delete()
+      return null
+    }
+
+    return bundleFile.absolutePath
+  }
+
+  /// Returns the best available Android CA certificate directory.
+  /// Prefers APEX path; falls back to legacy path.
+  private fun findAndroidCaDir(): java.io.File? {
+    val apex = java.io.File(ANDROID_CA_APEX)
+    if (apex.exists() && apex.isDirectory) {
+      return apex
+    }
+    val legacy = java.io.File(ANDROID_CA_LEGACY)
+    if (legacy.exists() && legacy.isDirectory) {
+      return legacy
+    }
+    return null
+  }
+
+  /// Extracts the PEM certificate block from a CA file.
+  /// Android CA files contain metadata after the PEM block (e.g. "Certificate:"
+  /// and "SHA1 Fingerprint=..."), so only the -----BEGIN/END CERTIFICATE-----
+  /// range is copied into the bundle.
+  private fun extractPemBlock(caFile: java.io.File): String? {
+    val content = caFile.readText()
+    val start = content.indexOf("-----BEGIN CERTIFICATE-----")
+    if (start < 0) return null
+    val end = content.indexOf("-----END CERTIFICATE-----")
+    if (end < 0) return null
+    // inclusive of END marker
+    return content.substring(start, end + "-----END CERTIFICATE-----".length)
+  }
+
   private fun ensureEngineLoaded() {
     val error = engineLoadError ?: return
     throw GitEngineException(
@@ -102,10 +195,14 @@ class GitEngineModule : Module() {
         System.loadLibrary("gitnotes_git2")
         uniffiEnsureInitialized()
         // Configure Android CA store for git2's OpenSSL adapter before any
-        // engine operation is dispatched. Safe to call on non-Android platforms
-        // (no-op there). Must happen after the cdylib is loaded and UniFFI
-        // is initialized, but before any engine op uses the TLS stack.
-        configureAndroidCa()
+        // engine operation is dispatched. Must happen after the cdylib is
+        // loaded and UniFFI is initialized, but before any engine op uses
+        // the TLS stack.
+        //
+        // The Kotlin host builds a PEM bundle from the Android CA directories
+        // and passes the path to Rust. This avoids the OpenSSL directory-mode
+        // incompatibility with Android's hash-named PEM files.
+        configureAndroidCaBundle()
         null
       } catch (error: Throwable) {
         // Throwable catches Error (e.g. ExceptionInInitializerError) and Exception
