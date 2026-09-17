@@ -418,18 +418,27 @@ GitHub HTTPS clones use TLS certificate verification. The vendored OpenSSL build
 
 ### How it works
 
-The Kotlin `GitEngineModule.OnCreate` calls `configureAndroidCa()` — a UniFFI-exported function backed by `engine::android_ca::configure_android_ca()` in `rust/src/engine/android_ca.rs`. That function:
+The Kotlin `GitEngineModule.OnCreate` calls `configureAndroidCaBundle()` which:
 
 1. Checks for `/apex/com.android.conscrypt/cacerts` (Android 10+, **preferred** — Conscrypt APEX module).
 2. Falls back to `/system/etc/security/cacerts` (legacy path) only if the APEX path does not exist.
-3. Validates the directory is readable and non-empty before passing it to `git2::opts::set_ssl_cert_dir`.
-4. If validation fails, the function returns silently and **does not** configure the directory — git2's default behaviour (system CA store) remains active.
+3. If neither directory exists (not on Android), returns early — no configuration needed.
+4. Reads all readable regular files from the selected directory (Android CA files are named like `01419da9.0`), sorted by name.
+5. For each file, extracts the `-----BEGIN CERTIFICATE-----` through `-----END CERTIFICATE-----` block (excluding any trailing `Certificate:` metadata and fingerprints that Android appends), appends a newline, and writes to the bundle.
+6. Concatenates them into a single PEM bundle file in app-private storage (`filesDir/gitnotes_ca_bundle.pem`), written atomically (temp file + rename).
+7. Skips rebuild if the bundle already exists and is non-empty.
+8. Fails silently (returns null, no configuration) if the bundle would be empty — no invalid bundle is passed to Rust.
+9. Passes the bundle path to `setSslCertFile()` — the UniFFI-exported `set_ssl_cert_file(cert_file)` in `rust/src/api/bridge.rs`.
 
-On non-Android platforms the function is a no-op.
+Rust then calls `git2::opts::set_ssl_cert_file` with the bundle path, which configures libgit2's OpenSSL adapter to use the PEM bundle for certificate verification.
+
+### Why a PEM bundle instead of a directory?
+
+libgit2 routes `set_ssl_cert_dir` to OpenSSL's `SSL_CTX_load_verify_locations` directory mode, which expects hash-named certificate files (e.g. `a88126e5.0`). Android uses this naming convention, but OpenSSL's directory-mode hash lookup is incompatible with Android's filesystem layout in this context. Using `set_ssl_cert_file` with a concatenated PEM bundle avoids this incompatibility.
 
 ### Safety contract
 
-`git2::opts::set_ssl_cert_dir` calls into `git_libgit2_opts(GIT_OPT_SET_SSL_CERT_LOCATIONS, …)` which mutates a C global (`git__ssl_ctx`) inside libgit2's OpenSSL adapter. This is **process-global state, not thread-local**. The function is therefore `unsafe`, and the Kotlin call site must satisfy these conditions:
+`git2::opts::set_ssl_cert_file` calls into `git_libgit2_opts(GIT_OPT_SET_SSL_CERT_LOCATIONS, …)` which mutates a C global (`git__ssl_ctx`) inside libgit2's OpenSSL adapter. This is **process-global state, not thread-local**. The function is therefore `unsafe`, and the Kotlin call site must satisfy these conditions:
 
 - The call runs **once**, on the **main thread**, before any async engine operations are dispatched.
 - No other thread can be inside a git2 call at the moment of invocation.
@@ -438,27 +447,26 @@ On non-Android platforms the function is a no-op.
 
 ### Certificate verification
 
-No certificate bypass is involved. `set_ssl_cert_dir` directs OpenSSL to the Android CA directory; it does not disable verification. GitHub's TLS certificate remains validated against trusted system CAs.
+No certificate bypass is involved. `set_ssl_cert_file` directs OpenSSL to the Android CA bundle; it does not disable verification. GitHub's TLS certificate remains validated against trusted system CAs.
 
 ### Rust module: `rust/src/engine/android_ca.rs`
 
 ```rust
 // Errors from Android CA configuration.
 pub enum AndroidCaError {
-    SetCertDir(git2::Error),
+    SetCertFile(git2::Error),
     NotReadable(std::io::Error),
 }
 
 // Returns the best available Android CA certificate directory.
-// Pass None for both to use the hardcoded defaults.
 pub fn android_ca_dir(apex_override: Option<&Path>, legacy_override: Option<&Path>) -> Option<PathBuf>
 
-// Configures git2's SSL CA directory for Android.
+// Configures git2's SSL CA file for Android.
 // SAFETY: must be called from main thread before any git2 operations.
-pub fn configure_android_ca() -> Result<(), AndroidCaError>
+pub fn set_ssl_cert_file(cert_file: &Path) -> Result<(), AndroidCaError>
 ```
 
-The `#[uniffi::export]` wrapper in `rust/src/api/bridge.rs` exposes `configure_android_ca` as `configureAndroidCa()` to Kotlin. The UniFFI layer maps `AndroidCaError` to `BridgeError::Other`, so Kotlin callers can catch `BridgeException` if the CA configuration fails.
+The `#[uniffi::export]` wrapper in `rust/src/api/bridge.rs` exposes `set_ssl_cert_file` as `setSslCertFile(certFile: String)` to Kotlin. The UniFFI layer maps `AndroidCaError` to `BridgeError::Other`, so Kotlin callers can catch `BridgeException` if the CA configuration fails.
 
 ## Integration with JavaScript Services
 
