@@ -54,7 +54,7 @@ GitNotēs uses a **centralized branch model** for clone-mode repositories:
 | File | Purpose |
 |------|---------|
 | `Recovery.ts` | Detects and recovers from corrupted git state, stranded commits, and partial sync failures. |
-| `SyncFailure.ts` | Classifies sync failures (network, auth, conflict, corruption) and routes to appropriate recovery. |
+| `syncFailure.ts` | Classifies sync failures (network, auth, conflict, corruption) and routes to appropriate recovery. |
 | `SyncTiming.ts` | Timing/throttling for sync operations — enforces minimum intervals between pushes, debounces rapid changes. |
 | `StrandedCommits.ts` | Detects commits that exist in the local repo but are not connected to the current branch head. |
 | `MultiRepoGitOps.ts` | Coordinates sync operations across multiple repositories simultaneously. |
@@ -98,8 +98,8 @@ GitNotēs uses a **centralized branch model** for clone-mode repositories:
 | File | Purpose |
 |------|---------|
 | `CloneSyncService.ts` | Clone mode sync — writes files to the local working tree without staging or committing. |
-| `NoteSyncQueueService.ts` | Queues note mutations when offline. Drains queue when connectivity returns. |
-| `BackgroundSyncService.ts` | OS background task for sync — runs when app is backgrounded, syncs up to 50 files. |
+| `NoteSyncQueueService.ts` | Re-export stub — actual implementation is `src/services/git/NoteSyncQueueService.ts`. Queues note mutations when offline. Drains queue when connectivity returns. |
+| `BackgroundSyncService.ts` | OS background task for sync — syncs when app is backgrounded, pulls from all repos at a minimum 30-minute interval. |
 | `ForegroundSyncService.ts` | Active sync when app is in foreground — monitors file changes, triggers incremental sync. |
 | `RepoFileSyncService.ts` | Syncs individual files to/from the repo — handles note files, attachment files, canvas files. |
 | `RepoPullService.ts` | Pulls changes from remote through the native GitEngine into the local working tree. |
@@ -110,7 +110,7 @@ GitNotēs uses a **centralized branch model** for clone-mode repositories:
 |------|---------|
 | `NoteGitHubSyncService.ts` | Syncs note content to GitHub — handles note-to-file mapping, conflict detection. |
 | `TodoGitHubSyncService.ts` | Syncs todo items to GitHub issues/checklists. Maps todos to GitHub issue comments. |
-| `CanvasGitHubSyncService.ts` | Syncs canvas data (tiles, hotspots) to GitHub as JSON or image attachments. |
+| `CanvasGitHubSyncService.ts` | Syncs canvas data to GitHub — active clone-mode path using CloneSyncService.save(). Handles canvas file creation, updates, and deletion. |
 | `TemplateGitHubSyncService.ts` | Syncs templates to GitHub — imports/exports note templates from the repo. |
 | `ThoughtDumpService.ts` | Captures rapid thought dumps and syncs them as notes. Batch-optimized for quick capture. |
 | `TemplateRepoPreferenceService.ts` | Stores per-repo template preferences in GitHub Gist or repo config. |
@@ -144,6 +144,7 @@ GitNotēs uses a **centralized branch model** for clone-mode repositories:
 | File | Purpose |
 |------|---------|
 | `AuthService.ts` | Handles app authentication (biometric, PIN). Manages auth state and lock screen. |
+| `AccountStorage.ts` | Secure account credential storage — SSH keys, tokens, host connections via SecureStore; managed by AccountStorage class |
 | `OnboardingService.ts` | Manages first-run onboarding flow — repo selection, initial clone, preferences. |
 | `StorageService.ts` | Wraps AsyncStorage for app preferences and local settings. |
 | `RevenueCatService.ts` | RevenueCat SDK wrapper — configures StoreKit 2, handles purchases, entitlements, customer info. |

@@ -401,6 +401,73 @@ The module is linked via Expo's autolinking system. The `package.json` entry:
 
 Expo reads `modules/GitEngine/package.json` and links the native module automatically during prebuild.
 
+## Android Release Build (R8 / minification)
+
+Release builds on Android use R8 minification (enabled via `enableMinifyInReleaseBuilds: true` in `app.json` under `expo-build-properties`). The GitEngine module depends on JNA (declared as `net.java.dev.jna:jna:5.17.0@aar` in `modules/GitEngine/android/build.gradle`), and the UniFFI Kotlin bindings call into the native cdylib through JNA's `Pointer` class. R8 stripping the `Pointer` class or its `peer` field causes `GitEngine` native library to be unavailable at runtime with the error `Can't obtain peer field ID for class com.sun.jna.Pointer`. Additionally, R8 can strip JNA's `Native` class entirely, causing `Can't obtain static method dispose from class com.sun.jna.Native` at runtime. ProGuard/R8 keep rules for BOTH classes are required:
+
+```
+-keep class com.sun.jna.Native { *; }
+-keep class com.sun.jna.Pointer { protected long peer; }
+```
+
+`-keepclassmembers` alone is insufficient because it does not retain the class itself.
+
+## Android CA Store Configuration
+
+GitHub HTTPS clones use TLS certificate verification. The vendored OpenSSL build in the Rust cdylib does not auto-detect Android's system CA certificate directories. On Android, git2's OpenSSL adapter must be explicitly pointed at the platform's CA store before any network operation.
+
+### How it works
+
+The Kotlin `GitEngineModule.OnCreate` calls `configureAndroidCaBundle()` which:
+
+1. Checks for `/apex/com.android.conscrypt/cacerts` (Android 10+, **preferred** — Conscrypt APEX module).
+2. Falls back to `/system/etc/security/cacerts` (legacy path) only if the APEX path does not exist.
+3. If neither directory exists (not on Android), returns early — no configuration needed.
+4. Reads all readable regular files from the selected directory (Android CA files are named like `01419da9.0`), sorted by name.
+5. For each file, extracts the `-----BEGIN CERTIFICATE-----` through `-----END CERTIFICATE-----` block (excluding any trailing `Certificate:` metadata and fingerprints that Android appends), appends a newline, and writes to the bundle.
+6. Concatenates them into a single PEM bundle file in app-private storage (`filesDir/gitnotes_ca_bundle.pem`), written atomically (temp file + rename).
+7. Skips rebuild if the bundle already exists and is non-empty.
+8. Fails silently (returns null, no configuration) if the bundle would be empty — no invalid bundle is passed to Rust.
+9. Passes the bundle path to `setSslCertFile()` — the UniFFI-exported `set_ssl_cert_file(cert_file)` in `rust/src/api/bridge.rs`.
+
+Rust then calls `git2::opts::set_ssl_cert_file` with the bundle path, which configures libgit2's OpenSSL adapter to use the PEM bundle for certificate verification.
+
+### Why a PEM bundle instead of a directory?
+
+libgit2 routes `set_ssl_cert_dir` to OpenSSL's `SSL_CTX_load_verify_locations` directory mode, which expects hash-named certificate files (e.g. `a88126e5.0`). Android uses this naming convention, but OpenSSL's directory-mode hash lookup is incompatible with Android's filesystem layout in this context. Using `set_ssl_cert_file` with a concatenated PEM bundle avoids this incompatibility.
+
+### Safety contract
+
+`git2::opts::set_ssl_cert_file` calls into `git_libgit2_opts(GIT_OPT_SET_SSL_CERT_LOCATIONS, …)` which mutates a C global (`git__ssl_ctx`) inside libgit2's OpenSSL adapter. This is **process-global state, not thread-local**. The function is therefore `unsafe`, and the Kotlin call site must satisfy these conditions:
+
+- The call runs **once**, on the **main thread**, before any async engine operations are dispatched.
+- No other thread can be inside a git2 call at the moment of invocation.
+
+`GitEngineModule.OnCreate` satisfies both: it runs on the Android main thread during app startup, before the React Native JS thread has posted any engine work.
+
+### Certificate verification
+
+No certificate bypass is involved. `set_ssl_cert_file` directs OpenSSL to the Android CA bundle; it does not disable verification. GitHub's TLS certificate remains validated against trusted system CAs.
+
+### Rust module: `rust/src/engine/android_ca.rs`
+
+```rust
+// Errors from Android CA configuration.
+pub enum AndroidCaError {
+    SetCertFile(git2::Error),
+    NotReadable(std::io::Error),
+}
+
+// Returns the best available Android CA certificate directory.
+pub fn android_ca_dir(apex_override: Option<&Path>, legacy_override: Option<&Path>) -> Option<PathBuf>
+
+// Configures git2's SSL CA file for Android.
+// SAFETY: must be called from main thread before any git2 operations.
+pub fn set_ssl_cert_file(cert_file: &Path) -> Result<(), AndroidCaError>
+```
+
+The `#[uniffi::export]` wrapper in `rust/src/api/bridge.rs` exposes `set_ssl_cert_file` as `setSslCertFile(certFile: String)` to Kotlin. The UniFFI layer maps `AndroidCaError` to `BridgeError::Other`, so Kotlin callers can catch `BridgeException` if the CA configuration fails.
+
 ## Integration with JavaScript Services
 
 The TypeScript facade at `src/services/git/engine/GitEngine.ts` is the single import point for all native Git operations. Services call it directly — there is no intermediate stub layer for real operations.

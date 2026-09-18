@@ -2,7 +2,7 @@
   "expo": {
     "name": "GitNotēs",
     "slug": "gitnotes",
-    "version": "1.6.1",
+    "version": "1.6.3",
     "orientation": "default",
     "icon": "./assets/generated/icon.png",
     "userInterfaceStyle": "automatic",
@@ -121,7 +121,10 @@
           "android": {
             "enableMinifyInReleaseBuilds": true,
             "enableShrinkResourcesInReleaseBuilds": true,
-            "extraProguardRules": "-dontwarn java.awt.Component"
+            "gradleProperties": {
+              "org.gradle.jvmargs": "-Xmx4096m -XX:MaxMetaspaceSize=1024m"
+            },
+            "extraProguardRules": "-dontwarn java.awt.**\n-dontwarn com.sun.jna.**\n-keep class com.sun.jna.Native { *; }\n-keep class com.sun.jna.Native$AWT { *; }\n-keep class com.sun.jna.Pointer { protected long peer; }"
           }
         }
       ],

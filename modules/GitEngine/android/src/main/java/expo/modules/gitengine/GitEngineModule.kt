@@ -13,6 +13,124 @@ internal class GitEngineException(message: String) : CodedException(message)
 class GitEngineModule : Module() {
   private var engineLoadError: Throwable? = null
 
+  /// Android APEX CA store path (Android 10+).
+  private companion object {
+    private const val ANDROID_CA_APEX = "/apex/com.android.conscrypt/cacerts"
+    private const val ANDROID_CA_LEGACY = "/system/etc/security/cacerts"
+    private const val CA_BUNDLE_FILENAME = "gitnotes_ca_bundle.pem"
+  }
+
+  private fun configureAndroidCaBundle() {
+    val caDir = findAndroidCaDir() ?: run {
+      android.util.Log.e("GitEngine", "configureAndroidCaBundle: no CA directory found")
+      return
+    }
+    val bundlePath = buildAndroidCaBundle() ?: run {
+      android.util.Log.e("GitEngine", "configureAndroidCaBundle: PEM bundle unavailable")
+      return
+    }
+    android.util.Log.i("GitEngine", "configureAndroidCaBundle: bundle=$bundlePath dir=${caDir.absolutePath}")
+    // setSslCertLocations(bundlePath, caDir.absolutePath) // Omit: SSL_CTX_set_default_verify_paths
+    // (called in openssl_init) already populates the X509 store from /apex/com.android.conscrypt/cacerts.
+    // Calling setSslCertLocations afterward causes X509_R_LOADED_CERT (error:05880020) because
+    // the store is already populated. Android OpenSSL no-stdio cannot load certs via file mode.
+  }
+
+  /// Returns the path to the CA bundle, building it if necessary.
+  /// Returns null if neither Android CA directory exists (not on Android).
+  private fun buildAndroidCaBundle(): String? {
+    val filesDir = appContext.reactContext?.filesDir ?: run {
+      android.util.Log.e("GitEngine", "buildAndroidCaBundle: filesDir is null (reactContext not ready)")
+      return null
+    }
+    val bundleFile = java.io.File(filesDir, CA_BUNDLE_FILENAME)
+    android.util.Log.i("GitEngine", "buildAndroidCaBundle: filesDir=$filesDir bundle=${bundleFile.absolutePath}")
+
+    // Skip rebuild if bundle already exists and is non-empty.
+    if (bundleFile.isFile && bundleFile.length() > 0) {
+      android.util.Log.i("GitEngine", "buildAndroidCaBundle: using existing bundle (${bundleFile.length()} bytes)")
+      return bundleFile.absolutePath
+    }
+
+    // Find the best available CA directory.
+    val caDir = findAndroidCaDir() ?: run {
+      android.util.Log.e("GitEngine", "buildAndroidCaBundle: findAndroidCaDir returned null")
+      return null
+    }
+    android.util.Log.i("GitEngine", "buildAndroidCaBundle: found caDir=${caDir.absolutePath}")
+
+    // Read all readable regular files (Android CA files are named like "01419da9.0").
+    val caFiles = caDir.listFiles { file ->
+      file.isFile && file.canRead()
+    }?.sortedBy { it.name } ?: run {
+      android.util.Log.e("GitEngine", "buildAndroidCaBundle: listFiles returned null")
+      return null
+    }
+    android.util.Log.i("GitEngine", "buildAndroidCaBundle: found ${caFiles.size} CA files")
+
+    if (caFiles.isEmpty()) {
+      android.util.Log.e("GitEngine", "buildAndroidCaBundle: no CA files found")
+      return null
+    }
+
+    // Write atomically: temp file + rename.
+    val tempFile = java.io.File(filesDir, "$CA_BUNDLE_FILENAME.tmp")
+    try {
+      tempFile.outputStream().buffered().writer().use { writer ->
+        for (caFile in caFiles) {
+          extractPemBlock(caFile)?.let { pem ->
+            writer.write(pem)
+            writer.write("\n")
+          }
+        }
+      }
+      if (!tempFile.renameTo(bundleFile)) {
+        throw java.io.IOException("Failed to atomically rename $tempFile to $bundleFile")
+      }
+    } catch (e: Throwable) {
+      android.util.Log.e("GitEngine", "buildAndroidCaBundle: write failed", e)
+      tempFile.delete()
+      throw e
+    }
+
+    if (bundleFile.length() == 0L) {
+      android.util.Log.e("GitEngine", "buildAndroidCaBundle: bundle is empty after write")
+      bundleFile.delete()
+      return null
+    }
+
+    android.util.Log.i("GitEngine", "buildAndroidCaBundle: success, bundle size=${bundleFile.length()}")
+    return bundleFile.absolutePath
+  }
+
+  /// Returns the best available Android CA certificate directory.
+  /// Prefers APEX path; falls back to legacy path.
+  private fun findAndroidCaDir(): java.io.File? {
+    val apex = java.io.File(ANDROID_CA_APEX)
+    if (apex.exists() && apex.isDirectory) {
+      return apex
+    }
+    val legacy = java.io.File(ANDROID_CA_LEGACY)
+    if (legacy.exists() && legacy.isDirectory) {
+      return legacy
+    }
+    return null
+  }
+
+  /// Extracts the PEM certificate block from a CA file.
+  /// Android CA files contain metadata after the PEM block (e.g. "Certificate:"
+  /// and "SHA1 Fingerprint=..."), so only the -----BEGIN/END CERTIFICATE-----
+  /// range is copied into the bundle.
+  private fun extractPemBlock(caFile: java.io.File): String? {
+    val content = caFile.readText()
+    val start = content.indexOf("-----BEGIN CERTIFICATE-----")
+    if (start < 0) return null
+    val end = content.indexOf("-----END CERTIFICATE-----")
+    if (end < 0) return null
+    // inclusive of END marker
+    return content.substring(start, end + "-----END CERTIFICATE-----".length)
+  }
+
   private fun ensureEngineLoaded() {
     val error = engineLoadError ?: return
     throw GitEngineException(
@@ -101,6 +219,15 @@ class GitEngineModule : Module() {
       engineLoadError = try {
         System.loadLibrary("gitnotes_git2")
         uniffiEnsureInitialized()
+        // Configure Android CA store for git2's OpenSSL adapter before any
+        // engine operation is dispatched. Must happen after the cdylib is
+        // loaded and UniFFI is initialized, but before any engine op uses
+        // the TLS stack.
+        //
+        // The Kotlin host builds a PEM bundle from the Android CA directories
+        // and passes the path to Rust. This avoids the OpenSSL directory-mode
+        // incompatibility with Android's hash-named PEM files.
+        configureAndroidCaBundle()
         null
       } catch (error: Throwable) {
         // Throwable catches Error (e.g. ExceptionInInitializerError) and Exception

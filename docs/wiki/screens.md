@@ -187,7 +187,7 @@ The canonical route param types are in `src/navigation/types.ts`:
 
 **Purpose:** Git repository explorer — view commits, diffs, files, branches, and pull requests. Branch-aware: shows the active checked-out branch from `activeBranchStore`, and all branch operations are routed through `GitBranchCoordinator` for checkout safety.
 
-**Wrapped by:** `CheckoutSafetyProvider` — gates mutation operations while checkout is running.
+**Wraps ExploreScreen** — gates mutation operations during branch checkout via `CheckoutSafetyProvider`. Components inside can call `useCheckoutSafety()` to access checkout state and show blocking overlays.
 
 **Git → Branches ownership:** The Explore tab (Git UI) is the sole authority for branch operations. The Git tab owns all branch state — no external UI (note editors, sync services, or other tabs) may trigger or control branch switches. Note editing never triggers implicit branch switches.
 

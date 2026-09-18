@@ -110,9 +110,9 @@ gitnotes/
 │   │   ├── settings/       # Settings modals, clone progress
 │   │   ├── todos/          # Todo cards, editor modal
 │   │   └── ...
-│   ├── contexts/           # React Context providers (13 contexts)
+│   ├── contexts/           # React Context providers (14 contexts)
 │   ├── data/               # Static data (philosopher quotes JSON)
-│   ├── hooks/              # Custom React hooks (23 hooks)
+│   ├── hooks/              # Custom React hooks (25 hooks)
 │   ├── i18n/               # i18n translations (6 languages)
 │   ├── lib/                # Shared utilities — `cn()` (clsx + tailwind-merge for Tailwind class composition) |
 │   ├── models/             # TypeScript interfaces (14 models)
@@ -123,7 +123,6 @@ gitnotes/
 │   │   ├── canvas/         # Sparse tile canvas, AI vision
 │   │   ├── documents/      # Document service, working tree
 │   │   ├── git/engine/GitEngine.ts  # Rust GitEngine TypeScript facade
-│   │   └── syncStubs.ts    # Sync service stubs (active implementation)
 │   ├── stores/             # Zustand stores (20 stores)
 │   ├── theme/              # NativeWind theme, color tokens
 │   └── types/              # Shared type definitions
@@ -147,8 +146,9 @@ gitnotes/
 User edits note
   → NoteEditorScreen.save()
     → noteStore.updateNote()
-      → FileSystem.writeAsStringAsync(fullPath, content)
-        → User stages and commits from the Git workspace or floating Git button
+      → CloneSyncService.save({ intent: 'upsert', content, filePath, ... })
+        → FileSystem.writeAsStringAsync(fullPath, content)
+          → User stages and commits from the Git workspace or floating Git button
       → ForegroundSyncService / BackgroundSyncService triggers push
         → GitEngine.push(repoDir, 'origin', branch)
           → 409 Conflict → ConflictResolverScreen

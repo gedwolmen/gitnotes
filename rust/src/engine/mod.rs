@@ -1,6 +1,7 @@
 //! Pure git2 engine logic: no framework, no FFI.
 //!
 //! Modules:
+//! - `android_ca`: Android CA store path detection + git2 SSL cert dir config
 //! - `error`: unified typed errors (incl. corruption classification)
 //! - `lock`: flock-based per-repo operation lock (ported from GitSync)
 //! - `credentials`: credential-callback construction from `CredentialSource`
@@ -11,6 +12,7 @@
 //! - `ops_remote`: clone/fetch/pull/push with progress
 //! - `ops_repair`: corruption repair + re-clone fallback
 
+pub mod android_ca;
 pub mod credentials;
 pub mod error;
 pub mod keys;

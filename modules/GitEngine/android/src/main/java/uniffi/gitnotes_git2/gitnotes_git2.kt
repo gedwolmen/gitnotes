@@ -776,6 +776,12 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_gitnotes_git2_checksum_func_set_remote_url(
     ): Int
+    external fun uniffi_gitnotes_git2_checksum_func_set_ssl_cert_directory(
+    ): Int
+    external fun uniffi_gitnotes_git2_checksum_func_set_ssl_cert_file(
+    ): Int
+    external fun uniffi_gitnotes_git2_checksum_func_set_ssl_cert_locations(
+    ): Int
     external fun uniffi_gitnotes_git2_checksum_func_stage_file_lines(
     ): Int
     external fun uniffi_gitnotes_git2_checksum_func_stage_paths(
@@ -894,6 +900,12 @@ internal object UniffiLib {
     external fun uniffi_gitnotes_git2_fn_func_set_credential(`repoId`: RustBuffer.ByValue,`credential`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_gitnotes_git2_fn_func_set_remote_url(`path`: RustBuffer.ByValue,`name`: RustBuffer.ByValue,`url`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_gitnotes_git2_fn_func_set_ssl_cert_directory(`certDir`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_gitnotes_git2_fn_func_set_ssl_cert_file(`certFile`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_gitnotes_git2_fn_func_set_ssl_cert_locations(`certFile`: RustBuffer.ByValue,`certDir`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_gitnotes_git2_fn_func_stage_file_lines(`path`: RustBuffer.ByValue,`filePath`: RustBuffer.ByValue,`hunks`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
@@ -4645,6 +4657,64 @@ public object FfiConverterSequenceTypeRemoteInfo: FfiConverterRustBuffer<List<Re
         FfiConverterString.lower(`path`),
         FfiConverterString.lower(`name`),
         FfiConverterString.lower(`url`),_status)
+}
+    
+    
+
+        /**
+         * Sets the SSL certificate directory for Android.
+         *
+         * On Android, this is preferred over `set_ssl_cert_file` because OpenSSL's
+         * directory mode uses hash-based certificate lookup, which works directly
+         * with Android's `/apex/com.android.conscrypt/cacerts` directory without
+         * requiring a bundled PEM file.
+         *
+         * This must be called from the host app's module-initialization entry point
+         * (`OnCreate` / `applicationDidFinishLaunching`) **before** any engine operation
+         * is dispatched.
+         */
+    @Throws(BridgeException::class) fun `setSslCertDirectory`(`certDir`: kotlin.String)
+        = 
+    uniffiRustCallWithError(BridgeException) { _status ->
+    UniffiLib.uniffi_gitnotes_git2_fn_func_set_ssl_cert_directory(
+    
+        
+        FfiConverterString.lower(`certDir`),_status)
+}
+    
+    
+
+        /**
+         * Configure git2's SSL CA certificate file for Android.
+         *
+         * This **must** be called from the host app's module-initialization entry point
+         * (`OnCreate` / `applicationDidFinishLaunching`) **before** any engine operation
+         * is dispatched. The Kotlin host builds a PEM bundle from the Android system CA
+         * directories and passes the path here; on non-Android platforms the equivalent
+         * bundle path from the host platform's CA store should be passed.
+         *
+         * Returns `Ok(())` when the certificate file was configured successfully.
+         * Returns `Err(BridgeError)` when `set_ssl_cert_file` failed.
+         */
+    @Throws(BridgeException::class) fun `setSslCertFile`(`certFile`: kotlin.String)
+        = 
+    uniffiRustCallWithError(BridgeException) { _status ->
+    UniffiLib.uniffi_gitnotes_git2_fn_func_set_ssl_cert_file(
+    
+        
+        FfiConverterString.lower(`certFile`),_status)
+}
+    
+    
+
+    @Throws(BridgeException::class) fun `setSslCertLocations`(`certFile`: kotlin.String, `certDir`: kotlin.String)
+        = 
+    uniffiRustCallWithError(BridgeException) { _status ->
+    UniffiLib.uniffi_gitnotes_git2_fn_func_set_ssl_cert_locations(
+    
+        
+        FfiConverterString.lower(`certFile`),
+        FfiConverterString.lower(`certDir`),_status)
 }
     
     

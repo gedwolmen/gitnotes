@@ -485,6 +485,21 @@ void uniffi_gitnotes_git2_fn_func_set_credential(RustBuffer repo_id, RustBuffer 
 void uniffi_gitnotes_git2_fn_func_set_remote_url(RustBuffer path, RustBuffer name, RustBuffer url, RustCallStatus *_Nonnull out_status
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_FN_FUNC_SET_SSL_CERT_DIRECTORY
+#define UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_FN_FUNC_SET_SSL_CERT_DIRECTORY
+void uniffi_gitnotes_git2_fn_func_set_ssl_cert_directory(RustBuffer cert_dir, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_FN_FUNC_SET_SSL_CERT_FILE
+#define UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_FN_FUNC_SET_SSL_CERT_FILE
+void uniffi_gitnotes_git2_fn_func_set_ssl_cert_file(RustBuffer cert_file, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_FN_FUNC_SET_SSL_CERT_LOCATIONS
+#define UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_FN_FUNC_SET_SSL_CERT_LOCATIONS
+void uniffi_gitnotes_git2_fn_func_set_ssl_cert_locations(RustBuffer cert_file, RustBuffer cert_dir, RustCallStatus *_Nonnull out_status
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_FN_FUNC_STAGE_FILE_LINES
 #define UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_FN_FUNC_STAGE_FILE_LINES
 void uniffi_gitnotes_git2_fn_func_stage_file_lines(RustBuffer path, RustBuffer file_path, RustBuffer hunks, RustCallStatus *_Nonnull out_status
@@ -1009,6 +1024,24 @@ uint16_t uniffi_gitnotes_git2_checksum_func_set_credential(void
 #ifndef UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_SET_REMOTE_URL
 #define UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_SET_REMOTE_URL
 uint16_t uniffi_gitnotes_git2_checksum_func_set_remote_url(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_SET_SSL_CERT_DIRECTORY
+#define UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_SET_SSL_CERT_DIRECTORY
+uint16_t uniffi_gitnotes_git2_checksum_func_set_ssl_cert_directory(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_SET_SSL_CERT_FILE
+#define UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_SET_SSL_CERT_FILE
+uint16_t uniffi_gitnotes_git2_checksum_func_set_ssl_cert_file(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_SET_SSL_CERT_LOCATIONS
+#define UNIFFI_FFIDEF_UNIFFI_GITNOTES_GIT2_CHECKSUM_FUNC_SET_SSL_CERT_LOCATIONS
+uint16_t uniffi_gitnotes_git2_checksum_func_set_ssl_cert_locations(void
     
 );
 #endif

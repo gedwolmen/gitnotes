@@ -53,13 +53,14 @@
 **Purpose:** Manages AI chat threads and messages.
 
 **State:**
-- `threads: ChatThread[]`
-- `selectedThreadId: string | null`
-- `messages: Record<string, ChatMessage[]>` — threadId → messages
+- `threads: ChatThreadSummary[]` — loaded thread summaries
+- `activeThread: ChatThread | null` — currently open thread (null if none)
 - `isLoading: boolean`
 - `error: string | null`
+- `isStreaming: boolean`
+- `storageAdapter: ChatStorageAdapter | null`
 
-**Key Actions:** `loadThreads`, `createThread`, `deleteThread`, `sendMessage`, `loadMessages`
+**Key Actions:** `loadThreads`, `loadThread`, `createThread`, `deleteThread`, `renameThread`, `addMessage`, `updateMessage`, `removeMessage`, `truncateAfter`, `setStreaming`, `clearActiveThread`, `clearError`, `setStorageAdapter`
 
 ---
 
@@ -124,20 +125,6 @@
 - `bindAccount`, `unbindAccount`
 
 **DEV_FORCE_PRO:** In `__DEV__` on iOS Simulator, Pro gate is forced open via `EXPO_PUBLIC_FORCE_ENABLE_PRO_ON_SIMULATOR` env var for QA testing without real IAP.
-
----
-
-## Theme Store (`src/stores/themeStore.ts`)
-
-**Purpose:** Manages visual theme — neumorphic vs flat, light vs dark.
-
-**State:**
-- `style: 'neumorphic' | 'flat'`
-- `isDark: boolean`
-- `colors: Palette` — resolved color tokens
-- `isHydrated: boolean`
-
-**Key Actions:** `setStyle`, `setDark`, `hydrate`
 
 ---
 

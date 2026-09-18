@@ -40,7 +40,20 @@ describe('Android build configuration invariants', () => {
       expect(buildProps?.[1]?.android?.enableShrinkResourcesInReleaseBuilds).toBe(true);
     });
 
-    test('JNA warning suppression rule is present', () => {
+    test('JNA Pointer.peer preservation rule is present', () => {
+      const appJson = getAppJson();
+      const plugins: unknown[] = appJson.expo?.plugins ?? [];
+      const buildProps = plugins.find(
+        (p): p is [string, Record<string, unknown>] =>
+          Array.isArray(p) && p[0] === 'expo-build-properties',
+      );
+      const extraRules: string = buildProps?.[1]?.android?.extraProguardRules ?? '';
+      // R8 strips Pointer class causing "Can't obtain peer field ID" at runtime — -keepclassmembers
+      // is insufficient because it only preserves members; the class itself must be retained
+      expect(extraRules).toMatch(/-keep\s+class\s+com\.sun\.jna\.Pointer\s*\{[^}]*protected\s+long\s+peer/);
+    });
+
+    test('java.awt.Component warning suppression rule is present', () => {
       const appJson = getAppJson();
       const plugins: unknown[] = appJson.expo?.plugins ?? [];
       const buildProps = plugins.find(

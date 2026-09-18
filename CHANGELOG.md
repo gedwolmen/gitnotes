@@ -8,6 +8,25 @@ All notable fixes and feature changes to GitNotēs are documented here.
 >
 > **History**: prior fixes (pre-2026-08) lived in single-PR wiki pages. Those pages were retired in [#1047](https://github.com/gedwolmen/gitnotes/pull/1047); their full diagnostic content is preserved in git history via `git log -p -- docs/wiki/<file>.md`.
 
+## 2026-09-17
+
+### fix(android): resolve Android TLS certificate verification failures
+
+**What:** Android Git push/fetch failed with `SSL certificate is invalid` and `error:05880020` (X509_R_LOADED_CERT) when using GitEngine's native libgit2 OpenSSL backend.
+
+**Fix:** Two-layer fix applied via `build.rs` patch to vendored libgit2 `openssl.c`:
+
+1. `verify_server_cert()` now skips the `SSL_get_verify_result()` check when `SSL_VERIFY_NONE` is set, preventing Conscrypt's independent Java-layer certificate validation from interfering with the native TLS handshake.
+2. `git_openssl__set_cert_location()` now falls back from file mode to directory mode when the PEM bundle file fails to load (handles Android OpenSSL `no-stdio` builds where `fopen()` is unavailable).
+
+Builds on PRs #1622–#1627. See PRs #1625, #1627.
+
+### fix(android): preserve JNA Pointer.peer through R8 minification
+
+**What:** Android Play Store release builds crashed on startup with `Can't obtain peer field ID for class com.sun.jna.Pointer` because R8 stripped the protected `peer` field from `com.sun.jna.Pointer`.
+
+**Fix:** Added `-keep class com.sun.jna.Pointer { protected long peer; }` to the R8 rules via `app.json` extraProguardRules, preserving the class and field through release minification. `-keepclassmembers` alone is insufficient because it does not retain the class itself.
+
 ## 2026-09-14
 
 ### fix(canvas): render strokes during gesture updates

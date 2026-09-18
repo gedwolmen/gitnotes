@@ -152,7 +152,7 @@
 
 **Purpose:** Safe back navigation — confirms if there are unsaved changes before navigating back.
 
-**Returns:** `{ goBack, confirmIfDirty }`
+**Returns:** `() => void` — a single function that safely navigates back; falls back to MainTabs if no previous screen is available.
 
 **Source:** `src/hooks/useSafeBack.ts`
 
@@ -177,6 +177,9 @@
 **Returns:** `{ accounts, activeAccount, addAccount, removeAccount }`
 
 **Source:** `src/hooks/useAccounts.ts`
+
+**Note:** This hook is currently a stub — it returns hardcoded `{ accounts: [], activeAccount: null }` without consuming any context. Account management is handled via AccountStorage service directly.
+<!-- OMO_INTERNAL_INITIATOR -->
 
 ---
 
@@ -237,6 +240,26 @@
 **Returns:** `{ quote, author, source, isLoading }`
 
 **Source:** `src/hooks/useDailyQuote.ts`
+
+---
+
+### `useForegroundSyncAlert()`
+
+**Purpose:** Displays an alert when foreground sync encounters a failure.
+
+**Returns:** `{ hasSyncedThisSession }`
+
+**Source:** `src/hooks/useForegroundSyncAlert.ts`
+
+---
+
+### `useGitRefreshEvent()`
+
+**Purpose:** Subscribes to git refresh events (checkout, commit, pull) for reactive UI updates.
+
+**Returns:** `{ lastRefreshAt: number | null }`
+
+**Source:** `src/hooks/useGitRefreshEvent.ts`
 
 ---
 

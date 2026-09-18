@@ -8,7 +8,64 @@ use crate::api::types::{
     FileStatus, GeneratedKey, HunkSelection, ProgressEvent, PullResult, PushIntegrateResult,
     PushResult, RemoteInfo, RepairReport, RepoInfo, RepoStatus,
 };
-use crate::engine::{self, EngineError};
+use crate::engine::{self, android_ca, EngineError};
+
+/// Configure git2's SSL CA certificate file for Android.
+///
+/// This **must** be called from the host app's module-initialization entry point
+/// (`OnCreate` / `applicationDidFinishLaunching`) **before** any engine operation
+/// is dispatched. The Kotlin host builds a PEM bundle from the Android system CA
+/// directories and passes the path here; on non-Android platforms the equivalent
+/// bundle path from the host platform's CA store should be passed.
+///
+/// Returns `Ok(())` when the certificate file was configured successfully.
+/// Returns `Err(BridgeError)` when `set_ssl_cert_file` failed.
+#[uniffi::export]
+pub fn set_ssl_cert_file(cert_file: String) -> Result<(), BridgeError> {
+    let path = std::path::Path::new(&cert_file);
+    android_ca::set_ssl_cert_file(path).map_err(|e| BridgeError::Other {
+        message: e.to_string(),
+        corruption: false,
+    })
+}
+
+/// Sets the SSL certificate directory for Android.
+///
+/// On Android, this is preferred over `set_ssl_cert_file` because OpenSSL's
+/// directory mode uses hash-based certificate lookup, which works directly
+/// with Android's `/apex/com.android.conscrypt/cacerts` directory without
+/// requiring a bundled PEM file.
+///
+/// This must be called from the host app's module-initialization entry point
+/// (`OnCreate` / `applicationDidFinishLaunching`) **before** any engine operation
+/// is dispatched.
+#[uniffi::export]
+pub fn set_ssl_cert_directory(cert_dir: String) -> Result<(), BridgeError> {
+    let path = std::path::Path::new(&cert_dir);
+    android_ca::set_ssl_cert_directory(path).map_err(|e| BridgeError::Other {
+        message: e.to_string(),
+        corruption: false,
+    })
+}
+
+#[uniffi::export]
+pub fn set_ssl_cert_locations(
+    cert_file: String,
+    cert_dir: String,
+) -> Result<(), BridgeError> {
+    let file_path = std::path::Path::new(&cert_file);
+    let dir_path = std::path::Path::new(&cert_dir);
+    let file_exists = file_path.exists();
+    let dir_exists = dir_path.exists();
+    android_ca::set_ssl_cert_locations(
+        file_exists.then_some(file_path),
+        dir_exists.then_some(dir_path),
+    )
+    .map_err(|e| BridgeError::Other {
+        message: e.to_string(),
+        corruption: false,
+    })
+}
 
 /// Errors surfaced across the FFI boundary.
 ///
