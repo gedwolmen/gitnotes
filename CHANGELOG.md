@@ -15,6 +15,7 @@ All notable fixes and feature changes to GitNotēs are documented here.
 **What:** Android Git push/fetch failed with `SSL certificate is invalid` and `error:05880020` (X509_R_LOADED_CERT) when using GitEngine's native libgit2 OpenSSL backend.
 
 **Fix:** Two-layer fix applied via `build.rs` patch to vendored libgit2 `openssl.c`:
+
 1. `verify_server_cert()` now skips the `SSL_get_verify_result()` check when `SSL_VERIFY_NONE` is set, preventing Conscrypt's independent Java-layer certificate validation from interfering with the native TLS handshake.
 2. `git_openssl__set_cert_location()` now falls back from file mode to directory mode when the PEM bundle file fails to load (handles Android OpenSSL `no-stdio` builds where `fopen()` is unavailable).
 
