@@ -151,6 +151,7 @@ export function useNoteEditorDocument({
   const titleRef = useRef(title);
   contentRef.current = content;
   titleRef.current = title;
+  const currentFilePathRef = useRef<string | undefined>(undefined);
   const [isEditing, setIsEditing] = useState(!noteId);
   const [tags, setTags] = useState<string[]>(initialTags ?? []);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
@@ -264,6 +265,7 @@ export function useNoteEditorDocument({
     setBranch(existingNote.branch);
     setCommit(existingNote.commit);
     setExistingFilePath(existingNote.filePath);
+    currentFilePathRef.current = existingNote.filePath;
     setFolderPath(existingNote.folderPath ?? deriveFolderPath(existingNote.filePath));
     setGithub(existingNote.github);
     setAccountId(existingNote.accountId ?? activeAccountId ?? undefined);
@@ -369,6 +371,7 @@ export function useNoteEditorDocument({
           return;
         }
         HapticService.success();
+        currentFilePathRef.current = updated.filePath;
       } else {
         const newNote = await createNote({
           title: title.trim(),
@@ -399,7 +402,7 @@ export function useNoteEditorDocument({
         // note appeared "gone" after restart (data-loss report).
         const defaultSlug = `${slugifyLocal(title.trim())}${getExtensionForFormat(noteFormat)}`;
         const syncPath =
-          existingFilePath ??
+          currentFilePathRef.current ??
           (folderPath ? `${folderPath}/${defaultSlug}` : `notes/${defaultSlug}`);
         const upsertOpId = syncPath
           ? gitOperationRegistry.begin({
