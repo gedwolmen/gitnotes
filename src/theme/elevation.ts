@@ -83,8 +83,14 @@ export function buildElevation(args: BuildElevationArgs): ElevationStyles {
   }
 
   return {
-    outer: {},
+    outer: { elevation: tier === 'subtle' ? 1 : tier === 'raised' ? 2 : 4 },
     inner: {},
-    androidOverlays: undefined,
+    androidOverlays: {
+      offset,
+      blur,
+      highlight: inset ? darkColor : lightColor,
+      shadow: inset ? lightColor : darkColor,
+      inset,
+    },
   };
 }
