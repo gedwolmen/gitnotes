@@ -25,16 +25,16 @@ function isSimulator(): boolean {
   }
   return _isDevice === false;
 }
-/** Dev-only override: forces Pro gate open on iOS simulator so QA can test paid features without IAP.
+/** Dev-only override: forces Pro gate open on iOS/Android simulator so QA can test paid features without IAP.
  *
  * NOT a payment bypass — RevenueCat calls (initialize/refresh/purchase/restore) run unchanged.
  * Only the derived gate (`selectIsPro` + `status`) is forced to `true` / `'pro'` in this path.
  *
- * Gate quad: `__DEV__ && Platform.OS === 'ios' && !Device.isDevice && EXPO_PUBLIC_FORCE_ENABLE_PRO_ON_SIMULATOR !== 'false'`
+ * Gate: `__DEV__ && ((Platform.OS === 'ios' && isSimulator()) || Platform.OS === 'android') && EXPO_PUBLIC_FORCE_ENABLE_PRO_ON_SIMULATOR !== 'false'`
  * - `__DEV__`: compiled out in production builds.
- * - `Platform.OS === 'ios'`: Android and web are unaffected.
- * - `!Device.isDevice`: only true in the iOS simulator (not on a real device).
- * - `EXPO_PUBLIC_FORCE_ENABLE_PRO_ON_SIMULATOR !== 'false'`: defaults true, set to 'false' to test paywalls on simulator.
+ * - `Platform.OS === 'ios' && isSimulator()`: iOS simulator only.
+ * - `Platform.OS === 'android'`: all Android (simulator + device in dev).
+ * - `EXPO_PUBLIC_FORCE_ENABLE_PRO_ON_SIMULATOR !== 'false'`: defaults true, set to 'false' to test paywalls.
  */
 export const DEV_FORCE_PRO =
   __DEV__ &&
