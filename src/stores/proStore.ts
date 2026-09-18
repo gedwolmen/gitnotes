@@ -38,8 +38,7 @@ function isSimulator(): boolean {
  */
 export const DEV_FORCE_PRO =
   __DEV__ &&
-  Platform.OS === 'ios' &&
-  isSimulator() &&
+  ((Platform.OS === 'ios' && isSimulator()) || Platform.OS === 'android') &&
   process.env.EXPO_PUBLIC_FORCE_ENABLE_PRO_ON_SIMULATOR !== 'false';
 
 const TRIAL_WAS_ACTIVE_KEY = '@gitnotes:trial_was_active';
