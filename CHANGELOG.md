@@ -8,6 +8,16 @@ All notable fixes and feature changes to GitNotēs are documented here.
 >
 > **History**: prior fixes (pre-2026-08) lived in single-PR wiki pages. Those pages were retired in [#1047](https://github.com/gedwolmen/gitnotes/pull/1047); their full diagnostic content is preserved in git history via `git log -p -- docs/wiki/<file>.md`.
 
+## 2026-09-19
+
+### fix(notes): prevent duplicate note file when editing title
+
+**What:** Editing a note's title caused duplicate entries in the mobile note list, while the repo file itself remained correct.
+
+**Fix:** In `useNoteEditorDocument.handleSave()`, the `syncPath` for `upsertNote` was using a stale `existingFilePath` captured at editor hydration time. After a title change, `noteStore.updateNote()` correctly committed a `git mv` rename, but `handleSave` then wrote to the old path, creating a duplicate file. The fix uses the `filePath` from the returned updated note instead of the stale captured value.
+
+See PR [#1635](https://github.com/gedwolmen/gitnotes/pull/1635).
+
 ## 2026-09-17
 
 ### fix(android): resolve Android TLS certificate verification failures
