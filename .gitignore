@@ -106,4 +106,3 @@ appstore_screenshots/
 
 # Agent dogfood/QA output (screenshots, traces, videos)
 dogfood-output/
-node_modules

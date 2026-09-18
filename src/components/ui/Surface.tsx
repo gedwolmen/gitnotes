@@ -90,17 +90,8 @@ interface AndroidOverlayProps {
 }
 
 function AndroidShadowOverlays(props: AndroidOverlayProps) {
-  const { offset, blur, highlight, shadow, inset, radius } = props;
+  const { offset, blur, shadow, radius } = props;
   const spread = blur;
-
-  // Simulate iOS neumorphic shadows: dark outer shadow + light inner highlight
-  // inset=true swaps shadow/highlight positions (pressed/inset effect)
-  const [shadowTop, shadowLeft, shadowRight, shadowBottom] = inset
-    ? [offset, offset, -offset, -offset]
-    : [-offset, -offset, offset, offset];
-  const [highlightTop, highlightLeft, highlightRight, highlightBottom] = inset
-    ? [-offset, -offset, offset, offset]
-    : [offset, offset, -offset, -offset];
 
   return (
     <>
@@ -108,27 +99,13 @@ function AndroidShadowOverlays(props: AndroidOverlayProps) {
         pointerEvents="none"
         style={{
           position: 'absolute',
-          top: shadowTop,
-          left: shadowLeft,
-          right: shadowRight,
-          bottom: shadowBottom,
+          top: -offset,
+          left: -offset,
+          right: offset,
+          bottom: offset,
           borderRadius: radius + spread / 2,
           backgroundColor: shadow,
-          opacity: 0.25,
-          zIndex: -1,
-        }}
-      />
-      <View
-        pointerEvents="none"
-        style={{
-          position: 'absolute',
-          top: highlightTop,
-          left: highlightLeft,
-          right: highlightRight,
-          bottom: highlightBottom,
-          borderRadius: radius + spread / 2,
-          backgroundColor: highlight,
-          opacity: 0.6,
+          opacity: 0.15,
           zIndex: -1,
         }}
       />
