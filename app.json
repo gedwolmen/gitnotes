@@ -124,7 +124,7 @@
             "gradleProperties": {
               "org.gradle.jvmargs": "-Xmx4096m -XX:MaxMetaspaceSize=1024m"
             },
-            "extraProguardRules": "-dontwarn java.awt.Component\n-keep class com.sun.jna.Native { *; }\n-keep class com.sun.jna.Pointer { protected long peer; }"
+            "extraProguardRules": "-dontwarn java.awt.**\n-dontwarn com.sun.jna.**\n-keep class com.sun.jna.Native { *; }\n-keep class com.sun.jna.Native$AWT { *; }\n-keep class com.sun.jna.Pointer { protected long peer; }"
           }
         }
       ],
