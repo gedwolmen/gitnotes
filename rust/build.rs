@@ -9,7 +9,8 @@ use std::process::Command;
 /// when SSL_VERIFY_NONE is set (needed for Android Conscrypt compatibility).
 fn apply_libgit2_openssl_patch(registry_src: &Path) {
     let openssl_c = registry_src.join("libgit2/src/libgit2/streams/openssl.c");
-    let patch_file = Path::new("patches/openssl-cert-verify.patch");
+    let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let patch_file = manifest_dir.join("patches/openssl-cert-verify.patch");
     let marker = registry_src.join(".patch-applied");
 
     if marker.exists() {
@@ -58,16 +59,17 @@ fn apply_libgit2_openssl_patch(registry_src: &Path) {
 
 fn main() {
     // Apply libgit2 openssl.c patch if needed.
+    // Patch ALL libgit2-sys versions found in the registry — git2 may depend on
+    // a different patch version than what we compiled previously, and each
+    // version has its own copy of the vendored libgit2 source.
     if let Ok(cargo_dir) = std::env::var("CARGO_REGISTRY_SRC") {
         let registry_src = Path::new(&cargo_dir);
-        // Find libgit2-sys in the registry.
         if let Ok(entries) = fs::read_dir(registry_src) {
             for entry in entries.flatten() {
                 let name = entry.file_name();
                 let name_str = name.to_string_lossy();
                 if name_str.starts_with("libgit2-sys-") {
                     apply_libgit2_openssl_patch(&entry.path());
-                    break;
                 }
             }
         }
