@@ -6,7 +6,7 @@ use std::process::Command;
 /// cargo registry. This is a one-time operation — the patch is applied once and
 /// a marker file is written so subsequent builds skip the patch application.
 /// The patch modifies libgit2's verify_server_cert() to skip the SSL result check
-/// when SSL_VERIFY_NONE is set (needed for Android Conscrypt compatibility).
+/// when SSL_VERIFY_NONE is is set (needed for Android Conscrypt compatibility).
 fn apply_libgit2_openssl_patch(registry_src: &Path) {
     let openssl_c = registry_src.join("libgit2/src/libgit2/streams/openssl.c");
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
@@ -57,6 +57,99 @@ fn apply_libgit2_openssl_patch(registry_src: &Path) {
     }
 }
 
+/// Patch git_openssl__set_cert_location in libgit2-sys 0.18.8+ to add directory-mode
+/// fallback when file-mode fails. The 0.18.8 version is missing the fallback that was
+/// added to 0.18.3, causing SSL_CTX_load_verify_locations to fail entirely on Android
+/// emulators where file-mode (no-stdio) fails and directory-mode is never attempted.
+///
+/// This is a content-based replacement (not line-number dependent) so it works across
+/// minor version differences.
+fn apply_set_cert_location_fallback(registry_src: &Path) {
+    let openssl_c = registry_src.join("libgit2/src/libgit2/streams/openssl.c");
+    let marker = registry_src.join(".set-cert-location-patched");
+
+    if marker.exists() {
+        return;
+    }
+
+    if !openssl_c.exists() {
+        return;
+    }
+
+    let content = match fs::read_to_string(&openssl_c) {
+        Ok(c) => c,
+        Err(_) => return,
+    };
+
+    // Check if fallback is already present (patched version has this comment).
+    if content.contains("file mode fails (e.g. no-stdio OpenSSL build)") {
+        println!("build.rs: set_cert_location fallback already present");
+        let _ = fs::write(&marker, "");
+        return;
+    }
+
+    // The unpatched 0.18.8 block ends with:
+    //     ERR_error_string_n(ERR_get_error(), errmsg, sizeof(errmsg));
+    //     git_error_set(GIT_ERROR_SSL, "OpenSSL error: failed to load certificates: %s",
+    //         errmsg);
+    //     return -1;
+    // }
+    // return 0;
+    let old_block = r#"	if (SSL_CTX_load_verify_locations(git__ssl_ctx, file, path) == 0) {
+		char errmsg[256];
+
+		ERR_error_string_n(ERR_get_error(), errmsg, sizeof(errmsg));
+		git_error_set(GIT_ERROR_SSL, "OpenSSL error: failed to load certificates: %s",
+			errmsg);
+
+		return -1;
+	}
+	return 0;
+}"#;
+
+    let new_block = r#"	if (SSL_CTX_load_verify_locations(git__ssl_ctx, file, path) == 0) {
+		char errmsg[256];
+
+		ERR_error_string_n(ERR_get_error(), errmsg, sizeof(errmsg));
+
+		/* If file mode fails (e.g. "no-stdio" OpenSSL build), try directory mode
+		 * if a directory was also provided. This handles Android where OpenSSL's
+		 * file-mode fails but directory mode works. */
+		if (file != NULL && path != NULL) {
+			if (SSL_CTX_load_verify_locations(git__ssl_ctx, NULL, path) == 0) {
+				git_error_set(GIT_ERROR_SSL, "OpenSSL error: failed to load certificates: %s",
+					errmsg);
+				return -1;
+			}
+			/* Directory mode succeeded. */
+			return 0;
+		}
+
+		git_error_set(GIT_ERROR_SSL, "OpenSSL error: failed to load certificates: %s",
+			errmsg);
+		return -1;
+	}
+	return 0;
+}"#;
+
+    if !content.contains(old_block) {
+        eprintln!(
+            "build.rs: set_cert_location block not found in {} — skipping fallback",
+            openssl_c.display()
+        );
+        return;
+    }
+
+    let new_content = content.replace(old_block, new_block);
+    if let Err(e) = fs::write(&openssl_c, new_content) {
+        eprintln!("build.rs: failed to write patched openssl.c: {}", e);
+        return;
+    }
+
+    let _ = fs::write(&marker, "");
+    println!("build.rs: applied set_cert_location fallback to libgit2-sys");
+}
+
 fn main() {
     // Apply libgit2 openssl.c patch if needed.
     // Patch ALL libgit2-sys versions found in the registry — git2 may depend on
@@ -70,6 +163,7 @@ fn main() {
                 let name_str = name.to_string_lossy();
                 if name_str.starts_with("libgit2-sys-") {
                     apply_libgit2_openssl_patch(&entry.path());
+                    apply_set_cert_location_fallback(&entry.path());
                 }
             }
         }
