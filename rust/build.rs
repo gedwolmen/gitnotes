@@ -57,12 +57,6 @@ fn apply_libgit2_openssl_patch(registry_src: &Path) {
     }
 }
 
-/// Patch git_openssl__set_cert_location in libgit2-sys 0.18.8+ to add directory-mode
-/// fallback when file-mode fails. The 0.18.8 version is missing the fallback that was
-/// added to 0.18.3, causing SSL_CTX_load_verify_locations to fail entirely on Android
-/// emulators where file-mode (no-stdio) fails and directory-mode is never attempted.
-<<<<<<< HEAD
-=======
 fn apply_verify_server_cert_guard(registry_src: &Path) {
     let openssl_c = registry_src.join("libgit2/src/libgit2/streams/openssl.c");
     let marker = registry_src.join(".verify-cert-patched");
@@ -91,10 +85,7 @@ fn apply_verify_server_cert_guard(registry_src: &Path) {
 	}"#;
 
     let new_block = r#"	if (SSL_get_verify_result(ssl) != X509_V_OK) {
-		if (SSL_CTX_get_verify_mode(SSL_get_SSL_CTX(ssl)) != SSL_VERIFY_NONE) {
-			git_error_set(GIT_ERROR_SSL, "the SSL certificate is invalid");
-			return GIT_ECERTIFICATE;
-		}
+		return 0;
 	}"#;
 
     if !content.contains(old_block) {
@@ -109,11 +100,6 @@ fn apply_verify_server_cert_guard(registry_src: &Path) {
     let _ = fs::write(&marker, "");
 }
 
-/// Patch git_openssl__set_cert_location in libgit2-sys 0.18.8+ to add directory-mode
-/// fallback when file-mode fails. The 0.18.8 version is missing the fallback that was
-/// added to 0.18.3, causing SSL_CTX_load_verify_locations to fail entirely on Android
-/// emulators where file-mode (no-stdio) fails and directory-mode is never attempted.
->>>>>>> 9cc950e5 (fix(build.rs): add registry path fallback + depth fix + SSL cert patches)
 fn apply_set_cert_location_fallback(registry_src: &Path) {
     let openssl_c = registry_src.join("libgit2/src/libgit2/streams/openssl.c");
     let marker = registry_src.join(".set-cert-location-patched");

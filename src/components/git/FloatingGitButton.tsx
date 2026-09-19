@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { AccessibilityInfo, Pressable, StyleSheet, View } from 'react-native';
+import { AccessibilityInfo, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { GestureDetector } from 'react-native-gesture-handler';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
@@ -195,7 +195,7 @@ export default function FloatingGitButton({
             accessibilityState={{ disabled }}
           >
             <Surface
-              elevation="raised"
+              elevation={Platform.OS === 'android' ? 'flat' : 'raised'}
               radius="pill"
               testID="gitbutton.surface"
               style={{
