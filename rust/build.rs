@@ -170,51 +170,6 @@ fn apply_set_cert_location_fallback(registry_src: &Path) {
     let _ = fs::write(&marker, "");
 }
 
-fn apply_verify_server_cert_guard(registry_src: &Path) {
-    let openssl_c = registry_src.join("libgit2/src/libgit2/streams/openssl.c");
-    let marker = registry_src.join(".verify-cert-patched");
-
-    if marker.exists() {
-        return;
-    }
-
-    if !openssl_c.exists() {
-        return;
-    }
-
-    let content = match fs::read_to_string(&openssl_c) {
-        Ok(c) => c,
-        Err(_) => return,
-    };
-
-    if content.contains("SSL_VERIFY_NONE is set. On Android") {
-        let _ = fs::write(&marker, "");
-        return;
-    }
-
-    let old_block = r#"	if (SSL_get_verify_result(ssl) != X509_V_OK) {
-		if (SSL_CTX_get_verify_mode(SSL_get_SSL_CTX(ssl)) != SSL_VERIFY_NONE) {
-			git_error_set(GIT_ERROR_SSL, "the SSL certificate is invalid");
-			return GIT_ECERTIFICATE;
-		}
-	}"#;
-
-    let new_block = r#"	if (SSL_get_verify_result(ssl) != X509_V_OK) {
-		return 0;
-	}"#;
-
-    if !content.contains(old_block) {
-        return;
-    }
-
-    let new_content = content.replace(old_block, new_block);
-    if fs::write(&openssl_c, new_content).is_err() {
-        return;
-    }
-
-    let _ = fs::write(&marker, "");
-}
-
 fn main() {
     // Apply libgit2 openssl.c patch if needed.
     // Patch ALL libgit2-sys versions found in the registry — git2 may depend on
