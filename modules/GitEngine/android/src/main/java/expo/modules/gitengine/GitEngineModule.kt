@@ -20,20 +20,47 @@ class GitEngineModule : Module() {
     private const val CA_BUNDLE_FILENAME = "gitnotes_ca_bundle.pem"
   }
 
+  /// Configure git2's SSL certificate store on Android.
+  ///
+  /// Strategy (tries in order, stops at first success):
+  /// 1. set_ssl_cert_file  — the PEM bundle built from Android CA directories.
+  /// 2. set_ssl_cert_directory — the Android APEX/legacy CA directory (works when the
+  ///    bundle file has permissions issues but the dir is accessible).
+  ///
+  /// If both fail with X509_R_LOADED_CERT it means git2's SSL_CTX was already
+  /// populated by its internal openssl_init call; git2 will use whatever cert store
+  /// it already has (may be empty on some Android builds — SSL errors will result).
+  /// In that case we log a clear warning so the failure is not silent.
   private fun configureAndroidCaBundle() {
-    val caDir = findAndroidCaDir() ?: run {
-      android.util.Log.e("GitEngine", "configureAndroidCaBundle: no CA directory found")
-      return
+    val caDir = findAndroidCaDir()
+    val bundlePath = caDir?.let { buildAndroidCaBundle() }
+
+    if (bundlePath != null) {
+      try {
+        setSslCertLocations(bundlePath, caDir.absolutePath)
+        android.util.Log.i("GitEngine", "configureAndroidCaBundle: SSL certs configured via file (bundle=$bundlePath)")
+        return
+      } catch (e: Throwable) {
+        // X509_R_LOADED_CERT: git2 already populated the SSL_CTX with its own store.
+        // Fall through to try the directory approach.
+        android.util.Log.w("GitEngine", "configureAndroidCaBundle: setSslCertLocations(file) failed: ${e.message}, trying directory")
+      }
     }
-    val bundlePath = buildAndroidCaBundle() ?: run {
-      android.util.Log.e("GitEngine", "configureAndroidCaBundle: PEM bundle unavailable")
-      return
+
+    if (caDir != null) {
+      try {
+        setSslCertDirectory(caDir.absolutePath)
+        android.util.Log.i("GitEngine", "configureAndroidCaBundle: SSL certs configured via directory (dir=${caDir.absolutePath})")
+        return
+      } catch (e: Throwable) {
+        android.util.Log.w("GitEngine", "configureAndroidCaBundle: setSslCertDirectory also failed: ${e.message}")
+      }
     }
-    android.util.Log.i("GitEngine", "configureAndroidCaBundle: bundle=$bundlePath dir=${caDir.absolutePath}")
-    // setSslCertLocations(bundlePath, caDir.absolutePath) // Omit: SSL_CTX_set_default_verify_paths
-    // (called in openssl_init) already populates the X509 store from /apex/com.android.conscrypt/cacerts.
-    // Calling setSslCertLocations afterward causes X509_R_LOADED_CERT (error:05880020) because
-    // the store is already populated. Android OpenSSL no-stdio cannot load certs via file mode.
+
+    // Both approaches failed — this is not silent; git2 may still work if its internal
+    // openssl_init found the system CA store, otherwise SSL ops will fail with a clear
+    // git error (not an obscure native-load error).
+    android.util.Log.e("GitEngine", "configureAndroidCaBundle: neither PEM bundle nor CA directory was available; git2 SSL verification may fail on this device")
   }
 
   /// Returns the path to the CA bundle, building it if necessary.
