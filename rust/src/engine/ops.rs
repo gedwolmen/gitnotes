@@ -9,8 +9,8 @@ use std::path::Path;
 
 use git2::build::CheckoutBuilder;
 use git2::{
-    BranchType, Diff, DiffOptions, Index, ObjectType, Oid, Repository, Signature, Sort, Status,
-    StatusOptions,
+    ApplyLocation, BranchType, Diff, DiffFindOptions, DiffOptions, Index, ObjectType, Oid,
+    Repository, Signature, Sort, Status, StatusOptions,
 };
 
 use crate::api::types::{
@@ -122,13 +122,31 @@ pub fn diff_file(path: &Path, file_path: &str) -> Result<FileDiff> {
 
 /// Stage the given paths (add to the index). `git add`; also resolves any
 /// conflict entries for those paths.
+///
+/// Rename detection is enabled so that moving a file is tracked as a rename
+/// rather than a delete + add pair, preventing duplicate files on the remote.
 pub fn stage_paths(path: &Path, paths: &[String]) -> Result<()> {
     run_with_lock(path, || {
         let repo = open_repo(path)?;
-        let mut index = repo.index()?;
-        let _ = index.add_all(paths.iter(), git2::IndexAddOption::DEFAULT, None);
-        let _ = index.update_all(paths.iter(), None);
-        index.write().map_err(EngineError::Git)
+        let head = repo.head()?;
+        let head_commit = head.peel_to_commit()?;
+        let head_tree = head_commit.tree()?;
+
+        let mut diff_opts = DiffOptions::new();
+        for p in paths {
+            diff_opts.pathspec(p);
+        }
+        let mut diff =
+            repo.diff_tree_to_workdir_with_index(Some(&head_tree), Some(&mut diff_opts))?;
+
+        let mut find_opts = DiffFindOptions::new();
+        find_opts.renames(true);
+        diff.find_similar(Some(&mut find_opts))?;
+
+        repo.apply(&diff, ApplyLocation::Index, None)
+            .map_err(EngineError::Git)?;
+
+        Ok(())
     })
 }
 
