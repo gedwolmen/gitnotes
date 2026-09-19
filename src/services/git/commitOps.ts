@@ -212,8 +212,9 @@ export async function commitRename(params: CommitRenameParams): Promise<CommitOp
     await ensureParentDirs(fsRoot, newAbsVirtual);
     await FileSystem.writeAsStringAsync(newAbsUri, content);
 
-    // 3. Stage the new file
-    await GitEngine.stage(repoDir, [newRelPath]);
+    // 3. Stage both old (deleted) and new (added) paths together so
+    // git's rename detection pairs them as a rename, not delete+add.
+    await GitEngine.stage(repoDir, [prevRelPath, newRelPath]);
 
     // 4. Commit both staged changes in one commit
     const commitInfo = await GitEngine.commit(repoDir, message, { name: author.name, email: author.email });
