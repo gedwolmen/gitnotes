@@ -341,8 +341,13 @@ async function pullNotesFromRepo(
     const fetched = await fetchInBatches(
       noteBlobs,
       async (blob) => {
-        const content = await resolvedReader.readFile(blob.path);
-        return content === null ? null : { path: blob.path, content };
+        try {
+          const content = await resolvedReader.readFile(blob.path);
+          return content === null ? null : { path: blob.path, content };
+        } catch (error) {
+          console.warn(`[RepoPullService] Failed to fetch note ${blob.path}:`, error instanceof Error ? error.message : error);
+          return null;
+        }
       },
       FILE_FETCH_CONCURRENCY,
     );
