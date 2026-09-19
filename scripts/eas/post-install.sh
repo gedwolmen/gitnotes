@@ -64,6 +64,14 @@ else
   fi
 fi
 
+if [ -z "${ANDROID_NDK_HOME:-}" ] && [ -d "${ANDROID_HOME:-}/ndk" ]; then
+  ndk_version=$(ls "$ANDROID_HOME/ndk" 2>/dev/null | tail -1)
+  if [ -n "$ndk_version" ]; then
+    export ANDROID_NDK_HOME="$ANDROID_HOME/ndk/$ndk_version"
+    log "Auto-detected ANDROID_NDK_HOME: $ANDROID_NDK_HOME"
+  fi
+fi
+
 if [ -n "${ANDROID_NDK_HOME:-}" ] && [ -d "${ANDROID_NDK_HOME:-}" ]; then
   log "Building Android libs for all ABIs..."
   ANDROID_TARGETS=(
