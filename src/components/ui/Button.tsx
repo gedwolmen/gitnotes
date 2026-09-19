@@ -206,7 +206,7 @@ export function Button(props: ButtonProps) {
         style={fullWidth ? { alignSelf: 'stretch' } : undefined}
       >
         <Surface
-          elevation={themeStyle === 'flat' || variant === 'primary' ? 'flat' : 'raised'}
+          elevation={themeStyle === 'flat' || variant === 'primary' || variant === 'outline' ? 'flat' : 'raised'}
           radius={sizeStyle.radius}
           inset={isPressed}
           style={[
