@@ -49,7 +49,7 @@ function tokenAuth(token: string | undefined) {
   return () => ({ username: 'x-access-token', password: token });
 }
 
-async function resolveStageAuthor(): Promise<{ name: string; email: string }> {
+export async function resolveStageAuthor(): Promise<{ name: string; email: string }> {
   const user: GitHostUser | null = await getGitHostService('github').getAuthenticatedUser();
   return {
     name: user?.name ?? user?.login ?? 'gitnotes',
