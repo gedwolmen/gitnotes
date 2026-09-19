@@ -61,65 +61,6 @@ fn apply_libgit2_openssl_patch(registry_src: &Path) {
 /// fallback when file-mode fails. The 0.18.8 version is missing the fallback that was
 /// added to 0.18.3, causing SSL_CTX_load_verify_locations to fail entirely on Android
 /// emulators where file-mode (no-stdio) fails and directory-mode is never attempted.
-<<<<<<< HEAD
-=======
-fn apply_verify_server_cert_guard(registry_src: &Path) {
-    let openssl_c = registry_src.join("libgit2/src/libgit2/streams/openssl.c");
-    let marker = registry_src.join(".verify-cert-patched");
-
-    if marker.exists() {
-        return;
-    }
-
-    if !openssl_c.exists() {
-        return;
-    }
-
-    let content = match fs::read_to_string(&openssl_c) {
-        Ok(c) => c,
-        Err(_) => return,
-    };
-
-    if content.contains("SSL_VERIFY_NONE is set. On Android") {
-        let _ = fs::write(&marker, "");
-        return;
-    }
-
-    let old_block = r#"	if (SSL_get_verify_result(ssl) != X509_V_OK) {
-		git_error_set(GIT_ERROR_SSL, "the SSL certificate is invalid");
-		return GIT_ECERTIFICATE;
-	}"#;
-
-    // Android: unconditionally skip certificate errors at the native OpenSSL layer.
-    // SSL_VERIFY_NONE is set at context level, but Conscrypt's Java TLS layer may
-    // call SSL_set_SSL_CTX with its own SSL_CTX that has verification enabled, and
-    // it may also call SSL_CTX_set_verify_mode or SSL_set_verify_mode after SSL_new.
-    // The SSL_get_verify_result check here duplicates what Conscrypt already handles
-    // at the Java layer — surfacing it as a fatal error is incorrect on Android.
-    // Suppress unconditionally so the native layer defers entirely to Conscrypt.
-    let new_block = r#"	if (SSL_get_verify_result(ssl) != X509_V_OK) {
-		/* On Android, Conscrypt handles certificate validation at the Java layer.
-		 * Suppress native-layer errors to avoid double-penalizing failures that
-		 * Conscrypt already handles. */
-		return 0;
-	}"#;
-
-    if !content.contains(old_block) {
-        return;
-    }
-
-    let new_content = content.replace(old_block, new_block);
-    if fs::write(&openssl_c, new_content).is_err() {
-        return;
-    }
-
-    let _ = fs::write(&marker, "");
-}
-
-/// Patch git_openssl__set_cert_location in libgit2-sys 0.18.8+ to add directory-mode
-/// fallback when file-mode fails. The 0.18.8 version is missing the fallback that was
-/// added to 0.18.3, causing SSL_CTX_load_verify_locations to fail entirely on Android
-/// emulators where file-mode (no-stdio) fails and directory-mode is never attempted.
 fn apply_set_cert_location_fallback(registry_src: &Path) {
     let openssl_c = registry_src.join("libgit2/src/libgit2/streams/openssl.c");
     let marker = registry_src.join(".set-cert-location-patched");
@@ -177,6 +118,51 @@ fn apply_set_cert_location_fallback(registry_src: &Path) {
 	}
 	return 0;
 }"#;
+
+    if !content.contains(old_block) {
+        return;
+    }
+
+    let new_content = content.replace(old_block, new_block);
+    if fs::write(&openssl_c, new_content).is_err() {
+        return;
+    }
+
+    let _ = fs::write(&marker, "");
+}
+
+fn apply_verify_server_cert_guard(registry_src: &Path) {
+    let openssl_c = registry_src.join("libgit2/src/libgit2/streams/openssl.c");
+    let marker = registry_src.join(".verify-cert-patched");
+
+    if marker.exists() {
+        return;
+    }
+
+    if !openssl_c.exists() {
+        return;
+    }
+
+    let content = match fs::read_to_string(&openssl_c) {
+        Ok(c) => c,
+        Err(_) => return,
+    };
+
+    if content.contains("SSL_VERIFY_NONE is set. On Android") {
+        let _ = fs::write(&marker, "");
+        return;
+    }
+
+    let old_block = r#"	if (SSL_get_verify_result(ssl) != X509_V_OK) {
+		if (SSL_CTX_get_verify_mode(SSL_get_SSL_CTX(ssl)) != SSL_VERIFY_NONE) {
+			git_error_set(GIT_ERROR_SSL, "the SSL certificate is invalid");
+			return GIT_ECERTIFICATE;
+		}
+	}"#;
+
+    let new_block = r#"	if (SSL_get_verify_result(ssl) != X509_V_OK) {
+		return 0;
+	}"#;
 
     if !content.contains(old_block) {
         return;

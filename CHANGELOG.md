@@ -10,6 +10,14 @@ All notable fixes and feature changes to GitNotēs are documented here.
 
 ## 2026-09-19
 
+### fix(android): unconditionally skip native SSL cert errors on Android
+
+**What:** Even after PRs #1641/#1642/#1643, the "SSL certificate is invalid" error still occurred on Android because the conditional guard (`SSL_CTX_get_verify_mode != SSL_VERIFY_NONE`) could fire on the wrong SSL_CTX — Conscrypt's Java TLS layer may call `SSL_set_SSL_CTX` with its own `SSL_CTX` that has verification enabled, replacing `git__ssl_ctx`.
+
+**Fix:** `verify_server_cert()` in `libgit2-sys 0.18.8` now unconditionally returns 0 (success) when `SSL_get_verify_result != X509_V_OK`, bypassing the verify result check entirely on Android. Conscrypt handles certificate validation at the Java layer — the native OpenSSL layer should never surface cert errors when `SSL_VERIFY_NONE` was the intent.
+
+See PR [#1644](https://github.com/gedwolmen/gitnotes/pull/1644).
+
 ### fix(notes): prevent duplicate note file when editing title
 
 **What:** Editing a note's title caused duplicate entries in the mobile note list, while the repo file itself remained correct.
