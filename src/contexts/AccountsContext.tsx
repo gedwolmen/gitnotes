@@ -411,7 +411,30 @@ export function AccountsProvider({ children }: { children: ReactNode }) {
 
 export function useAccounts(): AccountsContextValue {
   const ctx = useContext(AccountsContext);
-  if (ctx === undefined) throw new Error('useAccounts must be used within an AccountsProvider');
+  if (ctx === undefined) {
+    // During hot reload on Android, some components may re-render before AccountsProvider
+    // finishes mounting. Returning a safe default prevents a crash; components that
+    // actually need accounts will get stale/empty data and re-fetch once provider mounts.
+    return {
+      authState: EMPTY_AUTH,
+      accountSummaries: [],
+      accounts: [],
+      activeHostId: null,
+      activeAccountId: null,
+      isAuthenticated: false,
+      isLoading: true,
+      refreshAccounts: async () => {},
+      connectHost: async () => ({ ok: false, error: 'Accounts not ready' }),
+      disconnectHost: async () => {},
+      switchToHost: async () => false,
+      switchAccount: async () => false,
+      removeAccount: async () => {},
+      testToken: async () => ({ ok: false, reason: 'invalid' }),
+      setToken: async () => false,
+      clearToken: async () => {},
+      addAccount: async () => null,
+    };
+  }
   return ctx;
 }
 

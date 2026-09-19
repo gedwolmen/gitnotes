@@ -91,9 +91,9 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
                 hitSlop={6}
               >
                 <Surface
-                  elevation="subtle"
+                  elevation={Platform.OS === 'android' ? 'flat' : 'subtle'}
                   radius="pill"
-                  inset={isFocused}
+                  inset={Platform.OS !== 'android' && isFocused}
                   style={{
                     width: 48,
                     height: 40,

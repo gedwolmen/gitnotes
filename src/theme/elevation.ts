@@ -82,8 +82,17 @@ export function buildElevation(args: BuildElevationArgs): ElevationStyles {
     };
   }
 
+  // iOS shadows don't work on Android — use Material elevation + border for edge definition
+  const elevationVal = tier === 'subtle' ? 2 : tier === 'raised' ? 4 : 8;
+  const borderWidth = tier === 'subtle' ? 0.5 : tier === 'raised' ? 1 : 1.5;
+  // lightColor (white) is invisible on light surfaces; use shadow at low opacity instead
+  const borderColor = inset ? darkColor : `${darkColor}50`;
   return {
-    outer: {},
+    outer: {
+      elevation: elevationVal,
+      borderColor,
+      borderWidth,
+    },
     inner: {},
     androidOverlays: undefined,
   };

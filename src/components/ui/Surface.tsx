@@ -54,12 +54,19 @@ export function Surface(props: SurfaceProps) {
   const androidOverlays = elevationStyles.androidOverlays;
   const showOverlays = platform === 'android' && androidOverlays !== undefined;
 
+  const callerHasBg = Array.isArray(style) ? style : [style];
+  const androidBgStyle = platform === 'android' && !callerHasBg.some(
+    (s) => s && (s as ViewStyle).backgroundColor !== undefined,
+  )
+    ? { backgroundColor: colors.surface }
+    : undefined;
+
   return (
     <View
       {...rest}
       testID={testID}
-      className={cn(className, 'bg-surface', RADIUS_CLASS[radius])}
-      style={[elevationStyles.outer as ViewStyle, style]}
+      className={cn(className, platform !== 'android' ? 'bg-surface' : undefined, RADIUS_CLASS[radius])}
+      style={[elevationStyles.outer as ViewStyle, style, androidBgStyle]}
     >
       <View
         pointerEvents="none"

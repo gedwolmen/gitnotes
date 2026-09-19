@@ -130,16 +130,51 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
 
+const SAFE_DEFAULT_TOKENS: Tokens = {
+  colors: {
+    bg: '#f2f2f7',
+    surface: '#ffffff',
+    highlight: '#ffffff',
+    shadow: '#000000',
+    text: '#1c1c1e',
+    textSecondary: '#6e6e73',
+    accent: '#007AFF',
+    accentMuted: '#5AC8FA',
+    error: '#ff3b30',
+    success: '#34C759',
+    warning: '#FF9500',
+    background: '#f2f2f7',
+    surfaceSecondary: '#f2f2f7',
+    primary: '#007AFF',
+    border: '#c6c6c8',
+    card: '#ffffff',
+    elevated: '#ffffff',
+  },
+  radii: { sm: 12, md: 18, lg: 24, pill: 999 },
+  spacing: { 1: 4, 2: 8, 3: 12, 4: 16, 5: 20, 6: 24, 8: 32 },
+  type: { xs: 12, sm: 14, md: 16, lg: 18, xl: 22, '2xl': 28 },
+};
+
+const SAFE_DEFAULT_THEME: ThemeContextType = {
+  theme: 'system',
+  isDark: false,
+  style: 'flat',
+  setTheme: () => {},
+  setStyle: () => {},
+  colors: SAFE_DEFAULT_TOKENS.colors,
+  tokens: SAFE_DEFAULT_TOKENS,
+};
+
 export function useTheme(): ThemeContextType {
   const context = useContext(ThemeContext);
-  if (context === undefined) {
-    throw new Error('useTheme must be used within a ThemeProvider');
-  }
+  if (context === undefined) return SAFE_DEFAULT_THEME;
   return context;
 }
 
 export function useTokens(): Tokens {
-  return useTheme().tokens;
+  const context = useContext(ThemeContext);
+  if (context === undefined) return SAFE_DEFAULT_TOKENS;
+  return context.tokens;
 }
 
 export { ThemeContext };
