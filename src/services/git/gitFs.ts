@@ -151,7 +151,16 @@ function joinUri(root: string, virtualPath: string): string {
   // virtualPath is git's view: "/foo/bar" or "foo/bar". Map onto the on-disk
   // root which already ends in "file:///.../<base>/".
   const trimmed = virtualPath.replace(/^\/+/, '');
-  return root + trimmed;
+  // On Android, colons in file paths break ContentResolver/Uri parsing — the
+  // colon is interpreted as a URI scheme separator (e.g. "O:L.pdf" → scheme
+  // "O", host "L.pdf"). Encode each path segment so Android sees the literal
+  // filename.  We cannot use encodeURIComponent on the whole path because that
+  // would also encode forward slashes, which are valid path separators.
+  const segments = trimmed.split('/');
+  const encoded = segments
+    .map((seg) => seg.replace(/:/g, '%3A'))
+    .join('/');
+  return root + encoded;
 }
 
 async function ensureParentDirs(
