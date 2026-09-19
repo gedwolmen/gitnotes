@@ -18,6 +18,12 @@ All notable fixes and feature changes to GitNotēs are documented here.
 
 See PR [#1635](https://github.com/gedwolmen/gitnotes/pull/1635).
 
+### fix(android): apply SSL cert patches via corrected registry source path
+
+**What:** The `build.rs` patches for `verify_server_cert()` and `git_openssl__set_cert_location()` (added in PRs #1641/#1642) were silently not applying because `build.rs` was reading `CARGO_REGISTRY_SRC` as a one-level path (`~/.cargo/registry/src/`) but `libgit2-sys` crates live one level deeper inside index subdirectories (`index.crates.io-xxxx/libgit2-sys-0.18.x/`).
+
+**Fix:** `build.rs` now walks two directory levels: first into the index subdirectory, then into the crate directory. Also added `CARGO_HOME/registry/src` and `~/.cargo/registry/src` as fallback paths when `CARGO_REGISTRY_SRC` is not set. This ensures patches apply to all `libgit2-sys` versions found in the registry before any cross-compilation (Android NDK, iOS) begins.
+
 ## 2026-09-17
 
 ### fix(android): resolve Android TLS certificate verification failures
