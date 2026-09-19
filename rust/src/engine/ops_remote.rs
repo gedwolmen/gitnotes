@@ -354,7 +354,9 @@ fn rebase_onto_remote(
     remote_tip: &AnnotatedCommit,
 ) -> std::result::Result<(), RebaseOutcome> {
     let mut rebase_options = RebaseOptions::new();
-    rebase_options.merge_options(MergeOptions::new());
+    let mut merge_opts = MergeOptions::new();
+    merge_opts.find_renames(true);
+    rebase_options.merge_options(merge_opts);
     rebase_options.checkout_options(CheckoutBuilder::new());
 
     let mut rebase = repo.rebase(None, Some(remote_tip), None, Some(&mut rebase_options))?;

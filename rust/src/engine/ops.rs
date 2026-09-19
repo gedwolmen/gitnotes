@@ -1135,6 +1135,8 @@ fn status_options() -> StatusOptions {
     opts.include_untracked(true);
     opts.recurse_untracked_dirs(true);
     opts.include_unreadable(true);
+    opts.renames_head_to_index(true);
+    opts.renames_index_to_workdir(true);
     opts
 }
 

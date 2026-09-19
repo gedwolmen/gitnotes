@@ -1054,21 +1054,17 @@ class GitHubServiceClass {
     branch: string = 'main',
     opts?: TokenOpts,
   ): Promise<boolean> {
-    let createResult: GitHubFileCommit | null = null;
-    try {
-      createResult = await this.createFile(owner, repo, newPath, content, message, branch, opts);
-    } catch (error) {
-      console.warn('[GitHubService] moveFile create failed for', newPath, error);
-      return false;
-    }
-    if (!createResult) return false;
     try {
       await this.deleteFile(owner, repo, oldPath, message, oldSha, branch, opts);
     } catch (error) {
-      // Move semantics: the new path landed; failing to clean up the old
-      // path leaves a duplicate but is not catastrophic. Surface the
-      // failure in logs so it can be retried via the file browser.
-      console.warn('[GitHubService] moveFile cleanup failed for', oldPath, error);
+      console.warn('[GitHubService] moveFile delete failed for', oldPath, error);
+      return false;
+    }
+    try {
+      await this.createFile(owner, repo, newPath, content, message, branch, opts);
+    } catch (error) {
+      console.warn('[GitHubService] moveFile create failed for', newPath, error);
+      return false;
     }
     return true;
   }
