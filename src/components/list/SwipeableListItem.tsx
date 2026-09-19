@@ -1,5 +1,5 @@
 import React from 'react';
-import { TouchableOpacity } from 'react-native';
+import { Platform, TouchableOpacity } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   runOnJS,
@@ -78,14 +78,18 @@ export function SwipeableListItem({
       className="rounded-sm"
       style={[
         { flex: 1 },
-        selected && {
-          shadowColor: colors.error,
-          shadowOpacity: 0.55,
-          shadowRadius: 10,
-          shadowOffset: { width: 0, height: 0 },
-          borderBottomWidth: 3,
-          borderBottomColor: colors.error,
-        },
+        selected && Platform.select({
+          ios: {
+            shadowColor: colors.error,
+            shadowOpacity: 0.55,
+            shadowRadius: 10,
+            shadowOffset: { width: 0, height: 0 },
+          },
+          android: {
+            borderBottomWidth: 3,
+            borderBottomColor: colors.error,
+          },
+        }),
         animatedStyle,
       ]}
     >
