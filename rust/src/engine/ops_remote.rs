@@ -180,6 +180,7 @@ pub fn pull_repo(
                 });
             }
             let mut merge_options = MergeOptions::new();
+            merge_options.find_renames(true);
             let mut checkout = CheckoutBuilder::new();
             checkout.allow_conflicts(true);
             checkout.conflict_style_merge(true);
@@ -535,6 +536,7 @@ pub fn push_with_integrate(
             }
             Err(RebaseOutcome::Conflicted) => {
                 let mut merge_options = MergeOptions::new();
+                merge_options.find_renames(true);
                 let mut checkout = CheckoutBuilder::new();
                 checkout.allow_conflicts(true);
                 checkout.conflict_style_merge(true);
