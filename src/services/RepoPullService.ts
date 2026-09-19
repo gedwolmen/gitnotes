@@ -411,6 +411,8 @@ async function pullNotesFromRepo(
         : {};
       const titleFromPath = item.path
         .replace(/^notes\//, '')
+        .replace(/^journals\//, '')
+        .replace(/^journal\//, '')
         .replace(/\.[^.]+$/, '')
         .replace(/[-_/]/g, ' ');
 
