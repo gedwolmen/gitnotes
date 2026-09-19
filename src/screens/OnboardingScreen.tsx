@@ -9,7 +9,7 @@ import {
   ScrollView,
   TouchableOpacity,
 } from 'react-native';
-import Clipboard from '@react-native-clipboard/clipboard';
+import * as Clipboard from 'expo-clipboard';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -167,7 +167,7 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
               testID="onboarding.button.paste-token"
               className="flex-row items-center gap-2 py-3 px-4"
               onPress={async () => {
-                const text = await Clipboard.getString();
+                const text = await Clipboard.getStringAsync();
                 if (text) {
                   setToken(text);
                   setTokenError(null);
