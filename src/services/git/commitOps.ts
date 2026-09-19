@@ -194,7 +194,19 @@ export async function commitRename(params: CommitRenameParams): Promise<CommitOp
 
     await ensureOnBranch(repoDir, branch);
 
-    // 1. Stage deletion of the old file
+    // 1. Delete the old file from the working tree FIRST.
+    // GitEngine.remove with keep_worktree=false calls checkout_index which
+    // RESTORES the file from HEAD if it still exists on disk (because the
+    // index was modified but the working tree was not). Deleting first
+    // ensures checkout_index sees the file is already gone and does NOT
+    // restore it — leaving the working tree clean for rename detection.
+    const oldAbsVirtual = `${dir}/${prevRelPath}`;
+    const oldAbsUri = `${fsRoot}${oldAbsVirtual.replace(/^\//, '')}`;
+    try {
+      await FileSystem.deleteAsync(oldAbsUri);
+    } catch { /* ignore — file may already be gone */ }
+
+    // 2. Stage deletion of the old file (git rm)
     try {
       await GitEngine.remove(repoDir, [prevRelPath]);
     } catch (removeError) {
@@ -206,17 +218,17 @@ export async function commitRename(params: CommitRenameParams): Promise<CommitOp
       }
     }
 
-    // 2. Write the new file to disk
+    // 3. Write the new file to disk
     const newAbsVirtual = `${dir}/${newRelPath}`;
     const newAbsUri = `${fsRoot}${newAbsVirtual.replace(/^\//, '')}`;
     await ensureParentDirs(fsRoot, newAbsVirtual);
     await FileSystem.writeAsStringAsync(newAbsUri, content);
 
-    // 3. Stage both old (deleted) and new (added) paths together so
+    // 4. Stage both old (deleted) and new (added) paths together so
     // git's rename detection pairs them as a rename, not delete+add.
     await GitEngine.stage(repoDir, [prevRelPath, newRelPath]);
 
-    // 4. Commit both staged changes in one commit
+    // 5. Commit both staged changes in one commit
     const commitInfo = await GitEngine.commit(repoDir, message, { name: author.name, email: author.email });
 
     useGitActivityStore.getState().incrementRevision();
