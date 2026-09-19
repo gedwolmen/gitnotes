@@ -4,7 +4,8 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { Note, NoteCreateInput, NoteUpdateInput, sortNotesWithPinnedFirst, filterNotesBySearch } from '../models/Note';
 import { StorageService } from '../services/StorageService';
 import { NoteSyncQueueService, CloneSyncService, type MutationSucceededEvent, type DroppedMutationEvent, type SaveResult } from '../services/cloneSyncServiceImpl';
-import { CommitService } from '../services/git/CommitService';
+import { resolveStageAuthor } from '../services/git/CommitService';
+import { commitRename } from '../services/git/commitOps';
 import { resolveDefaultFolder, resolveDefaultRepo } from '../services/git/defaultsPolicy';
 import { recordDeleteFailure } from '../services/git/deleteFailures';
 import { gitOperationRegistry, useGitOperationStore } from './gitOperationStore';
@@ -165,13 +166,15 @@ export const useNoteStore = create<NoteState & NoteActions>()((set, get) => ({
             attempts: 0,
           });
           try {
-            const commitResult = await CommitService.commit({
+            const author = await resolveStageAuthor();
+            const commitResult = await commitRename({
               repo: existingNote.repo,
               branch: existingNote.branch ?? 'main',
               prevFilePath: oldPath,
               filePath: newPath,
               content,
               message: `Rename note: ${input.title ?? existingNote.title}`,
+              author,
             });
             if (!commitResult.success) {
               gitOperationRegistry.fail(opId, commitResult.error ?? 'Failed to rename note');
