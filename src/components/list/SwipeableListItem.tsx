@@ -83,6 +83,7 @@ export function SwipeableListItem({
           shadowOpacity: 0.55,
           shadowRadius: 10,
           shadowOffset: { width: 0, height: 0 },
+          elevation: 2,
         },
         animatedStyle,
       ]}
