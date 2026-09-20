@@ -38,6 +38,12 @@ android {
   }
 }
 
+tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+  kotlinOptions {
+    freeCompilerArgs += ['-Xjsr305=warn']
+  }
+}
+
 dependencies {
   // ExpoModulesCore is added by expo-module-gradle-plugin (compileOnly).
 
