@@ -10,12 +10,6 @@ All notable fixes and feature changes to GitNotēs are documented here.
 
 ## 2026-09-21
 
-### fix(explore): prevent duplicate commit pagination during initial load
-
-**What:** The commit history list could request its next page before the initial page finished loading, appending the first page twice and triggering duplicate SHA key warnings.
-
-**Fix:** Ignore pagination callbacks while the initial commit request is active.
-
 ### fix(notes): deduplicate persisted note index IDs
 
 **What:** A duplicated note ID in local storage could render duplicate rows and trigger React Native duplicate-key warnings in the notes list.

@@ -120,25 +120,4 @@ describe('CommitsSection pagination', () => {
     expect(getAllByTestId(/^commit-row-/)).toHaveLength(PAGE_SIZE * 2);
     expect(GitEngine.log).toHaveBeenLastCalledWith(mockRepo.localPath, PAGE_SIZE, PAGE_SIZE);
   });
-
-  it('does not paginate while the initial commit page is loading', async () => {
-    let resolveInitial: ((commits: CommitInfo[]) => void) | undefined;
-    (GitEngine.log as jest.Mock).mockReset();
-    (GitEngine.log as jest.Mock).mockImplementationOnce(
-      () => new Promise<CommitInfo[]>((resolve) => {
-        resolveInitial = resolve;
-      }),
-    );
-
-    const { getByTestId, getAllByTestId } = render(
-      <CommitsSection repo={mockRepo} active={true} onChanged={jest.fn()} status={null} />,
-    );
-
-    await waitFor(() => expect(GitEngine.log).toHaveBeenCalledTimes(1));
-    fireEvent.press(getByTestId('trigger-load-more'));
-    expect(GitEngine.log).toHaveBeenCalledTimes(1);
-
-    resolveInitial?.(initialPage);
-    await waitFor(() => expect(getAllByTestId(/^commit-row-/)).toHaveLength(PAGE_SIZE));
-  });
 });

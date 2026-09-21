@@ -59,7 +59,7 @@ export function CommitsSection({ repo, active, chromeTopInset = 0, refreshStatus
   }, [loadInitial, branchInvalidationKey]);
 
   const loadMore = useCallback(async () => {
-    if (loading || loadingMoreRef.current || !hasMore.current) return;
+    if (loadingMoreRef.current || !hasMore.current) return;
     loadingMoreRef.current = true;
     setLoadingMore(true);
     try {
@@ -73,7 +73,7 @@ export function CommitsSection({ repo, active, chromeTopInset = 0, refreshStatus
       loadingMoreRef.current = false;
       setLoadingMore(false);
     }
-  }, [commits.length, loading, repo.localPath]);
+  }, [commits.length, repo.localPath]);
 
   const handlePush = useCallback(async () => {
     if (loading || pushing) return;
