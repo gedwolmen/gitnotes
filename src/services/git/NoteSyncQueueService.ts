@@ -15,7 +15,7 @@ const QUEUE_STORAGE_KEY = '@gitnotes:sync_queue_v1';
 
 export type MutationStatus = 'pending' | 'paused' | 'done' | 'failed';
 
-export type EntityType = 'note' | 'canvas' | 'todo' | 'journal';
+export type EntityType = 'note' | 'canvas' | 'todo' | 'journal' | 'diagram';
 
 export interface QueueItem {
   id: string;

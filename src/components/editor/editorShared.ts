@@ -116,6 +116,31 @@ export function extractCanvasJsonRefs(content: string): string[] {
   return out;
 }
 
+/**
+ * Extracts `diagram:<id>` link targets from note content.
+ * Matches:
+ * - Markdown: [Title](diagram:diagram-xxxx)
+ * - Neorg:   {diagram:diagram-xxxx}[Title]
+ * - Org:     [[diagram:diagram-xxxx][Title]]
+ */
+export function extractDiagramJsonRefs(content: string): string[] {
+  const re = /(?:\[([^\]]*)\]\((diagram:[a-zA-Z0-9_-]+)\)|\{(diagram:[a-zA-Z0-9_-]+)\}|\[\[(diagram:[a-zA-Z0-9_-]+)\]\[)/g;
+  const out: string[] = [];
+  const seen = new Set<string>();
+  let match: RegExpExecArray | null;
+
+  while ((match = re.exec(content)) !== null) {
+    const raw = match[2] || match[3] || match[4];
+    if (!raw) continue;
+    if (!seen.has(raw)) {
+      seen.add(raw);
+      out.push(raw);
+    }
+  }
+
+  return out;
+}
+
 function stripTopMetadata(raw: string, format: NoteFormat): string {
   if (format === 'markdown') {
     const lines = raw.split('\n');

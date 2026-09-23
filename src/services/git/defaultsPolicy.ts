@@ -15,8 +15,9 @@ const NOTE_FOLDER = 'notes/';
 const CANVAS_FOLDER = 'canvases/';
 const TODO_FOLDER = 'todos/';
 const TEMPLATE_FOLDER = 'templates/';
+const DIAGRAM_FOLDER = 'diagrams/';
 
-export type ContentType = 'note' | 'canvas' | 'todo' | 'template';
+export type ContentType = 'note' | 'canvas' | 'todo' | 'template' | 'diagram';
 
 /**
  * Returns the first saved repository's path.
@@ -59,5 +60,7 @@ export function resolveDefaultFolder(contentType: ContentType): string {
       return TODO_FOLDER;
     case 'template':
       return TEMPLATE_FOLDER;
+    case 'diagram':
+      return DIAGRAM_FOLDER;
   }
 }

@@ -40,6 +40,7 @@ export const DOCUMENT_TYPE_DIRS: Record<DocumentType, string> = {
   template: 'template',
   journal: 'journal',
   canvas: 'canvas',
+  diagram: 'diagram',
   ai: 'ai',
 };
 
@@ -52,6 +53,7 @@ const DEFAULT_FORMAT: Record<DocumentType, DocumentFormat> = {
   template: 'markdown',
   journal: 'markdown',
   canvas: 'canvas',
+  diagram: 'td',
   ai: 'markdown',
 };
 
@@ -61,6 +63,7 @@ const FORMAT_EXTENSIONS: Record<DocumentFormat, string> = {
   org: 'org',
   json: 'json',
   canvas: 'json',
+  td: 'td.json',
 };
 
 const MAX_RESCAN = 500;

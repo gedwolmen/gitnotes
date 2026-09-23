@@ -13,7 +13,7 @@ export type ImportRepoResult =
   | { ok: true; counts: PullResult }
   | { ok: false; error: string; retryable: boolean };
 
-const EMPTY_REPO_COUNTS: PullResult = { repos: 1, notes: 0, canvases: 0, todos: 0, templates: 0 };
+const EMPTY_REPO_COUNTS: PullResult = { repos: 1, notes: 0, canvases: 0, todos: 0, templates: 0, diagrams: 0 };
 
 const RETRYABLE_STATUS = new Set([408, 425, 429, 500, 502, 503, 504]);
 const NON_RETRYABLE_STATUS = new Set([401, 403, 404, 410]);

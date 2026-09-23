@@ -5,12 +5,16 @@ import { GitRepository } from './GitService';
 import type { GitHostProvider } from './git/GitHost';
 import { Todo, TodoCreateInput, TodoUpdateInput, createTodoItem, applyTodoUpdate } from '../models/Todo';
 import { Canvas, CanvasCreateInput, CanvasUpdateInput, createCanvas, updateCanvas } from '../models/Canvas';
+import type { Diagram, DiagramCreateInput, DiagramUpdateInput } from '../models/Diagram';
+import { createDiagram, updateDiagram } from '../models/Diagram';
 import { NOTE_INDEX_KEY, noteKey, getBootValue } from './StorageBootstrap';
 import type { NoteTemplate } from './TemplateService';
 
 const TODOS_STORAGE_KEY = '@gitnotes:todos';
 const CANVASES_STORAGE_KEY = '@gitnotes:canvases';
 const CANVASES_BACKUP_STORAGE_KEY = '@gitnotes:canvases.bak';
+const DIAGRAMS_STORAGE_KEY = '@gitnotes:diagrams';
+const DIAGRAMS_BACKUP_STORAGE_KEY = '@gitnotes:diagrams.bak';
 const LEGACY_NOTES_KEY = '@gitnotes:notes';
 const REPOS_STORAGE_KEY = '@gitnotes:repos';
 const FOLDERS_STORAGE_KEY = '@gitnotes:folders';
@@ -47,6 +51,7 @@ async function migrateFromBlob(): Promise<void> {
 
 export class StorageService {
   private static canvasWriteQueue: Promise<void> = Promise.resolve();
+  private static diagramWriteQueue: Promise<void> = Promise.resolve();
 
   private static enqueueCanvasWrite<T>(operation: () => Promise<T>): Promise<T> {
     let queueCapture: Promise<T>;
@@ -55,6 +60,16 @@ export class StorageService {
       return queueCapture;
     });
     this.canvasWriteQueue = newQueue.then(() => undefined).catch(() => undefined);
+    return newQueue.then(() => queueCapture as Promise<T>).then((r) => r as T);
+  }
+
+  private static enqueueDiagramWrite<T>(operation: () => Promise<T>): Promise<T> {
+    let queueCapture: Promise<T>;
+    const newQueue = this.diagramWriteQueue.then(async () => {
+      queueCapture = operation();
+      return queueCapture;
+    });
+    this.diagramWriteQueue = newQueue.then(() => undefined).catch(() => undefined);
     return newQueue.then(() => queueCapture as Promise<T>).then((r) => r as T);
   }
 
@@ -76,10 +91,28 @@ export class StorageService {
     }
   }
 
+  private static async readAllDiagramsRaw(): Promise<Diagram[]> {
+    try {
+      const boot = getBootValue('@gitnotes:diagrams');
+      const json = boot ?? await AsyncStorage.getItem(DIAGRAMS_STORAGE_KEY);
+      return json ? JSON.parse(json) : [];
+    } catch (error) {
+      console.error('Error reading diagrams from storage:', error);
+      return [];
+    }
+  }
+
   private static async backupCanvasBlob(): Promise<void> {
     const current = await AsyncStorage.getItem(CANVASES_STORAGE_KEY);
     if (current !== null) {
       await AsyncStorage.setItem(CANVASES_BACKUP_STORAGE_KEY, current);
+    }
+  }
+
+  private static async backupDiagramBlob(): Promise<void> {
+    const current = await AsyncStorage.getItem(DIAGRAMS_STORAGE_KEY);
+    if (current !== null) {
+      await AsyncStorage.setItem(DIAGRAMS_BACKUP_STORAGE_KEY, current);
     }
   }
 
@@ -92,6 +125,21 @@ export class StorageService {
         await AsyncStorage.setItem(CANVASES_STORAGE_KEY, JSON.stringify(canvases));
       } catch (error) {
         console.error('Error saving canvases to storage:', error);
+        throw error;
+      }
+      return result;
+    });
+  }
+
+  static async mutateDiagrams<T>(mutator: (diagrams: Diagram[]) => Promise<T> | T): Promise<T> {
+    return this.enqueueDiagramWrite(async () => {
+      const diagrams = await this.readAllDiagramsRaw();
+      const result = await mutator(diagrams);
+      try {
+        await this.backupDiagramBlob();
+        await AsyncStorage.setItem(DIAGRAMS_STORAGE_KEY, JSON.stringify(diagrams));
+      } catch (error) {
+        console.error('Error saving diagrams to storage:', error);
         throw error;
       }
       return result;
@@ -520,6 +568,54 @@ export class StorageService {
       const idx = canvases.findIndex((c) => c.id === id);
       if (idx === -1) return false;
       canvases.splice(idx, 1);
+      return true;
+    });
+  }
+
+  static async getAllDiagrams(): Promise<Diagram[]> {
+    await this.diagramWriteQueue;
+    return this.readAllDiagramsRaw();
+  }
+
+  static async saveAllDiagrams(diagrams: Diagram[]): Promise<void> {
+    await this.enqueueDiagramWrite(async () => {
+      try {
+        await this.backupDiagramBlob();
+        await AsyncStorage.setItem(DIAGRAMS_STORAGE_KEY, JSON.stringify(diagrams));
+      } catch (error) {
+        console.error('Error saving diagrams to storage:', error);
+        throw error;
+      }
+    });
+  }
+
+  static async getDiagramById(id: string): Promise<Diagram | null> {
+    const diagrams = await this.getAllDiagrams();
+    return diagrams.find((d) => d.id === id) || null;
+  }
+
+  static async createDiagram(input: DiagramCreateInput): Promise<Diagram> {
+    return this.mutateDiagrams((diagrams) => {
+      const newDiagram = createDiagram(input);
+      diagrams.push(newDiagram);
+      return newDiagram;
+    });
+  }
+
+  static async updateDiagram(input: DiagramUpdateInput): Promise<Diagram | null> {
+    return this.mutateDiagrams((diagrams) => {
+      const idx = diagrams.findIndex((d) => d.id === input.id);
+      if (idx === -1) return null;
+      diagrams[idx] = updateDiagram(diagrams[idx], input);
+      return diagrams[idx];
+    });
+  }
+
+  static async deleteDiagram(id: string): Promise<boolean> {
+    return this.mutateDiagrams((diagrams) => {
+      const idx = diagrams.findIndex((d) => d.id === id);
+      if (idx === -1) return false;
+      diagrams.splice(idx, 1);
       return true;
     });
   }

@@ -9,6 +9,7 @@ import { applyNoteTagsToContent, applyNoteColorToContent } from '../NoteGitHubSy
 import type { Note } from '../../models/Note';
 import type { Todo } from '../../models/Todo';
 import type { Canvas } from '../../models/Canvas';
+import type { Diagram } from '../../models/Diagram';
 import type { NoteTemplate } from '../TemplateService';
 
 export interface MigrationReport {
@@ -17,6 +18,7 @@ export interface MigrationReport {
   todos: number;
   canvases: number;
   templates: number;
+  diagrams: number;
   failures: { kind: string; filePath: string; error: string }[];
 }
 
@@ -66,6 +68,7 @@ export class CloneMigrationService {
       todos: 0,
       canvases: 0,
       templates: 0,
+      diagrams: 0,
       failures: [],
     };
 
@@ -136,6 +139,30 @@ export class CloneMigrationService {
         report.failures.push({
           kind: 'canvas',
           filePath: c.filePath!,
+          error: result.error ?? 'unknown',
+        });
+    }
+
+    let allDiagrams: Diagram[] = [];
+    await StorageService.mutateDiagrams((ds) => {
+      allDiagrams = [...ds];
+    });
+    const localDiagrams = allDiagrams.filter((d) => d.repo === repoPath && d.filePath);
+    for (const d of localDiagrams) {
+      const result = await LocalGitWriter.writeAndCommit({
+        repoPath,
+        branch,
+        filePath: d.filePath!,
+        content: JSON.stringify(d.document, null, 2),
+        message: `Migrate diagram: ${d.title}`,
+        author,
+        push: false,
+      });
+      if (result.success) report.diagrams++;
+      else
+        report.failures.push({
+          kind: 'diagram',
+          filePath: d.filePath!,
           error: result.error ?? 'unknown',
         });
     }

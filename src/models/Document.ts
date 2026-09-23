@@ -15,6 +15,7 @@ export const DOCUMENT_TYPES = [
   'template',
   'journal',
   'canvas',
+  'diagram',
   'ai',
 ] as const;
 
@@ -71,7 +72,7 @@ export interface Document extends DocumentMeta {
   raw: string;
 }
 
-export type DocumentFormat = 'markdown' | 'neorg' | 'org' | 'json' | 'canvas';
+export type DocumentFormat = 'markdown' | 'neorg' | 'org' | 'json' | 'canvas' | 'td';
 
 export interface DocumentCreateInput {
   type: DocumentType;

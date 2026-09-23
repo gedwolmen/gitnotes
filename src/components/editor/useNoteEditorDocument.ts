@@ -20,7 +20,8 @@ import { githubActivity } from '../../stores/githubActivityStore';
 import { useGitOperationStore, gitOperationRegistry, GIT_OP_ALL_REPOS } from '../../stores/gitOperationStore';
 import type { GitOp } from '../../stores/gitOperationStore';
 import { canvasToLink } from '../../models/Canvas';
-import { getExtensionForFormat, extractCanvasJsonRefs, slugifyLocal } from './editorShared';
+import { diagramToLink } from '../../models/Diagram';
+import { getExtensionForFormat, extractCanvasJsonRefs, extractDiagramJsonRefs, slugifyLocal } from './editorShared';
 import { useHardWrap, applyHardWrap } from '../../hooks/useHardWrap';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'NoteEditor'>;
@@ -562,6 +563,18 @@ export function useNoteEditorDocument({
     setHasChanges(true);
   }, [content, noteFormat, setContent]);
 
+  const handleLinkDiagram = useCallback((diagramId: string, diagramTitle: string) => {
+    const link = diagramToLink({ id: diagramId });
+    const linkText = noteFormat === 'neorg'
+      ? `\n{${link}}[${diagramTitle}]\n`
+      : noteFormat === 'org'
+        ? `\n[[${link}][${diagramTitle}]]\n`
+        : `\n[${diagramTitle}](${link})\n`;
+
+    setContent(content + linkText);
+    setHasChanges(true);
+  }, [content, noteFormat, setContent]);
+
   const handlePickImage = useCallback(async () => {
     try {
       const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -600,6 +613,8 @@ export function useNoteEditorDocument({
 
   const canvasJsonRefs = useMemo(() => extractCanvasJsonRefs(content), [content]);
 
+  const diagramJsonRefs = useMemo(() => extractDiagramJsonRefs(content), [content]);
+
   const editorPlaceholder = useMemo(() => {
     const linkExamples = `[[wiki-link]] [[wiki-link|Display Text]]
 [[../folder/note]] [[folder/sub-note|Sub Note]]
@@ -632,6 +647,7 @@ export function useNoteEditorDocument({
     repoFolders,
     selectedFolderId,
     canvasJsonRefs,
+    diagramJsonRefs,
     editorPlaceholder,
     setIsEditing,
     handleTitleChange,
@@ -648,6 +664,7 @@ export function useNoteEditorDocument({
     handleRedo,
     handleVoiceDone,
     handleLinkCanvas,
+    handleLinkDiagram,
     handlePickImage,
   };
 }

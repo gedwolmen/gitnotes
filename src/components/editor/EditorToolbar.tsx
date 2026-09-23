@@ -14,6 +14,7 @@ interface EditorToolbarProps {
   onInsertCanvas: () => void;
   onInsertImage: () => void;
   onLinkCanvas: () => void;
+  onLinkDiagram: () => void;
 }
 
 export function EditorToolbar({
@@ -25,6 +26,7 @@ export function EditorToolbar({
   onInsertCanvas,
   onInsertImage,
   onLinkCanvas,
+  onLinkDiagram,
 }: EditorToolbarProps) {
   const { colors } = useTheme();
 
@@ -53,6 +55,9 @@ export function EditorToolbar({
       </IconButton>
       <IconButton size="sm" testID="note-editor.toolbar.canvas-picker" onPress={onLinkCanvas} accessibilityLabel="Link existing canvas">
         <Ionicons name="easel-outline" size={20} color={colors.primary} />
+      </IconButton>
+      <IconButton size="sm" testID="note-editor.toolbar.diagram-picker" onPress={onLinkDiagram} accessibilityLabel="Link diagram">
+        <Ionicons name="grid-outline" size={20} color={colors.primary} />
       </IconButton>
     </View>
   );

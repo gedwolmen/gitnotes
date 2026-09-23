@@ -12,6 +12,7 @@ import GraphViewScreen from '../screens/GraphViewScreen';
 import ChatThreadListScreen from '../screens/ChatThreadListScreen';
 import NoteEditorScreen from '../screens/NoteEditorScreen';
 import CanvasEditorScreen from '../screens/CanvasEditorScreen';
+import DiagramEditorScreen from '../screens/DiagramEditorScreen';
 import PdfViewerScreen from '../screens/PdfViewerScreen';
 import FileViewerScreen from '../screens/FileViewerScreen';
 import ImageViewerScreen from '../screens/ImageViewerScreen';
@@ -63,6 +64,7 @@ const getLinkingConfig = (): LinkingOptions<RootStackParamList> => {
         },
         NoteEditor: 'note/:noteId',
         CanvasEditor: 'canvas/:canvasId',
+        DiagramEditor: 'diagram/:diagramId',
         ChatThreadList: 'chat',
         ChatScreen: 'chat/:threadId',
         ThoughtDump: 'thought-dump',
@@ -206,6 +208,11 @@ export default function AppNavigator({ showOnboarding, onOnboardingComplete, onO
             <Stack.Screen
               name="CanvasEditor"
               component={CanvasEditorScreen}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="DiagramEditor"
+              component={DiagramEditorScreen}
               options={{ headerShown: false }}
             />
             <Stack.Screen

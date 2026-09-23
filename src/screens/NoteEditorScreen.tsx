@@ -6,6 +6,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { useNotes } from '../contexts/NoteContext';
 import { useCanvases } from '../contexts/CanvasContext';
+import { useDiagrams } from '../contexts/DiagramContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { RootStackParamList } from '../navigation/types';
@@ -18,6 +19,7 @@ import { getMarkdownStyles } from '../utils/preview';
 import { useRenderStyle } from '../stores/renderStyleStore';
 import { SafeAreaView } from '../components/ui/SafeAreaView';
 import { CanvasPickerModal } from '../components/editor/CanvasPickerModal';
+import { DiagramPickerModal } from '../components/diagram/DiagramPickerModal';
 import { EditorHeader } from '../components/editor/EditorHeader';
 import { EditorToolbar } from '../components/editor/EditorToolbar';
 import { NoteEditorForm } from '../components/editor/NoteEditorForm';
@@ -29,6 +31,7 @@ import { ErrorBoundary } from '../components/ui/ErrorBoundary';
 import { useTranslation } from 'react-i18next';
 import { useSafeBack } from '../hooks/useSafeBack';
 import { subscribeGitContentRefresh } from '../hooks/useGitRefreshEvent';
+import { diagramIdFromLink } from '../models/Diagram';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'NoteEditor'>;
 type NoteEditorRouteProp = RouteProp<RootStackParamList, 'NoteEditor'>;
@@ -60,10 +63,12 @@ function NoteEditorScreenInner() {
 
   const { notes, getNoteById, createNote, updateNote } = useNotes();
   const { canvases } = useCanvases();
+  const { diagrams } = useDiagrams();
   const { folders } = useFolders();
   const { repositories } = useRepos();
   const [showVoiceModal, setShowVoiceModal] = React.useState(false);
   const [showCanvasPicker, setShowCanvasPicker] = React.useState(false);
+  const [showDiagramPicker, setShowDiagramPicker] = React.useState(false);
   const [showFolderDialog, setShowFolderDialog] = React.useState(false);
 
   const document = useNoteEditorDocument({
@@ -188,6 +193,7 @@ function NoteEditorScreenInner() {
           onInsertCanvas={() => navigation.navigate('CanvasEditor', {})}
           onInsertImage={document.handlePickImage}
           onLinkCanvas={() => setShowCanvasPicker(true)}
+          onLinkDiagram={() => setShowDiagramPicker(true)}
         />
 
         {sideBySide ? (
@@ -200,6 +206,7 @@ function NoteEditorScreenInner() {
                 noteFormat={document.noteFormat}
                 tags={document.tags}
                 canvasJsonRefs={document.canvasJsonRefs}
+                diagramJsonRefs={document.diagramJsonRefs}
                 content={document.content}
                 placeholder={document.editorPlaceholder}
                 onRepoChange={document.handleRepoChange}
@@ -210,6 +217,10 @@ function NoteEditorScreenInner() {
                 onEditCanvasJson={(uri) => {
                   void uri;
                   navigation.navigate('CanvasEditor', {});
+                }}
+                onEditDiagramJson={(ref) => {
+                  const diagramId = diagramIdFromLink(ref);
+                  navigation.navigate('DiagramEditor', { diagramId });
                 }}
                 onContentChange={document.handleContentChange}
               />
@@ -241,6 +252,7 @@ function NoteEditorScreenInner() {
             noteFormat={document.noteFormat}
             tags={document.tags}
             canvasJsonRefs={document.canvasJsonRefs}
+            diagramJsonRefs={document.diagramJsonRefs}
             content={document.content}
             placeholder={document.editorPlaceholder}
             onRepoChange={document.handleRepoChange}
@@ -251,6 +263,10 @@ function NoteEditorScreenInner() {
             onEditCanvasJson={(uri) => {
               void uri;
               navigation.navigate('CanvasEditor', {});
+            }}
+            onEditDiagramJson={(ref) => {
+              const diagramId = diagramIdFromLink(ref);
+              navigation.navigate('DiagramEditor', { diagramId });
             }}
             onContentChange={document.handleContentChange}
           />
@@ -274,6 +290,18 @@ function NoteEditorScreenInner() {
           setShowCanvasPicker(false);
         }}
         onClose={() => setShowCanvasPicker(false)}
+      />
+
+      <DiagramPickerModal
+        visible={showDiagramPicker}
+        diagrams={diagrams}
+        currentRepo={document.repo}
+        currentBranch={document.branch}
+        onSelect={(diagramId, diagramTitle) => {
+          document.handleLinkDiagram(diagramId, diagramTitle);
+          setShowDiagramPicker(false);
+        }}
+        onClose={() => setShowDiagramPicker(false)}
       />
 
       <FolderSelectionDialog

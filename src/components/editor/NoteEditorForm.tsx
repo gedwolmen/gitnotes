@@ -19,6 +19,7 @@ interface NoteEditorFormProps {
   noteFormat: NoteFormat;
   tags: string[];
   canvasJsonRefs: string[];
+  diagramJsonRefs: string[];
   content: string;
   placeholder: string;
   onRepoChange: (repo: string | undefined) => void;
@@ -27,6 +28,7 @@ interface NoteEditorFormProps {
   onNoteFormatChange: (format: NoteFormat) => void;
   onTagsChange: (tags: string[]) => void;
   onEditCanvasJson: (uri: string) => void;
+  onEditDiagramJson: (diagramId: string) => void;
   onContentChange: (value: string) => void;
 }
 
@@ -37,6 +39,7 @@ export function NoteEditorForm({
   noteFormat,
   tags,
   canvasJsonRefs,
+  diagramJsonRefs,
   content,
   placeholder,
   onRepoChange,
@@ -45,6 +48,7 @@ export function NoteEditorForm({
   onNoteFormatChange,
   onTagsChange,
   onEditCanvasJson,
+  onEditDiagramJson,
   onContentChange,
 }: NoteEditorFormProps) {
   const { colors } = useTheme();
@@ -162,6 +166,27 @@ export function NoteEditorForm({
               >
                 <Ionicons name="brush-outline" size={14} color={colors.primary} />
                 <Text style={[styles.canvasChipText, { color: colors.text }]} numberOfLines={1}>{`Canvas ${index + 1}`}</Text>
+                <Ionicons name="pencil" size={12} color={colors.textSecondary} />
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      ) : null}
+
+      {diagramJsonRefs.length > 0 ? (
+        <View style={styles.canvasChipsRow}>
+          <Text style={[styles.canvasChipsLabel, { color: colors.textSecondary }]}>Diagrams</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.canvasChipsScroll}>
+            {diagramJsonRefs.map((ref) => (
+              <TouchableOpacity
+                key={ref}
+                testID="note-editor-form.button.edit-diagram"
+                style={[styles.canvasChip, { borderColor: colors.border, backgroundColor: colors.surfaceSecondary }]}
+                onPress={() => onEditDiagramJson(ref)}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="grid-outline" size={14} color={colors.primary} />
+                <Text style={[styles.canvasChipText, { color: colors.text }]} numberOfLines={1}>{ref.replace('diagram:', '').slice(0, 12)}</Text>
                 <Ionicons name="pencil" size={12} color={colors.textSecondary} />
               </TouchableOpacity>
             ))}

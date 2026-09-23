@@ -19,6 +19,9 @@ import type { CloneProgressCallback } from './RepoImportService';
 import { getActiveBranch } from './git/activeBranchStore';
 import { useRepoStore } from '../stores/repoStore';
 import { isGitCorruptionError } from './git/corruptionErrors';
+import { DocumentService } from './documents/DocumentService';
+import { parseDiagramDocument } from './diagram/core/parser';
+import type { Diagram } from '../models/Diagram';
 
 // Paths of todo files already reported as unparseable, per repo. Without this
 // cache the same malformed remote files re-warn on every pull (#1161); a file
@@ -39,6 +42,16 @@ const reportedCanvasParseWarns = new Map<string, Set<string>>();
 /** Test-only seam: clear the per-repo canvas parse-warn dedup cache. */
 export function __resetCanvasParseLogForTests(): void {
   reportedCanvasParseWarns.clear();
+}
+
+// Session-scoped dedup for diagram .td.json parse warnings: without it a
+// malformed remote diagram re-warns on every pull. Files that later parse
+// cleanly drop out of the set, so a future breakage re-warns again.
+const reportedDiagramParseWarns = new Map<string, Set<string>>();
+
+/** Test-only seam: clear the per-repo diagram parse-warn dedup cache. */
+export function __resetDiagramParseLogForTests(): void {
+  reportedDiagramParseWarns.clear();
 }
 
 async function hasUnpushedCommits(repoPath: string, branch: string): Promise<boolean> {
@@ -627,6 +640,158 @@ async function pullCanvasesFromRepo(
   return pulled;
 }
 
+export async function pullDiagramsFromRepo(
+  owner: string,
+  repo: string,
+  repoPath: string,
+  branch: string,
+  provider?: GitHostProvider,
+  onProgress?: CloneProgressCallback,
+  reader?: RepoReader,
+): Promise<number> {
+  let pulled = 0;
+  let files: { path: string; content: string }[] = [];
+  let directoryExists = false;
+
+  try {
+    files = await fetchDirectoryFiles(owner, repo, repoPath, 'diagrams', branch, provider, reader);
+    directoryExists = true;
+  } catch (error) {
+    console.warn(
+      `[RepoPullService] diagrams pull failed, preserving local data (${owner}/${repo}@${branch}):`,
+      error instanceof Error ? error.message : error,
+    );
+    return pulled;
+  }
+
+  let processed = 0;
+  const diagramTdJsonCount = files.filter((f) => f.path.endsWith('.td.json')).length;
+  const previouslyWarnedDiagramPaths = reportedDiagramParseWarns.get(repoPath) ?? new Set<string>();
+  const freshBadDiagramPaths: string[] = [];
+  const processedDiagrams: { path: string; title: string; diagramDoc: Diagram['document']; pulledDoc: string }[] = [];
+  try {
+    await StorageService.mutateDiagrams((allDiagrams) => {
+      if (directoryExists) {
+        const remotePaths = new Set<string>();
+        for (const file of files) {
+          if (!file.path.endsWith('.td.json')) continue;
+          processed++;
+          onProgress?.('Importing diagrams…', processed, diagramTdJsonCount);
+          remotePaths.add(file.path);
+
+          const titleFromPath = file.path
+            .replace(/^diagrams\//, '')
+            .replace(/\.td\.json$/, '')
+            .replace(/-/g, ' ');
+
+          const idx = allDiagrams.findIndex((d) => d.filePath === file.path);
+
+          let diagramDoc: Diagram['document'] | null = null;
+          let parseErr: Error | null = null;
+          try {
+            diagramDoc = parseDiagramDocument(file.content);
+          } catch (error) {
+            parseErr = error instanceof Error ? error : new Error(String(error));
+          }
+
+          if (parseErr) {
+            freshBadDiagramPaths.push(file.path);
+            if (!previouslyWarnedDiagramPaths.has(file.path)) {
+              console.warn('[RepoPullService] Failed to parse diagram .td.json:', file.path, parseErr.message);
+            }
+            continue;
+          }
+
+          const pulledDoc = JSON.stringify(diagramDoc);
+          if (idx !== -1) {
+            const existing = allDiagrams[idx];
+            if (JSON.stringify(existing.document) !== pulledDoc) {
+              allDiagrams[idx] = { ...existing, document: diagramDoc!, lastPulledDocument: pulledDoc, updatedAt: Date.now() };
+              pulled++;
+            } else if (existing.lastPulledDocument !== pulledDoc) {
+              allDiagrams[idx] = { ...existing, lastPulledDocument: pulledDoc };
+            }
+          } else {
+            const newDiagram: Diagram = {
+              id: `diagram-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 9)}`,
+              title: titleFromPath,
+              document: diagramDoc!,
+              repo: repoPath,
+              branch,
+              filePath: file.path,
+              tags: [],
+              createdAt: Date.now(),
+              updatedAt: Date.now(),
+              lastPulledDocument: pulledDoc,
+            };
+            allDiagrams.push(newDiagram);
+            pulled++;
+          }
+          processedDiagrams.push({ path: file.path, title: titleFromPath, diagramDoc: diagramDoc!, pulledDoc });
+        }
+
+        if (freshBadDiagramPaths.length > 0) {
+          reportedDiagramParseWarns.set(repoPath, new Set(freshBadDiagramPaths));
+        } else {
+          reportedDiagramParseWarns.delete(repoPath);
+        }
+
+        const survivors = allDiagrams.filter((d) => {
+          if (d.repo !== repoPath) return true;
+          if (d.branch !== branch) return true;
+          if (!d.filePath) return true;
+          if (remotePaths.has(d.filePath)) return true;
+          const dirty =
+            d.lastPulledDocument === undefined || d.lastPulledDocument !== JSON.stringify(d.document);
+          return dirty;
+        });
+        allDiagrams.length = 0;
+        allDiagrams.push(...survivors);
+      } else {
+        const survivors = allDiagrams.filter((d) => {
+          if (d.repo !== repoPath) return true;
+          if (d.branch !== branch) return true;
+          if (!d.filePath) return true;
+          const dirty =
+            d.lastPulledDocument === undefined || d.lastPulledDocument !== JSON.stringify(d.document);
+          return dirty;
+        });
+        allDiagrams.length = 0;
+        allDiagrams.push(...survivors);
+      }
+    });
+
+    if (processedDiagrams.length > 0) {
+      const docService = new DocumentService();
+      for (const item of processedDiagrams) {
+        try {
+          const slug = item.title.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-+|-+$/g, '') || 'untitled';
+          const existing = await docService.index.getDocumentMetaBySlug('diagram', slug);
+          if (existing) {
+            await docService.update(existing.id, {
+              body: item.pulledDoc,
+              extra: { repo: repoPath, branch, filePath: item.path, lastPulledDocument: item.pulledDoc },
+            });
+          } else {
+            await docService.create({
+              type: 'diagram',
+              title: item.title,
+              body: item.pulledDoc,
+              tags: [],
+              extra: { repo: repoPath, branch, filePath: item.path, lastPulledDocument: item.pulledDoc },
+            });
+          }
+        } catch (err) {
+          console.warn('[RepoPullService] Failed to sync diagram to DocumentService:', item.path, err instanceof Error ? err.message : err);
+        }
+      }
+    }
+  } catch (error) {
+    console.warn('[RepoPullService] Failed to process diagrams:', error);
+  }
+  return pulled;
+}
+
 async function pullTodosFromRepo(
   owner: string,
   repo: string,
@@ -864,6 +1029,7 @@ export interface PullResult {
   canvases: number;
   todos: number;
   templates: number;
+  diagrams: number;
 }
 
 export async function pullFromSingleRepo(
@@ -871,7 +1037,7 @@ export async function pullFromSingleRepo(
   onProgress?: CloneProgressCallback,
 ): Promise<PullResult> {
   if (!GitHubService.isAuthenticated()) {
-    return { repos: 0, notes: 0, canvases: 0, todos: 0, templates: 0 };
+    return { repos: 0, notes: 0, canvases: 0, todos: 0, templates: 0, diagrams: 0 };
   }
 
   onProgress?.('Reading repository…', 0, null);
@@ -879,21 +1045,22 @@ export async function pullFromSingleRepo(
   const repos = await StorageService.getSavedRepositories();
   const repo = repos.find((r) => r.path === repoPath);
   if (!repo) {
-    return { repos: 0, notes: 0, canvases: 0, todos: 0, templates: 0 };
+    return { repos: 0, notes: 0, canvases: 0, todos: 0, templates: 0, diagrams: 0 };
   }
 
   const repoInfo = parseRepoPath(repo.path);
   if (!repoInfo) {
-    return { repos: 0, notes: 0, canvases: 0, todos: 0, templates: 0 };
+    return { repos: 0, notes: 0, canvases: 0, todos: 0, templates: 0, diagrams: 0 };
   }
   const branch = await resolveBranch(repo.path, repo.branch);
 
   const sharedReader = await getRepoReader(repo.path, repoInfo.owner, repoInfo.repo, branch, repo.provider);
 
-  const [notes, canvases, todos] = await Promise.all([
+  const [notes, canvases, todos, diagrams] = await Promise.all([
     pullNotesFromRepo(repoInfo.owner, repoInfo.repo, repo.path, branch, repo.provider, onProgress, sharedReader),
     pullCanvasesFromRepo(repoInfo.owner, repoInfo.repo, repo.path, branch, repo.provider, onProgress, sharedReader),
     pullTodosFromRepo(repoInfo.owner, repoInfo.repo, repo.path, branch, repo.provider, onProgress, sharedReader),
+    pullDiagramsFromRepo(repoInfo.owner, repoInfo.repo, repo.path, branch, repo.provider, onProgress, sharedReader),
   ]);
 
   const pref = await TemplateRepoPreferenceService.get();
@@ -901,18 +1068,19 @@ export async function pullFromSingleRepo(
     pref && pref.repoPath === repoPath
       ? await pullTemplatesFromRepo(repoInfo.owner, repoInfo.repo, branch, repo.provider, onProgress)
       : 0;
-  return { repos: 1, notes, canvases, todos, templates };
+  return { repos: 1, notes, canvases, todos, templates, diagrams };
 }
 
 export async function pullAllFromRepos(): Promise<PullResult> {
   if (!GitHubService.isAuthenticated()) {
-    return { repos: 0, notes: 0, canvases: 0, todos: 0, templates: 0 };
+    return { repos: 0, notes: 0, canvases: 0, todos: 0, templates: 0, diagrams: 0 };
   }
 
   const repos = await StorageService.getSavedRepositories();
   let totalNotes = 0;
   let totalCanvases = 0;
   let totalTodos = 0;
+  let totalDiagrams = 0;
   let reposProcessed = 0;
 
   for (const repo of repos) {
@@ -923,18 +1091,20 @@ export async function pullAllFromRepos(): Promise<PullResult> {
 
     const sharedReader = await getRepoReader(repo.path, repoInfo.owner, repoInfo.repo, branch, repo.provider);
 
-    const [notes, canvases, todos] = await Promise.all([
+    const [notes, canvases, todos, diagrams] = await Promise.all([
       pullNotesFromRepo(repoInfo.owner, repoInfo.repo, repo.path, branch, repo.provider, undefined, sharedReader),
       pullCanvasesFromRepo(repoInfo.owner, repoInfo.repo, repo.path, branch, repo.provider, undefined, sharedReader),
       pullTodosFromRepo(repoInfo.owner, repoInfo.repo, repo.path, branch, repo.provider, undefined, sharedReader),
+      pullDiagramsFromRepo(repoInfo.owner, repoInfo.repo, repo.path, branch, repo.provider, undefined, sharedReader),
     ]);
 
     totalNotes += notes;
     totalCanvases += canvases;
     totalTodos += todos;
+    totalDiagrams += diagrams;
     reposProcessed++;
   }
 
   const templates = await pullTemplatesFromConfiguredRepo();
-  return { repos: reposProcessed, notes: totalNotes, canvases: totalCanvases, todos: totalTodos, templates };
+  return { repos: reposProcessed, notes: totalNotes, canvases: totalCanvases, todos: totalTodos, templates, diagrams: totalDiagrams };
 }
