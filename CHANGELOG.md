@@ -8,6 +8,20 @@ All notable fixes and feature changes to GitNotēs are documented here.
 >
 > **History**: prior fixes (pre-2026-08) lived in single-PR wiki pages. Those pages were retired in [#1047](https://github.com/gedwolmen/gitnotes/pull/1047); their full diagnostic content is preserved in git history via `git log -p -- docs/wiki/<file>.md`.
 
+## 2026-09-23
+
+### docs: correct stale canvas/diagram documentation across wiki and README
+
+**What:** Multiple wiki pages and README contained stale facts about canvases and diagrams.
+
+**Fixes:**
+- `models.md`: Replaced obsolete `tiles: CanvasTile[]` / `hotspots: Hotspot[]` schema with current `scene: CanvasScene` / `elements: CanvasElement[]` representation. Added full `Diagram` model documentation.
+- `paywall.md`: Updated feature table to distinguish Visual Canvas (free view, Pro edit) from ASCII Diagrams (Pro-only). Added explicit "Visual Canvas vs ASCII Diagrams" section.
+- `contexts.md`: Removed stale `updateTile` from CanvasContext. Added DiagramContext with full CRUD operations.
+- `screens.md`: Updated CanvasEditorScreen description (removed sparse tile/hotspot references). Added DiagramEditorScreen documentation.
+- `index.md`: Added Document Types table distinguishing note/todo/canvas/diagram storage and access levels.
+- `README.md`: Updated subtitle and highlights to distinguish Visual Canvases (free) from ASCII Diagrams (Pro).
+
 ## 2026-09-17
 
 ### fix(android): resolve Android TLS certificate verification failures

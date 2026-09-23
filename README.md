@@ -11,7 +11,7 @@
 <h1 align="center">GitNotēs</h1>
 
 <p align="center">
-  Mobile notes, todos, and canvases backed by a Git repo.<br>
+  Mobile notes, todos, Visual Canvases, and ASCII Diagrams (Pro) backed by a Git repo.<br>
   Your data lives as plain Markdown, Neorg, Org, or JSON — yours to read, edit, and version anywhere.
 </p>
 
@@ -43,7 +43,7 @@
 
 ## Highlights
 
-- Notes, todos, journals, and Excalidraw-style canvases — all backed by Git
+- Notes, todos, journals, and Visual Canvases (free); ASCII Diagrams (Pro) — all backed by Git
 - Folders, tags, colors, pins, wiki-links, backlinks, custom templates
 - Multi-provider sync (GitHub, GitLab, Gitea-like) via local git clone
 - Optional Pro tier with Neumorphic "Fancy UI", advanced AI, multi-host paywall, and trial/lifetime via StoreKit 2 (RevenueCat) — see the [wiki: Paywall & Pro Tier](https://github.com/gedwolmen/gitnotes/wiki/paywall)
@@ -52,7 +52,7 @@
 
 ## Stack
 
-Expo SDK 56 · React Native 0.85 · TypeScript 6 · React Navigation v7 · TanStack Query · Zustand · Vercel AI SDK v6 · Reanimated · FlashList · NativeWind v5.
+Expo SDK 57 · React Native 0.86 · TypeScript 6 · React Navigation v7 · TanStack Query · Zustand · Vercel AI SDK v6 · Reanimated · FlashList · NativeWind v5.
 
 ## Contributing
 
