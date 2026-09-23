@@ -126,7 +126,7 @@ describe('PDF exclusion via pullFromSingleRepo import seam', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockPullFromSingleRepo.mockResolvedValue({
-      repos: 1, notes: 0, canvases: 0, todos: 0, templates: 0,
+      repos: 1, notes: 0, canvases: 0, todos: 0, templates: 0, diagrams: 0,
     });
     jest.mocked(AuthService.getToken).mockResolvedValue('gh-token');
     jest.mocked(StorageService.getSavedRepositories).mockResolvedValue([
@@ -202,7 +202,7 @@ describe('clone vs. pull timing boundary', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockPullFromSingleRepo.mockResolvedValue({
-      repos: 1, notes: 0, canvases: 0, todos: 0, templates: 0,
+      repos: 1, notes: 0, canvases: 0, todos: 0, templates: 0, diagrams: 0,
     });
     jest.mocked(AuthService.getToken).mockResolvedValue('gh-token');
     jest.mocked(StorageService.getSavedRepositories).mockResolvedValue([
@@ -233,7 +233,7 @@ describe('clone vs. pull timing boundary', () => {
     });
     mockPullFromSingleRepo.mockImplementation(async () => {
       callOrder.push('pullFromSingleRepo');
-      return { repos: 1, notes: 0, canvases: 0, todos: 0, templates: 0 };
+      return { repos: 1, notes: 0, canvases: 0, todos: 0, templates: 0, diagrams: 0 };
     });
 
     await importRepoAtAdd(REPO_PATH, 'monorepo');
@@ -282,7 +282,7 @@ describe('pullNotesFromRepo error paths', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockPullFromSingleRepo.mockResolvedValue({
-      repos: 1, notes: 0, canvases: 0, todos: 0, templates: 0,
+      repos: 1, notes: 0, canvases: 0, todos: 0, templates: 0, diagrams: 0,
     });
     jest.mocked(AuthService.getToken).mockResolvedValue('gh-token');
     jest.mocked(StorageService.getSavedRepositories).mockResolvedValue([
@@ -304,7 +304,7 @@ describe('pullNotesFromRepo error paths', () => {
 
     const result = await importRepoAtAdd(REPO_PATH, 'test-repo');
 
-    expect(result).toEqual({ ok: true, counts: { repos: 1, notes: 0, canvases: 0, todos: 0, templates: 0 } });
+    expect(result).toEqual({ ok: true, counts: { repos: 1, notes: 0, canvases: 0, todos: 0, templates: 0, diagrams: 0 } });
     expect(mockPullFromSingleRepo).not.toHaveBeenCalled();
   });
 

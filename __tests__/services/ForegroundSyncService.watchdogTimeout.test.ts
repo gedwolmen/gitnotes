@@ -95,7 +95,7 @@ describe('ForegroundSyncService watchdog vs success regression', () => {
 
       await jest.advanceTimersByTimeAsync(PULL_WATCHDOG_MS + 1);
 
-      pullResolve!({ repos: 1, notes: 0, canvases: 0, todos: 0, templates: 0 });
+      pullResolve!({ repos: 1, notes: 0, canvases: 0, todos: 0, templates: 0, diagrams: 0 });
 
       await pullPromise;
       expect(getForegroundSyncHealth().status).toBe('ok');

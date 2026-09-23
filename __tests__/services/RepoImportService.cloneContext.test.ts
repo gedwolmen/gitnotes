@@ -62,7 +62,7 @@ describe('importRepoAtAdd clone context', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockPullFromSingleRepo.mockResolvedValue({
-      repos: 1, notes: 0, canvases: 0, todos: 0, templates: 0,
+      repos: 1, notes: 0, canvases: 0, todos: 0, templates: 0, diagrams: 0,
     });
     jest.mocked(AuthService.getToken).mockResolvedValue('gitlab-token');
     jest.mocked(StorageService.getSavedRepositories).mockResolvedValue([
@@ -119,7 +119,7 @@ describe('importRepoAtAdd clone context', () => {
     });
     mockPullFromSingleRepo.mockImplementation(async () => {
       callOrder.push('pullFromSingleRepo');
-      return { repos: 1, notes: 0, canvases: 0, todos: 0, templates: 0 };
+      return { repos: 1, notes: 0, canvases: 0, todos: 0, templates: 0, diagrams: 0 };
     });
 
     await importRepoAtAdd('group/project', 'project');
@@ -132,7 +132,7 @@ describe('importRepoAtAdd clone context', () => {
 
     const result = await importRepoAtAdd('group/project', 'project');
 
-    expect(result).toEqual({ ok: true, counts: { repos: 1, notes: 0, canvases: 0, todos: 0, templates: 0 } });
+    expect(result).toEqual({ ok: true, counts: { repos: 1, notes: 0, canvases: 0, todos: 0, templates: 0, diagrams: 0 } });
     expect(mockPullFromSingleRepo).not.toHaveBeenCalled();
   });
 
