@@ -1,13 +1,10 @@
-export interface Account {
-  id: string;
-  name: string;
-  email?: string;
-  provider: string;
-}
+import { useEffect, useState } from 'react';
+import { AuthService } from '../services/AuthService';
 
 export const useActiveAccount = () => {
-  return {
-    activeAccount: null as Account | null,
-    accounts: [] as Account[],
-  };
+  const [summary, setSummary] = useState<Awaited<ReturnType<typeof AuthService.getActiveSummary>> | null>(null);
+  useEffect(() => {
+    void AuthService.getActiveSummary().then(setSummary);
+  }, []);
+  return summary;
 };

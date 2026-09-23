@@ -323,6 +323,29 @@ describe('CanvasListScreen policy — Visual Canvas free / ASCII Diagram Pro-onl
       // Paywall should NOT have been called
       expect(mockProState.openPaywall).not.toHaveBeenCalled();
     });
+
+    it('free user: Visual Canvas full flow — create → type picker → Visual Canvas → size picker → navigates to CanvasEditor', () => {
+      const { getByTestId } = render(React.createElement(CanvasListScreen));
+
+      // Step 1: Tap "new canvas" to open type picker
+      fireEvent.press(getByTestId('canvas-list.icon-button.new-canvas'));
+      expect(getByTestId('document-type-picker-modal')).toBeTruthy();
+
+      // Step 2: Select Visual Canvas — opens size picker
+      fireEvent.press(getByTestId('picker-button.visual-canvas'));
+      expect(getByTestId('canvas-list.overlay.size-picker')).toBeTruthy();
+
+      // Step 3: Pick a preset size — should navigate to CanvasEditor
+      fireEvent.press(getByTestId('canvas-list.button.pick-size-phone'));
+
+      // Verify navigation to CanvasEditor with canvas dimensions
+      expect(mockNavigate).toHaveBeenCalledWith('CanvasEditor', expect.objectContaining({
+        canvasWidth: 1080,
+        canvasHeight: 1920,
+      }));
+      // Paywall should NOT have been called
+      expect(mockProState.openPaywall).not.toHaveBeenCalled();
+    });
   });
 
   describe('Visual Canvas opening — free for all users', () => {
@@ -360,6 +383,22 @@ describe('CanvasListScreen policy — Visual Canvas free / ASCII Diagram Pro-onl
       expect(mockNavigate).not.toHaveBeenCalledWith(
         expect.objectContaining({ screen: 'DiagramEditor' }),
       );
+    });
+
+    it('free user: ASCII Diagram full flow — create → type picker → ASCII Diagram → openPaywall called', () => {
+      const { getByTestId } = render(React.createElement(CanvasListScreen));
+
+      // Step 1: Tap "new canvas" to open type picker
+      fireEvent.press(getByTestId('canvas-list.icon-button.new-canvas'));
+      expect(getByTestId('document-type-picker-modal')).toBeTruthy();
+
+      // Step 2: Select ASCII Diagram — should trigger paywall for free user
+      fireEvent.press(getByTestId('picker-button.ascii-diagram'));
+
+      // Paywall must be called (isPro = false)
+      expect(mockProState.openPaywall).toHaveBeenCalledTimes(1);
+      // No navigation should occur
+      expect(mockNavigate).not.toHaveBeenCalled();
     });
 
     it('Pro user: selecting ASCII Diagram does NOT call paywall', () => {

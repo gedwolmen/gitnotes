@@ -2,7 +2,7 @@
   "name": "gitnotes",
   "version": "1.6.3",
   "license": "MPL-2.0",
-  "main": "expo/AppEntry.js",
+  "main": "index.ts",
   "engines": {
     "node": ">=20.18"
   },

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation, type NavigationProp } from '@react-navigation/native';
 import { useToast, Toast, ToastDescription, ToastTitle } from '@/components/ui/toast';
@@ -8,7 +8,7 @@ import { useGitButtonActionStore } from '@/stores/gitButtonActionStore';
 import { stageAllPending, commitAll, pushAll, type RepoOpOutcome } from '@/services/git/multiRepoGitOps';
 import { CommitService } from '@/services/git/CommitService';
 import type { Author } from '@/services/git/engine/GitEngine';
-import { useAccounts } from '@/contexts/AccountsContext';
+import { AuthService } from '@/services/AuthService';
 import { emitGitContentRefresh, emitGitRefresh } from '@/hooks/useGitRefreshEvent';
 import FloatingGitButton from './FloatingGitButton';
 import type { ReleaseSegment } from './useFloatingGitButtonAffordances';
@@ -37,13 +37,6 @@ export default function AppFloatingGitButton() {
   const setPending = useGitButtonActionStore((s) => s.setPending);
   const toast = useToast();
   const hintFiredRef = useRef(false);
-  const { accounts, activeAccountId } = useAccounts();
-
-  const author = useMemo<Author | null>(() => {
-    const account = accounts.find((a) => a.id === activeAccountId) ?? null;
-    if (!account) return null;
-    return { name: account.name, email: account.email ?? '' };
-  }, [accounts, activeAccountId]);
 
   const hasAnyAction =
     aggregatedState.totalUncommitted > 0 ||
@@ -75,6 +68,10 @@ export default function AppFloatingGitButton() {
           });
           return;
         }
+        const summary = await AuthService.getActiveSummary();
+        const author: Author | null = summary
+          ? { name: summary.account.name, email: summary.account.email ?? '' }
+          : null;
         if (!author) {
           toast.show({
             placement: 'top',
@@ -199,7 +196,7 @@ export default function AppFloatingGitButton() {
         isOperationActiveRef.current = false;
       }
     },
-    [repos, author, toast, aggregatedState, navigation],
+    [repos, toast, aggregatedState, navigation],
   );
 
   /**

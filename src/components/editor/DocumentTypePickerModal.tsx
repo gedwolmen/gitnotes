@@ -10,8 +10,8 @@ export type DocumentType = 'canvas' | 'diagram';
 /**
  * Pro-gated document type picker shown when the user taps "new canvas".
  *
- * Visual Canvas: always Pro-gated; opens size picker flow.
- * ASCII Diagram: always Pro-gated; routes to DiagramEditor after title input.
+ * Visual Canvas: free; opens size picker flow.
+ * ASCII Diagram: Pro-only; routes to DiagramEditor after title input.
  * Free users see both options but selecting diagram immediately shows paywall
  * before any store mutation.
  */

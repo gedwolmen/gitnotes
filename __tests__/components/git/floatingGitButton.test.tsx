@@ -74,6 +74,31 @@ jest.mock('@/contexts/ThemeContext', () => ({
   useTokens: () => ({ colors: { surface: '#fff', textSecondary: '#999', error: '#f00', success: '#0f0', primary: '#00f', background: '#fff', foreground: '#000' }, radii: {} }),
 }));
 
+describe('AppFloatingGitButton — AccountsContext module identity regression', () => {
+  it('useAccounts() finds provider when both use canonical @/ import path', async () => {
+    const { useAccounts, AccountsProvider } = require('@/contexts/AccountsContext');
+
+    let capturedAccounts: ReturnType<typeof useAccounts> | null = null;
+
+    function TestConsumer() {
+      const accounts = useAccounts();
+      capturedAccounts = accounts;
+      return null;
+    }
+
+    render(
+      <AccountsProvider>
+        <TestConsumer />
+      </AccountsProvider>
+    );
+
+    await act(async () => { await Promise.resolve(); });
+
+    expect(capturedAccounts).not.toBeNull();
+    expect(capturedAccounts!.isLoading).toBe(false);
+  });
+});
+
 describe('FloatingGitButton — integration', () => {
   beforeEach(() => {
     __resetTime();

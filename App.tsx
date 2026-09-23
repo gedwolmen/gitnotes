@@ -15,20 +15,21 @@ import { useColorScheme } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 
-import { NoteProvider } from './src/contexts/NoteContext';
-import { ThemeProvider } from './src/contexts/ThemeContext';
+import { NoteProvider } from '@/contexts/NoteContext';
+import { ThemeProvider } from '@/contexts/ThemeContext';
 import { NativeWindThemeProvider } from './src/theme/nativewind';
-import { FolderProvider } from './src/contexts/FolderContext';
-import { ViewModeProvider } from './src/contexts/ViewModeContext';
-import { AccountsProvider } from './src/contexts/AccountsContext';
-import { HostAuthProvider } from './src/contexts/HostAuthContext';
-import { TodoProvider } from './src/contexts/TodoContext';
-import { CanvasProvider } from './src/contexts/CanvasContext';
-import { RepoProvider } from './src/contexts/RepoContext';
-import { BiometricLockProvider } from './src/contexts/BiometricLockContext';
+import { FolderProvider } from '@/contexts/FolderContext';
+import { ViewModeProvider } from '@/contexts/ViewModeContext';
+import { AccountsProvider } from '@/contexts/AccountsContext';
+import { HostAuthProvider } from '@/contexts/HostAuthContext';
+import { TodoProvider } from '@/contexts/TodoContext';
+import { CanvasProvider } from '@/contexts/CanvasContext';
+import { DiagramProvider } from '@/contexts/DiagramContext';
+import { RepoProvider } from '@/contexts/RepoContext';
+import { BiometricLockProvider } from '@/contexts/BiometricLockContext';
 import { BiometricLockScreen } from './src/components/BiometricLockScreen';
 import { AppLoadingView } from './src/components/ui/AppLoadingView';
-import { BacklinksProvider } from './src/contexts/BacklinksContext';
+import { BacklinksProvider } from '@/contexts/BacklinksContext';
 import AppNavigator from './src/navigation/AppNavigator';
 import { OnboardingService } from './src/services/OnboardingService';
 import { NotificationService } from './src/services/NotificationService';
@@ -215,6 +216,7 @@ export default function App() {
                   <BacklinksProvider>
                     <TodoProvider>
                       <CanvasProvider>
+                        <DiagramProvider>
                         <ViewModeProvider>
                           <BiometricLockProvider>
                             <StatusBar style="auto" />
@@ -230,6 +232,7 @@ export default function App() {
                             <BiometricLockScreen />
                           </BiometricLockProvider>
                         </ViewModeProvider>
+                        </DiagramProvider>
                       </CanvasProvider>
                     </TodoProvider>
                   </BacklinksProvider>

@@ -41,7 +41,8 @@ export default function ExploreCommitScreen() {
   const storedRepo = useRepoStore((state) =>
     state.repositories.find((candidate) => candidate.id === repoId),
   );
-  const { activeAccount } = useActiveAccount();
+  const summary = useActiveAccount();
+  const activeAccount = summary?.account ?? null;
   let localPath: string | null = null;
   if (storedRepo) {
     try {

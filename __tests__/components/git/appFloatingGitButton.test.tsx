@@ -98,11 +98,11 @@ jest.mock('@/stores/repoStore', () => ({
     }),
 }));
 
-jest.mock('@/contexts/AccountsContext', () => ({
-  useAccounts: () => ({
-    accounts: [{ id: 'acc-1', name: 'Test User', email: 'test@example.com' }],
-    activeAccountId: 'acc-1',
-  }),
+const mockGetActiveSummary = jest.fn();
+jest.mock('@/services/AuthService', () => ({
+  AuthService: {
+    getActiveSummary: (...args: unknown[]) => mockGetActiveSummary(...args),
+  },
 }));
 
 const mockStageAllPending = jest.fn();
@@ -162,6 +162,24 @@ function setupDefaultMocks() {
   mockCommitAll.mockResolvedValue({ outcomes: [], totalActed: 1, failures: [], ok: true });
   mockPushAll.mockResolvedValue({ outcomes: [], totalActed: 1, failures: [], ok: true });
   mockRefresh.mockResolvedValue(undefined);
+  mockGetActiveSummary.mockImplementation(async () => ({
+    account: { id: 'acc-1', name: 'Test User', email: 'test@example.com', avatarUrl: null, login: 'testuser' },
+    hosts: [
+      {
+        id: 'host-1',
+        accountId: 'acc-1',
+        provider: 'github' as const,
+        hostLogin: 'testuser',
+        hostUserId: 1,
+        name: 'Test User',
+        email: 'test@example.com',
+        avatarUrl: null,
+        instanceBaseUrl: null,
+        addedAt: Date.now(),
+      },
+    ],
+    activeHostId: 'host-1',
+  }));
 }
 
 function getReleaseCallback() {
@@ -347,6 +365,24 @@ describe('AppFloatingGitButton — conflict navigation deduplication', () => {
     jest.clearAllMocks();
     capturedOnReleaseSegment = null;
     setupDefaultMocks();
+    mockGetActiveSummary.mockImplementation(async () => ({
+      account: { id: 'acc-1', name: 'Test User', email: 'test@example.com', avatarUrl: null, login: 'testuser' },
+      hosts: [
+        {
+          id: 'host-1',
+          accountId: 'acc-1',
+          provider: 'github' as const,
+          hostLogin: 'testuser',
+          hostUserId: 1,
+          name: 'Test User',
+          email: 'test@example.com',
+          avatarUrl: null,
+          instanceBaseUrl: null,
+          addedAt: Date.now(),
+        },
+      ],
+      activeHostId: 'host-1',
+    }));
   });
 
   it('navigates to each unique conflict repoId exactly once', async () => {
@@ -354,11 +390,11 @@ describe('AppFloatingGitButton — conflict navigation deduplication', () => {
       outcomes: [],
       totalActed: 0,
       failures: [
-        { repoId: 'repo-1', repoPath: '/test/repo-1', repoName: 'Repo 1', ok: false, actedCount: 0, error: 'conflict' },
-        { repoId: 'repo-1', repoPath: '/test/repo-1', repoName: 'Repo 1', ok: false, actedCount: 0, error: 'conflict' },
-        { repoId: 'repo-2', repoPath: '/test/repo-2', repoName: 'Repo 2', ok: false, actedCount: 0, error: 'conflict' },
-        { repoId: 'repo-2', repoPath: '/test/repo-2', repoName: 'Repo 2', ok: false, actedCount: 0, error: 'conflict' },
-        { repoId: 'repo-1', repoPath: '/test/repo-1', repoName: 'Repo 1', ok: false, actedCount: 0, error: 'conflict' },
+        { repoId: 'repo-1', repoPath: '/test/repo-1', repoName: 'Repo 1', ok: false, actedCount: 0, error: 'conflict', failureKind: 'rejected' },
+        { repoId: 'repo-1', repoPath: '/test/repo-1', repoName: 'Repo 1', ok: false, actedCount: 0, error: 'conflict', failureKind: 'rejected' },
+        { repoId: 'repo-2', repoPath: '/test/repo-2', repoName: 'Repo 2', ok: false, actedCount: 0, error: 'conflict', failureKind: 'rejected' },
+        { repoId: 'repo-2', repoPath: '/test/repo-2', repoName: 'Repo 2', ok: false, actedCount: 0, error: 'conflict', failureKind: 'rejected' },
+        { repoId: 'repo-1', repoPath: '/test/repo-1', repoName: 'Repo 1', ok: false, actedCount: 0, error: 'conflict', failureKind: 'rejected' },
       ],
       ok: false,
     });
@@ -482,5 +518,55 @@ describe('AppFloatingGitButton — toast feedback', () => {
         duration: 3000,
       }),
     );
+  });
+});
+
+describe('AppFloatingGitButton — no author toast and abort', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    capturedOnReleaseSegment = null;
+    mockStageAllPending.mockResolvedValue({ outcomes: [], totalActed: 1, failures: [], ok: true });
+    mockCommitAll.mockResolvedValue({ outcomes: [], totalActed: 1, failures: [], ok: true });
+    mockPushAll.mockResolvedValue({ outcomes: [], totalActed: 1, failures: [], ok: true });
+    mockRefresh.mockResolvedValue(undefined);
+  });
+
+  it('shows no-author error toast and skips stage when getActiveSummary returns null', async () => {
+    mockGetActiveSummary.mockImplementation(async () => null);
+
+    const { default: AppFloatingGitButton } = require('@/components/git/AppFloatingGitButton');
+    render(<AppFloatingGitButton />);
+    await act(async () => { await Promise.resolve(); });
+
+    const release = getReleaseCallback();
+    await act(async () => { release('stage'); });
+    await flushPromises();
+
+    const toastCall = mockToastShow.mock.calls.find((call) => call[0]?.duration === 3000);
+    expect(toastCall).toBeDefined();
+    expect(toastCall?.[0]).toEqual(
+      expect.objectContaining({
+        placement: 'top',
+        duration: 3000,
+        render: expect.any(Function),
+      }),
+    );
+    expect(mockStageAllPending).not.toHaveBeenCalled();
+  });
+
+  it('shows no-author error toast and skips commit when getActiveSummary returns null', async () => {
+    mockGetActiveSummary.mockImplementation(async () => null);
+
+    const { default: AppFloatingGitButton } = require('@/components/git/AppFloatingGitButton');
+    render(<AppFloatingGitButton />);
+    await act(async () => { await Promise.resolve(); });
+
+    const release = getReleaseCallback();
+    await act(async () => { release('commit'); });
+    await flushPromises();
+
+    const toastCall = mockToastShow.mock.calls.find((call) => call[0]?.duration === 3000);
+    expect(toastCall).toBeDefined();
+    expect(mockCommitAll).not.toHaveBeenCalled();
   });
 });
