@@ -1052,5 +1052,22 @@
     "badge": "PRO",
     "lockedTitle": "Pro Feature",
     "lockedBody": "This feature requires GitNotēs Pro. Upgrade to unlock unlimited accounts, repos, AI, and more."
+  },
+  "diagram": {
+    "title": "Diagrams",
+    "create": "New Diagram",
+    "edit": "Edit Diagram",
+    "delete": "Delete Diagram",
+    "deleteConfirm": "Delete this diagram? This cannot be undone.",
+    "proOnly": "Diagrams are a Pro feature",
+    "proOnlyBody": "Upgrade to GitNotēs Pro to create and edit unlimited ASCII diagrams.",
+    "format": "Format",
+    "save": "Save",
+    "cancel": "Cancel",
+    "empty": "No diagrams yet",
+    "placeholder": "Diagram name",
+    "createSuccess": "Diagram created",
+    "updateSuccess": "Diagram saved",
+    "deleteSuccess": "Diagram deleted"
   }
 }

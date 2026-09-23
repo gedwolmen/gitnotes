@@ -1049,5 +1049,22 @@
     "badge": "PRO",
     "lockedTitle": "Pro機能",
     "lockedBody": "この機能にはGitNotēs Proが必要です。アップグレードすると、無制限のアカウント、リポジトリ、AIなどを利用できます。"
+  },
+  "diagram": {
+    "title": "ダイアグラム",
+    "create": "新規ダイアグラム",
+    "edit": "ダイアグラムを編集",
+    "delete": "ダイアグラムを削除",
+    "deleteConfirm": "このダイアグラムを削除しますか？この操作は取り消せません。",
+    "proOnly": "ダイアグラムはPro機能です",
+    "proOnlyBody": "GitNotēs Proにアップグレードすると、無制限のASCIIダイアグラムを作成・編集できます。",
+    "format": "フォーマット",
+    "save": "保存",
+    "cancel": "キャンセル",
+    "empty": "ダイアグラムはまだありません",
+    "placeholder": "ダイアグラム名",
+    "createSuccess": "ダイアグラムを作成しました",
+    "updateSuccess": "ダイアグラムを保存しました",
+    "deleteSuccess": "ダイアグラムを削除しました"
   }
 }

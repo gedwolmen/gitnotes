@@ -1051,5 +1051,22 @@
     "badge": "PRO",
     "lockedTitle": "Pro-Funktion",
     "lockedBody": "Diese Funktion erfordert GitNotēs Pro. Upgrade, um unbegrenzte Konten, Repos, KI und mehr freizuschalten."
+  },
+  "diagram": {
+    "title": "Diagramme",
+    "create": "Neues Diagramm",
+    "edit": "Diagramm bearbeiten",
+    "delete": "Diagramm löschen",
+    "deleteConfirm": "Dieses Diagramm löschen? Dies kann nicht rückgängig gemacht werden.",
+    "proOnly": "Diagramme sind eine Pro-Funktion",
+    "proOnlyBody": "Upgrade auf GitNotēs Pro, um unbegrenzte ASCII-Diagramme zu erstellen und zu bearbeiten.",
+    "format": "Format",
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "empty": "Noch keine Diagramme",
+    "placeholder": "Diagrammname",
+    "createSuccess": "Diagramm erstellt",
+    "updateSuccess": "Diagramm gespeichert",
+    "deleteSuccess": "Diagramm gelöscht"
   }
 }

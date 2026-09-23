@@ -1051,5 +1051,22 @@
     "badge": "PRO",
     "lockedTitle": "Pro 기능",
     "lockedBody": "이 기능에는 GitNotēs Pro가 필요합니다. 업그레이드하면 무제한 계정, 저장소, AI 등을 이용할 수 있습니다."
+  },
+  "diagram": {
+    "title": "다이어그램",
+    "create": "새 다이어그램",
+    "edit": "다이어그램 편집",
+    "delete": "다이어그램 삭제",
+    "deleteConfirm": "이 다이어그램을 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.",
+    "proOnly": "다이어그램은 Pro 기능입니다",
+    "proOnlyBody": "GitNotēs Pro로 업그레이드하여 무제한 ASCII 다이어그램을 만들고 편집하세요.",
+    "format": "형식",
+    "save": "저장",
+    "cancel": "취소",
+    "empty": "아직 다이어그램이 없습니다",
+    "placeholder": "다이어그램 이름",
+    "createSuccess": "다이어그램이 생성되었습니다",
+    "updateSuccess": "다이어그램이 저장되었습니다",
+    "deleteSuccess": "다이어그램이 삭제되었습니다"
   }
 }

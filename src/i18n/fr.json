@@ -1051,5 +1051,22 @@
     "badge": "PRO",
     "lockedTitle": "Fonctionnalité Pro",
     "lockedBody": "Cette fonctionnalité nécessite GitNotēs Pro. Passez à Pro pour débloquer comptes, dépôts, IA et plus, sans limite."
+  },
+  "diagram": {
+    "title": "Diagrammes",
+    "create": "Nouveau diagramme",
+    "edit": "Modifier le diagramme",
+    "delete": "Supprimer le diagramme",
+    "deleteConfirm": "Supprimer ce diagramme ? Cette action est irréversible.",
+    "proOnly": "Les diagrammes sont une fonctionnalité Pro",
+    "proOnlyBody": "Passez à GitNotēs Pro pour créer et modifier des diagrammes ASCII illimités.",
+    "format": "Format",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "empty": "Aucun diagramme pour le moment",
+    "placeholder": "Nom du diagramme",
+    "createSuccess": "Diagramme créé",
+    "updateSuccess": "Diagramme enregistré",
+    "deleteSuccess": "Diagramme supprimé"
   }
 }

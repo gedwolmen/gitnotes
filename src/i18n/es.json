@@ -1053,5 +1053,22 @@
     "badge": "PRO",
     "lockedTitle": "Función Pro",
     "lockedBody": "Esta función requiere GitNotēs Pro. Mejora para desbloquear cuentas, repos, IA y más ilimitados."
+  },
+  "diagram": {
+    "title": "Diagramas",
+    "create": "Nuevo diagrama",
+    "edit": "Editar diagrama",
+    "delete": "Eliminar diagrama",
+    "deleteConfirm": "¿Eliminar este diagrama? No se puede deshacer.",
+    "proOnly": "Los diagramas son una función Pro",
+    "proOnlyBody": "Mejora a GitNotēs Pro para crear y editar diagramas ASCII ilimitados.",
+    "format": "Formato",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "empty": "Aún no hay diagramas",
+    "placeholder": "Nombre del diagrama",
+    "createSuccess": "Diagrama creado",
+    "updateSuccess": "Diagrama guardado",
+    "deleteSuccess": "Diagrama eliminado"
   }
 }
