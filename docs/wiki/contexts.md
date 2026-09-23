@@ -226,7 +226,7 @@ App
 
 ## CanvasContext
 
-**Purpose:** Provides the currently selected canvas and tile operations.
+**Purpose:** Provides the currently selected visual canvas and CRUD operations.
 
 **Provides:**
 ```typescript
@@ -237,11 +237,32 @@ App
   createCanvas: (input: CanvasCreateInput) => Promise<Canvas>;
   updateCanvas: (id: string, input: CanvasUpdateInput) => Promise<Canvas>;
   deleteCanvas: (id: string) => Promise<void>;
-  updateTile: (canvasId: string, tile: CanvasTile) => void;
+  refreshCanvases: () => Promise<void>;
 }
 ```
 
 **Consumed by:** `CanvasEditorScreen`, `CanvasListScreen`
+
+---
+
+## DiagramContext
+
+**Purpose:** Provides ASCII diagram state and operations (Pro-only).
+
+**Provides:**
+```typescript
+{
+  selectedDiagram: Diagram | null;
+  diagrams: Diagram[];
+  selectDiagram: (diagramId: string | null) => void;
+  createDiagram: (input: DiagramCreateInput) => Promise<Diagram>;
+  updateDiagram: (id: string, input: DiagramUpdateInput) => Promise<Diagram>;
+  deleteDiagram: (id: string) => Promise<void>;
+  refreshDiagrams: () => Promise<void>;
+}
+```
+
+**Consumed by:** `DiagramEditorScreen`, `DiagramPickerModal`
 
 ---
 

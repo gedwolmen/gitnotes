@@ -66,40 +66,196 @@ interface Todo {
 
 **File:** `src/models/Canvas.ts`
 
+Visual Canvas — infinite canvas with drawing, shapes, text, charts, and images.
+
 ```typescript
 interface Canvas {
   id: string;
   title: string;
-  tiles: CanvasTile[];          // Sparse tile data
-  hotspots: Hotspot[];           // Interactive regions
+  scene: CanvasScene;           // Scene graph with elements
+  folderPath?: string;
   repo?: string;
   branch?: string;
-  commit?: string;
+  filePath?: string;
+  tags: string[];
   createdAt: number;
   updatedAt: number;
+  accountId?: string;
+  lastPulledScene?: string;     // Serialized scene for edit detection
 }
 
-interface CanvasTile {
+interface CanvasScene {
+  version: number;
+  width: number;
+  height: number;
+  background: string;
+  elements: CanvasElement[];     // Stroke, Shape, Text, Chart, Image
+}
+
+type CanvasElement = CanvasStroke | CanvasShape | CanvasText | CanvasChart | CanvasImage;
+
+interface CanvasStroke {
+  type: 'stroke';
   id: string;
+  tool: 'pen' | 'highlighter' | 'eraser';
+  color: string;
+  width: number;
+  points: { x: number; y: number }[];
+  animation?: CanvasAnimation;
+}
+
+interface CanvasShape {
+  type: 'shape';
+  id: string;
+  shape: 'line' | 'rect' | 'ellipse' | 'diamond' | 'roundRect' | 'arrow';
+  color: string;
+  fillColor?: string;
+  width: number;
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  animation?: CanvasAnimation;
+}
+
+interface CanvasText {
+  type: 'text';
+  id: string;
+  text: string;
+  x: number;
+  y: number;
+  fontSize: number;
+  color: string;
+  animation?: CanvasAnimation;
+}
+
+interface CanvasChart {
+  type: 'chart';
+  id: string;
+  chartType: 'bar' | 'line' | 'pie';
+  title: string;
+  labels: string[];
+  values: number[];
   x: number;
   y: number;
   width: number;
   height: number;
-  type: 'image' | 'text' | 'drawing' | 'ai';
-  content: string;              // JSON or base64 for images
-  zIndex: number;
+  animation?: CanvasAnimation;
 }
 
-interface Hotspot {
+interface CanvasImage {
+  type: 'image';
   id: string;
+  data: string;                 // Base64 JPEG
+  mimeType: 'image/jpeg';
   x: number;
   y: number;
   width: number;
   height: number;
-  action: 'link' | 'note' | 'canvas' | 'url';
-  target: string;               // Note ID, canvas ID, or URL
+  animation?: CanvasAnimation;
+}
+
+interface CanvasAnimation {
+  type: 'pulse' | 'fade' | 'spin' | 'translate';
+  duration: number;
+  loop: boolean;
 }
 ```
+
+> **Stale info removed:** The obsolete `tiles: CanvasTile[]` and `hotspots: Hotspot[]` schema (from the original sparse-tile canvas) no longer exists. The current canvas uses `scene: CanvasScene` with `elements: CanvasElement[]`.
+
+---
+
+## Diagram
+
+**File:** `src/models/Diagram.ts`
+
+ASCII Diagram — Pro-only box-drawing diagrams stored as `.td.json` files under `diagrams/`.
+
+```typescript
+interface Diagram {
+  id: string;
+  title: string;
+  document: DrawDocument;        // The ASCII drawing document
+  folderPath?: string;
+  repo?: string;
+  branch?: string;
+  filePath?: string;
+  tags: string[];
+  createdAt: number;
+  updatedAt: number;
+  accountId?: string;
+  lastPulledDocument?: string;  // Serialized doc for edit detection
+}
+
+interface DrawDocument {
+  version: number;
+  objects: DrawObject[];         // Box, Line, Elbow, Paint, Text
+}
+
+type DrawObject = BoxObject | LineObject | ElbowObject | PaintObject | TextObject;
+
+interface BoxObject {
+  type: 'box';
+  id: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  style: BoxStyle;
+  label?: string;
+}
+
+interface LineObject {
+  type: 'line';
+  id: string;
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  style: LineStyle;
+}
+
+interface ElbowObject {
+  type: 'elbow';
+  id: string;
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  orientation: ElbowOrientation;
+  style: LineStyle;
+}
+
+interface PaintObject {
+  type: 'paint';
+  id: string;
+  color: InkColor;
+  thickness: number;
+  points: Point[];
+}
+
+interface TextObject {
+  type: 'text';
+  id: string;
+  x: number;
+  y: number;
+  content: string;
+  style: TextBorderMode;
+}
+
+type BoxStyle = 'none' | 'single' | 'double' | 'underline';
+type LineStyle = 'solid' | 'dashed' | 'dotted';
+type ElbowOrientation = 'horizontal' | 'vertical';
+type InkColor = 'black' | 'red' | 'green' | 'blue' | 'yellow' | 'magenta' | 'cyan' | 'white';
+type TextBorderMode = 'none' | 'single' | 'double';
+```
+
+> **Key invariants:**
+> - Diagrams are **Pro-only** — creation and editing gated by `useProScreenGuard('DiagramEditor')`
+> - Diagrams use type `diagram`, format `td`, stored as `.td.json` under `diagrams/` in the repo
+> - Canvas uses type `canvas`, format `canvas` (JSON), stored as `.canvas` under `canvases/`
+> - The two document types are isolated: `.td.json` files are never processed as canvases, and vice versa
 
 ---
 

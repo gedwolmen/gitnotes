@@ -8,14 +8,30 @@ GitNotēs has two tiers: **Free** and **Pro**.
 
 | Feature | Free | Pro |
 |---------|------|-----|
-| Notes, todos, canvases | ✅ | ✅ |
+| Notes, todos | ✅ | ✅ |
+| Visual Canvas (infinite canvas) | ✅ | ✅ |
+| ASCII Diagrams (box-drawing, `.td.json`) | ❌ | ✅ |
 | GitHub sync | ✅ | ✅ |
 | Neumorphic "Fancy UI" | ❌ | ✅ |
 | Advanced AI (Claude 3.5, GPT-4o) | ❌ | ✅ |
 | Multi-host (GitLab, Gitea) | ❌ | ✅ |
 | Unlimited repos | 3 | Unlimited |
-| Canvas AI vision | Limited | ✅ |
+| Canvas AI vision (OCR, object detection) | ❌ | ✅ |
 | Priority support | ❌ | ✅ |
+
+### Visual Canvas vs ASCII Diagrams
+
+GitNotēs has two distinct visual document types:
+
+**Visual Canvas** (`canvas` type, `.canvas` JSON under `canvases/`):
+- Infinite canvas with pen drawing, shapes, text, charts, images
+- Free for creation, viewing, and editing for all users
+- AI vision features (OCR, object detection) are Pro-only
+
+**ASCII Diagrams** (`diagram` type, `.td.json` under `diagrams/`):
+- Box-drawing diagrams rendered as ASCII art
+- Pro-only creation, editing, and viewing
+- Stored as plain `.td.json` files — portable and git-merge-friendly
 
 ## RevenueCat Integration
 

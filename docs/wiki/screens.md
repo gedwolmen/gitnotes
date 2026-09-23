@@ -58,6 +58,7 @@ GitNotēs uses the custom scheme `gitnotes://` for deep links.
 | Explore | `gitnotes://explore` | `gitnotes://explore` |
 | Settings | `gitnotes://settings` | `gitnotes://settings` |
 | Thought dump | `gitnotes://thought-dump` | `gitnotes://thought-dump` |
+| Diagram | `gitnotes://diagram/:diagramId` | `gitnotes://diagram/1699876543-jkl012` |
 
 > **Note:** Tab bar screens (Home, Notes, Explore, Todos, Settings) ARE reachable via `gitnotes://home`, `gitnotes://notes`, etc. Universal links (`https://gitnotes.app/...`) require associated domains entitlement configuration — see [Architecture](./architecture.md).
 
@@ -150,13 +151,25 @@ The canonical route param types are in `src/navigation/types.ts`:
 
 ### CanvasEditorScreen
 
-**Purpose:** Infinite canvas with tile-based layout, drawing, and AI vision.
+**Purpose:** Visual Canvas editor — infinite canvas with pen drawing, shapes, text, charts, and AI vision.
 
 **Key components:**
-- Sparse tile canvas (handled by native Skia/canvas layer)
-- `AtlasComposer` — tile composition
-- `HotspotGrid` — tappable regions
-- AI vision toolbar (OCR, object detection)
+- Skia canvas layer for strokes, shapes, text, charts, images
+- `AtlasComposer` — element composition
+- AI vision toolbar (OCR, object detection) — Pro-only
+- Free for creation, viewing, and editing; AI vision features are Pro-only
+
+---
+
+### DiagramEditorScreen
+
+**Purpose:** ASCII Diagram editor — Pro-only box-drawing diagrams rendered as ASCII art.
+
+**Key components:**
+- `DiagramEditorContent` — renders ASCII diagram with Unicode box-drawing characters
+- `DiagramToolbar` — tool palette (box, line, elbow, paint, text)
+- `DiagramPreview` — ASCII preview
+- Pro gate: `useProScreenGuard()` (zero-argument form) blocks free users at the screen level
 
 ---
 

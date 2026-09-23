@@ -29,6 +29,20 @@ yarn ios       # iOS
 yarn android   # Android
 ```
 
+## Document Types
+
+GitNotēs supports multiple document types:
+
+| Type | Format | Storage | Access |
+|------|--------|---------|--------|
+| Note | Markdown, Neorg, Org | `.md` under `documents/note/` | Free |
+| Todo | JSON | `.md` under `documents/todo/` | Free |
+| Visual Canvas | JSON | `.canvas` under `canvases/` | Free view, Pro edit |
+| ASCII Diagram | JSON | `.td.json` under `diagrams/` | **Pro-only** |
+| Template | Markdown | `.md` under `documents/template/` | Free |
+| Journal | Markdown | `.md` under `documents/journal/` | Free |
+| Thought Dump | Markdown | `.md` under `documents/thought-dump/` | Pro |
+
 ## AI Agent Note
 
 If you are an AI agent modifying code in this repository, read the [Architecture](./architecture.md) page before making significant changes. Any change to services, stores, screens, hooks, models, contexts, sync, or the Git engine must update the corresponding wiki page. See `AGENTS.md` for the full wiki-first rule.
