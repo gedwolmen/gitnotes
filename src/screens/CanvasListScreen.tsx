@@ -32,6 +32,7 @@ import CanvasCard from '../components/CanvasCard';
 import { SwipeableListItem } from '../components/list/SwipeableListItem';
 import { BulkActionBar } from '../components/list/BulkActionBar';
 import { HapticService } from '../utils/haptics';
+import { DocumentTypePickerModal } from '../components/editor/DocumentTypePickerModal';
 
 type CanvasViewMode = 'list' | 'grid';
 
@@ -84,12 +85,18 @@ export default function CanvasListScreen() {
   const [showSizePicker, setShowSizePicker] = useState(false);
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [showViewModePicker, setShowViewModePicker] = useState(false);
+  const [showTypePicker, setShowTypePicker] = useState(false);
+  const [showDiagramTitleModal, setShowDiagramTitleModal] = useState(false);
+  const [showDiagramRepoPicker, setShowDiagramRepoPicker] = useState(false);
+  const [selectedDiagramRepo, setSelectedDiagramRepo] = useState<string | null>(null);
   const [customW, setCustomW] = useState('800');
   const [customH, setCustomH] = useState('600');
   const [canvasTitle, setCanvasTitle] = useState('');
+  const [diagramTitle, setDiagramTitle] = useState('');
   const [viewMode, setViewMode] = useState<CanvasViewMode>('list');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
   const isDeletingRef = useRef(false);
+  const isCreatingRef = useRef(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -98,15 +105,12 @@ export default function CanvasListScreen() {
   );
 
   const handleCreate = useCallback(() => {
-    if (!isPro) {
-      openPaywall();
-      return;
-    }
     setCanvasTitle('');
     setCustomW('800');
     setCustomH('600');
-    setShowSizePicker(true);
-  }, [isPro, openPaywall]);
+    setDiagramTitle('');
+    setShowTypePicker(true);
+  }, []);
 
   const handlePickSize = useCallback(
     (w: number, h: number) => {
@@ -120,6 +124,43 @@ export default function CanvasListScreen() {
     [navigation, canvasTitle],
   );
 
+  const handleSelectVisualCanvas = useCallback(() => {
+    setShowTypePicker(false);
+    setCanvasTitle('');
+    setCustomW('800');
+    setCustomH('600');
+    setShowSizePicker(true);
+  }, []);
+
+  const handleSelectDiagram = useCallback(() => {
+    setShowTypePicker(false);
+    if (!isPro) {
+      openPaywall();
+      return;
+    }
+    isCreatingRef.current = false;
+    setDiagramTitle('');
+    setSelectedDiagramRepo(null);
+    setShowDiagramTitleModal(true);
+  }, [isPro, openPaywall]);
+
+  const handleCreateDiagram = useCallback(() => {
+    if (isCreatingRef.current) return;
+    if (!selectedDiagramRepo) {
+      setShowDiagramRepoPicker(true);
+      return;
+    }
+    isCreatingRef.current = true;
+    setShowDiagramTitleModal(false);
+    setShowDiagramRepoPicker(false);
+    navigation.navigate('DiagramEditor', {
+      diagramTitle: diagramTitle.trim() || undefined,
+      repo: selectedDiagramRepo,
+      branch: undefined,
+    });
+    setTimeout(() => { isCreatingRef.current = false; }, 1000);
+  }, [navigation, diagramTitle, selectedDiagramRepo]);
+
   const handleCustomSize = useCallback(() => {
     const w = parseInt(customW, 10) || 800;
     const h = parseInt(customH, 10) || 600;
@@ -128,13 +169,9 @@ export default function CanvasListScreen() {
 
   const handleOpen = useCallback(
     (id: string) => {
-      if (!isPro) {
-        openPaywall();
-        return;
-      }
       navigation.navigate('CanvasEditor', { canvasId: id });
     },
-    [navigation, isPro, openPaywall],
+    [navigation],
   );
 
   const handleDelete = useCallback(
@@ -427,6 +464,152 @@ export default function CanvasListScreen() {
           </KeyboardAvoidingView>
         </TouchableOpacity>
       </Modal>
+
+      <DocumentTypePickerModal
+        visible={showTypePicker}
+        onSelectVisualCanvas={handleSelectVisualCanvas}
+        onSelectDiagram={handleSelectDiagram}
+        onClose={() => setShowTypePicker(false)}
+      />
+
+      <Modal
+        visible={showDiagramTitleModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowDiagramTitleModal(false)}
+      >
+        <TouchableOpacity
+          testID="canvas-list.overlay.diagram-title"
+          className="flex-1 justify-center items-center p-6"
+          style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
+          activeOpacity={1}
+          accessible={false}
+          onPress={() => setShowDiagramTitleModal(false)}
+        >
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            style={{ width: '100%' }}
+          >
+            <View className="w-full rounded-lg p-5" style={{ backgroundColor: colors.surface }} onStartShouldSetResponder={() => true}>
+              <Text className="text-lg font-bold text-center mb-3" style={{ color: colors.text }}>
+                {'New ASCII Diagram'}
+              </Text>
+
+              <TextInput
+                testID="canvas-list.input.diagram-title"
+                className="border rounded-sm px-3 py-2.5 text-base mb-3"
+                style={{ backgroundColor: colors.background, color: colors.text, borderColor: colors.border }}
+                value={diagramTitle}
+                onChangeText={setDiagramTitle}
+                placeholder={'Diagram name'}
+                placeholderTextColor={colors.textSecondary}
+                autoCapitalize="sentences"
+                maxLength={60}
+                autoFocus
+              />
+
+              <TouchableOpacity
+                testID="canvas-list.button.diagram-repo"
+                accessible
+                accessibilityRole="button"
+                accessibilityLabel={'Select repository'}
+                className="flex-row justify-between items-center py-3 px-4 rounded-sm border mb-3"
+                style={{ borderColor: colors.border }}
+                onPress={() => setShowDiagramRepoPicker(true)}
+                activeOpacity={0.7}
+              >
+                <View className="flex-row items-center gap-2">
+                  <Ionicons name="git-branch" size={16} color={selectedDiagramRepo ? colors.primary : colors.textSecondary} />
+                  <Text style={{ color: selectedDiagramRepo ? colors.text : colors.textSecondary, fontSize: 15 }}>
+                    {selectedDiagramRepo ? selectedDiagramRepo.split('/').pop() : 'Select repository'}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                testID="canvas-list.button.create-diagram"
+                className="py-3 rounded-sm items-center mb-2"
+                style={{ backgroundColor: colors.accent }}
+                onPress={handleCreateDiagram}
+              >
+                <Text className="text-white text-base font-semibold">{t('common.create')}</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                className="py-3 rounded-sm border items-center"
+                style={{ borderColor: colors.border }}
+                onPress={() => setShowDiagramTitleModal(false)}
+              >
+                <Text className="text-base" style={{ color: colors.textSecondary }}>{t('common.cancel')}</Text>
+              </TouchableOpacity>
+            </View>
+          </KeyboardAvoidingView>
+        </TouchableOpacity>
+      </Modal>
+
+      <Modal
+        visible={showDiagramRepoPicker}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowDiagramRepoPicker(false)}
+      >
+        <TouchableOpacity
+          testID="canvas-list.overlay.diagram-repo-picker"
+          className="flex-1 justify-center items-center p-6"
+          style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
+          activeOpacity={1}
+          accessible={false}
+          onPress={() => setShowDiagramRepoPicker(false)}
+        >
+          <View className="w-full rounded-lg" style={{ backgroundColor: colors.surface, maxHeight: '70%' }} onStartShouldSetResponder={() => true}>
+            <View style={[styles.repoPickerHeader, { borderBottomColor: colors.border }]}>
+              <Text style={[styles.repoPickerTitle, { color: colors.text }]}>{'Select Repository'}</Text>
+              <TouchableOpacity onPress={() => setShowDiagramRepoPicker(false)}>
+                <Text style={{ color: colors.primary, fontSize: 16 }}>{'Done'}</Text>
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              data={repositories}
+              keyExtractor={(item) => item.path}
+              testID="canvas-list.diagram-repo-list"
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  testID={`canvas-list.diagram-repo-item-${item.path}`}
+                  accessible
+                  accessibilityRole="button"
+                  accessibilityLabel={item.path}
+                  style={[styles.repoPickerItem, { borderBottomColor: colors.border }]}
+                  onPress={() => {
+                    setSelectedDiagramRepo(item.path);
+                    setShowDiagramRepoPicker(false);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <View className="flex-row items-center gap-2 flex-1">
+                    <Ionicons name="folder" size={18} color={colors.primary} />
+                    <View className="flex-1">
+                      <Text style={{ color: colors.text, fontSize: 15 }} numberOfLines={1}>{item.name}</Text>
+                      <Text style={{ color: colors.textSecondary, fontSize: 12 }} numberOfLines={1}>{item.path}</Text>
+                    </View>
+                  </View>
+                  {selectedDiagramRepo === item.path && (
+                    <Ionicons name="checkmark" size={18} color={colors.primary} />
+                  )}
+                </TouchableOpacity>
+              )}
+              ListEmptyComponent={
+                <View style={{ padding: 32, alignItems: 'center' }}>
+                  <Text style={{ color: colors.textSecondary, fontSize: 15, textAlign: 'center' }}>
+                    {'No repositories added yet. Add one in Settings.'}
+                  </Text>
+                </View>
+              }
+            />
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
       <ScreenHeader
         title={t('canvases.title')}
         onBack={() => navigation.goBack()}
@@ -508,5 +691,25 @@ const styles = StyleSheet.create({
   viewModeLabel: {
     fontSize: 16,
     flex: 1,
+  },
+  repoPickerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  repoPickerTitle: {
+    fontSize: 17,
+    fontWeight: '600',
+  },
+  repoPickerItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    gap: 10,
   },
 });
