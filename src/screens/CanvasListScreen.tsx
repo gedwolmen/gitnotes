@@ -33,6 +33,7 @@ import CanvasCard from '../components/CanvasCard';
 import { SwipeableListItem } from '../components/list/SwipeableListItem';
 import { BulkActionBar } from '../components/list/BulkActionBar';
 import { HapticService } from '../utils/haptics';
+import { DocumentTypePickerModal } from '../components/editor/DocumentTypePickerModal';
 
 type CanvasViewMode = 'list' | 'grid';
 
@@ -83,6 +84,7 @@ export default function CanvasListScreen() {
   const filter = useEntityFilter<Canvas>(canvases);
   const displayCanvases = useMemo(() => filter.applyFilters(filteredCanvases), [filter, filteredCanvases]);
   const [showSizePicker, setShowSizePicker] = useState(false);
+  const [showDocumentTypePicker, setShowDocumentTypePicker] = useState(false);
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [showViewModePicker, setShowViewModePicker] = useState(false);
   const [customW, setCustomW] = useState('800');
@@ -99,15 +101,29 @@ export default function CanvasListScreen() {
   );
 
   const handleCreate = useCallback(() => {
+    setCanvasTitle('');
+    setCustomW('800');
+    setCustomH('600');
+    setShowDocumentTypePicker(true);
+  }, []);
+
+  const handleSelectVisualCanvas = useCallback(() => {
+    setShowDocumentTypePicker(false);
     if (!isPro) {
       openPaywall();
       return;
     }
-    setCanvasTitle('');
-    setCustomW('800');
-    setCustomH('600');
     setShowSizePicker(true);
   }, [isPro, openPaywall]);
+
+  const handleSelectDiagram = useCallback(() => {
+    setShowDocumentTypePicker(false);
+    if (!isPro) {
+      openPaywall();
+      return;
+    }
+    navigation.navigate('DiagramEditor', { diagramTitle: canvasTitle.trim() || undefined });
+  }, [isPro, openPaywall, canvasTitle, navigation]);
 
   const handlePickSize = useCallback(
     (w: number, h: number) => {
@@ -424,6 +440,12 @@ export default function CanvasListScreen() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+      <DocumentTypePickerModal
+        visible={showDocumentTypePicker}
+        onSelectVisualCanvas={handleSelectVisualCanvas}
+        onSelectDiagram={handleSelectDiagram}
+        onClose={() => setShowDocumentTypePicker(false)}
+      />
       <ScreenHeader
         title={t('canvases.title')}
         onBack={() => navigation.goBack()}
