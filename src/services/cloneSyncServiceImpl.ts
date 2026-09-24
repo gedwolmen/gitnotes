@@ -1,12 +1,15 @@
 /**
  * Stub implementations for deleted sync services.
  * These services are no-ops as the sync architecture has evolved —
- * except CloneSyncService.save, which performs the real worktree write that
- * clone-mode saves depend on.
+ * CloneSyncService delegates to LocalGitWriter for real worktree writes
+ * + git commit + push (clone-mode).
  */
 
 import * as FileSystem from 'expo-file-system/legacy';
 import { parseRepoPath } from '../utils/gitPathParser';
+import { LocalGitWriter } from './git/LocalGitWriter';
+import { StorageService } from './StorageService';
+import { CommitService } from './git/CommitService';
 
 const CLONES_SUBDIR = 'GitNotes/';
 
@@ -25,6 +28,10 @@ function toRepoRelativePath(filePath: string): string | null {
     return null;
   }
   return relativePath;
+}
+
+async function resolveAuthor(): Promise<{ name: string; email: string }> {
+  return CommitService.resolveAuthor();
 }
 
 // NoteSyncQueueService stubs
@@ -145,7 +152,7 @@ export interface CloneSyncServiceSaveParams {
 
 export const CloneSyncService = {
   async save(params: CloneSyncServiceSaveParams): Promise<SaveResult> {
-    const { repoPath, filePath, content, intent } = params;
+    const { repoPath, branch, filePath, content, message, intent } = params;
 
     const info = parseRepoPath(repoPath);
     if (!info) {
@@ -157,20 +164,29 @@ export const CloneSyncService = {
       return { success: false, error: 'Missing filePath' };
     }
 
-    const repoDir = `${clonesRoot()}${info.owner}/${info.repo}`;
-    const fullPath = `${repoDir}/${relPath}`;
-
     try {
       if (intent === 'delete') {
-        await FileSystem.deleteAsync(fullPath, { idempotent: true });
-        return { success: true };
+        const result = await LocalGitWriter.deleteAndCommit({
+          repoPath,
+          branch,
+          filePath: relPath,
+          message,
+          author: await resolveAuthor(),
+          push: false,
+        });
+        return { success: result.success, error: result.error };
       }
 
-      const lastSlash = relPath.lastIndexOf('/');
-      const dirPath = lastSlash === -1 ? repoDir : `${repoDir}/${relPath.slice(0, lastSlash)}`;
-      await FileSystem.makeDirectoryAsync(dirPath, { intermediates: true });
-      await FileSystem.writeAsStringAsync(fullPath, content ?? '');
-      return { success: true };
+      const result = await LocalGitWriter.writeAndCommit({
+        repoPath,
+        branch,
+        filePath: relPath,
+        content: content ?? '',
+        message,
+        author: await resolveAuthor(),
+        push: false,
+      });
+      return { success: result.success, error: result.error };
     } catch (error) {
       return { success: false, error: error instanceof Error ? error.message : String(error) };
     }

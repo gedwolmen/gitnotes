@@ -953,9 +953,10 @@ export default function CanvasEditorContent() {
         .maxPointers(1)
         .onStart((e) => {
           'worklet';
-          const pt = { x: e.x, y: e.y };
+          const canvasX = (e.x - translateX.value) / scale.value;
+          const canvasY = (e.y - translateY.value) / scale.value;
+          const pt = { x: canvasX, y: canvasY };
 
-          // Text tool is handled via long-press or tap, not pan
           if (tool === 'text') {
             runOnJS(startTextPlacement)(pt);
             return;
@@ -971,7 +972,6 @@ export default function CanvasEditorContent() {
             return;
           }
 
-          // Don't draw if in select mode - let the select gesture handle it
           if (tool === 'select') {
             return;
           }
@@ -1006,7 +1006,9 @@ export default function CanvasEditorContent() {
         })
         .onChange((e) => {
           'worklet';
-          const pt = { x: e.x, y: e.y };
+          const canvasX = (e.x - translateX.value) / scale.value;
+          const canvasY = (e.y - translateY.value) / scale.value;
+          const pt = { x: canvasX, y: canvasY };
 
           if (tool === 'select') {
             return;
@@ -1043,7 +1045,7 @@ export default function CanvasEditorContent() {
             activeDrawingElement.value = null;
           }
         }),
-    [tool, color, size, filled, saveHistory, startTextPlacement, startChartPlacement, startImagePlacement, commitActiveDrawing, activeDrawingElement, eraseElementsAtPoint],
+    [tool, color, size, filled, saveHistory, startTextPlacement, startChartPlacement, startImagePlacement, commitActiveDrawing, activeDrawingElement, eraseElementsAtPoint, translateX, translateY, scale],
   );
 
   const addTextElement = useCallback(() => {
@@ -1276,6 +1278,14 @@ export default function CanvasEditorContent() {
           `Could not sync canvas to Git: ${syncResult.error ?? 'unknown error'}. Your edits are kept — try again or check connection.`,
         );
         return;
+      }
+
+      // Persist the assigned filePath back to the canvas record and mark lastPulledScene as clean
+      const finalId = canvasId ?? (existingCanvas?.id ?? '');
+      if (syncResult.filePath) {
+        await updateCanvas({ id: finalId, filePath: syncResult.filePath, lastPulledScene: JSON.stringify(scene) });
+      } else {
+        await updateCanvas({ id: finalId, lastPulledScene: JSON.stringify(scene) });
       }
     }
 
@@ -1529,7 +1539,7 @@ export default function CanvasEditorContent() {
       </View>
 
       <View style={styles.toolbar}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1 }}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexDirection: 'row' }}>
           {TOOLS.map(({ key, label, icon }) => {
             // Tool icon used to inherit the active *pen color*, so on dark
             // mode with the default black pen the icon vanished against
@@ -1931,8 +1941,8 @@ const makeStyles = (colors: StyleColors) => StyleSheet.create({
     color: colors.text,
     backgroundColor: colors.surface,
   },
-  canvasPane: { flex: 1, overflow: 'hidden', backgroundColor: '#E5E5E5' },
-  gitContextContainer: { paddingHorizontal: 16, paddingVertical: 8 },
+  canvasPane: { flex: 1, overflow: 'hidden', backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border },
+  gitContextContainer: { paddingHorizontal: 16, paddingVertical: 8, flexShrink: 1 },
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', alignItems: 'center', justifyContent: 'center' },
   modalCard: { width: 300, padding: 16, backgroundColor: colors.surface, borderRadius: 12 },
   modalTitle: { fontSize: 16, fontWeight: '600', marginBottom: 10, color: colors.text },
