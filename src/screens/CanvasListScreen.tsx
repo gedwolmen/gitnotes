@@ -98,6 +98,9 @@ export default function CanvasListScreen() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
   const isDeletingRef = useRef(false);
   const isCreatingRef = useRef(false);
+  const sizePickerContentRef = useRef<{ pressStartedInContent: boolean }>({ pressStartedInContent: false });
+  const diagramTitleContentRef = useRef<{ pressStartedInContent: boolean }>({ pressStartedInContent: false });
+  const diagramRepoPickerContentRef = useRef<{ pressStartedInContent: boolean }>({ pressStartedInContent: false });
 
   useFocusEffect(
     useCallback(() => {
@@ -374,9 +377,14 @@ export default function CanvasListScreen() {
         <Pressable
           testID="canvas-list.overlay.size-picker"
           style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.5)' }]}
-          onPress={() => setShowSizePicker(false)}
+          onPressIn={() => { sizePickerContentRef.current.pressStartedInContent = false; }}
+          onPressOut={() => { sizePickerContentRef.current.pressStartedInContent = false; }}
+          onPress={() => {
+            if (!sizePickerContentRef.current.pressStartedInContent) setShowSizePicker(false);
+          }}
         />
-        <View style={styles.sizePickerModalContent} pointerEvents="box-none">
+        <Pressable style={styles.sizePickerModalContent} pointerEvents="box-none"
+          onPressIn={() => { sizePickerContentRef.current.pressStartedInContent = true; }}>
           <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
             style={{ width: '100%' }}
@@ -461,7 +469,7 @@ export default function CanvasListScreen() {
             </TouchableOpacity>
           </View>
           </KeyboardAvoidingView>
-        </View>
+        </Pressable>
       </Modal>
 
       <DocumentTypePickerModal
@@ -479,9 +487,14 @@ export default function CanvasListScreen() {
       >
         <Pressable
           style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.5)' }]}
-          onPress={() => setShowDiagramTitleModal(false)}
+          onPressIn={() => { diagramTitleContentRef.current.pressStartedInContent = false; }}
+          onPressOut={() => { diagramTitleContentRef.current.pressStartedInContent = false; }}
+          onPress={() => {
+            if (!diagramTitleContentRef.current.pressStartedInContent) setShowDiagramTitleModal(false);
+          }}
         />
-        <View style={styles.diagramTitleModalContent} pointerEvents="box-none">
+        <Pressable style={styles.diagramTitleModalContent} pointerEvents="box-none"
+          onPressIn={() => { diagramTitleContentRef.current.pressStartedInContent = true; }}>
           <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
             style={{ width: '100%' }}
@@ -536,9 +549,9 @@ export default function CanvasListScreen() {
               >
                 <Text className="text-base" style={{ color: colors.textSecondary }}>{t('common.cancel')}</Text>
               </TouchableOpacity>
-            </View>
+          </View>
           </KeyboardAvoidingView>
-        </View>
+        </Pressable>
       </Modal>
 
       <Modal
@@ -549,9 +562,14 @@ export default function CanvasListScreen() {
       >
         <Pressable
           style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.5)' }]}
-          onPress={() => setShowDiagramRepoPicker(false)}
+          onPressIn={() => { diagramRepoPickerContentRef.current.pressStartedInContent = false; }}
+          onPressOut={() => { diagramRepoPickerContentRef.current.pressStartedInContent = false; }}
+          onPress={() => {
+            if (!diagramRepoPickerContentRef.current.pressStartedInContent) setShowDiagramRepoPicker(false);
+          }}
         />
-        <View style={styles.repoPickerModalContent} pointerEvents="box-none">
+        <Pressable style={styles.repoPickerModalContent} pointerEvents="box-none"
+          onPressIn={() => { diagramRepoPickerContentRef.current.pressStartedInContent = true; }}>
           <View className="w-full rounded-lg" style={{ backgroundColor: colors.surface, maxHeight: '70%' }}>
             <View style={[styles.repoPickerHeader, { borderBottomColor: colors.border }]}>
               <Text style={[styles.repoPickerTitle, { color: colors.text }]}>{'Select Repository'}</Text>
@@ -597,7 +615,7 @@ export default function CanvasListScreen() {
               }
             />
           </View>
-        </View>
+        </Pressable>
       </Modal>
 
       <ScreenHeader
