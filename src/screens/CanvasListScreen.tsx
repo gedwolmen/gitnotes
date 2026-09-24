@@ -9,6 +9,7 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   StyleSheet,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -370,19 +371,17 @@ export default function CanvasListScreen() {
         animationType="fade"
         onRequestClose={() => setShowSizePicker(false)}
       >
-        <TouchableOpacity
+        <Pressable
           testID="canvas-list.overlay.size-picker"
-          className="flex-1 justify-center items-center p-6"
-          style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
-          activeOpacity={1}
-          accessible={false}
+          style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.5)' }]}
           onPress={() => setShowSizePicker(false)}
-        >
+        />
+        <View style={styles.sizePickerModalContent} pointerEvents="box-none">
           <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
             style={{ width: '100%' }}
           >
-            <View className="w-full rounded-lg p-5" style={{ backgroundColor: colors.surface }} pointerEvents="box-none">
+            <View className="w-full rounded-lg p-5" style={{ backgroundColor: colors.surface }}>
             <Text className="text-lg font-bold text-center mb-3" style={{ color: colors.text }}>{t('canvases.newCanvas')}</Text>
 
             <TextInput
@@ -462,7 +461,7 @@ export default function CanvasListScreen() {
             </TouchableOpacity>
           </View>
           </KeyboardAvoidingView>
-        </TouchableOpacity>
+        </View>
       </Modal>
 
       <DocumentTypePickerModal
@@ -478,19 +477,16 @@ export default function CanvasListScreen() {
         animationType="fade"
         onRequestClose={() => setShowDiagramTitleModal(false)}
       >
-        <TouchableOpacity
-          testID="canvas-list.overlay.diagram-title"
-          className="flex-1 justify-center items-center p-6"
-          style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
-          activeOpacity={1}
-          accessible={false}
+        <Pressable
+          style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.5)' }]}
           onPress={() => setShowDiagramTitleModal(false)}
-        >
-            <KeyboardAvoidingView
+        />
+        <View style={styles.diagramTitleModalContent} pointerEvents="box-none">
+          <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
             style={{ width: '100%' }}
           >
-            <View className="w-full rounded-lg p-5" style={{ backgroundColor: colors.surface }} pointerEvents="box-none">
+            <View className="w-full rounded-lg p-5" style={{ backgroundColor: colors.surface }}>
               <Text className="text-lg font-bold text-center mb-3" style={{ color: colors.text }}>
                 {'New ASCII Diagram'}
               </Text>
@@ -542,7 +538,7 @@ export default function CanvasListScreen() {
               </TouchableOpacity>
             </View>
           </KeyboardAvoidingView>
-        </TouchableOpacity>
+        </View>
       </Modal>
 
       <Modal
@@ -551,15 +547,12 @@ export default function CanvasListScreen() {
         animationType="fade"
         onRequestClose={() => setShowDiagramRepoPicker(false)}
       >
-        <TouchableOpacity
-          testID="canvas-list.overlay.diagram-repo-picker"
-          className="flex-1 justify-center items-center p-6"
-          style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
-          activeOpacity={1}
-          accessible={false}
+        <Pressable
+          style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.5)' }]}
           onPress={() => setShowDiagramRepoPicker(false)}
-        >
-          <View className="w-full rounded-lg" style={{ backgroundColor: colors.surface, maxHeight: '70%' }} pointerEvents="box-none">
+        />
+        <View style={styles.repoPickerModalContent} pointerEvents="box-none">
+          <View className="w-full rounded-lg" style={{ backgroundColor: colors.surface, maxHeight: '70%' }}>
             <View style={[styles.repoPickerHeader, { borderBottomColor: colors.border }]}>
               <Text style={[styles.repoPickerTitle, { color: colors.text }]}>{'Select Repository'}</Text>
               <TouchableOpacity onPress={() => setShowDiagramRepoPicker(false)}>
@@ -604,7 +597,7 @@ export default function CanvasListScreen() {
               }
             />
           </View>
-        </TouchableOpacity>
+        </View>
       </Modal>
 
       <ScreenHeader
@@ -708,5 +701,35 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
     gap: 10,
+  },
+  diagramTitleModalContent: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+  },
+  repoPickerModalContent: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+  },
+  sizePickerModalContent: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
   },
 });

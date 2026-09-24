@@ -96,6 +96,8 @@ jest.mock('react-native', () => {
       React.createElement('Text', props, children),
     TouchableOpacity: ({ children, testID, accessibilityLabel, accessibilityRole, onPress, ...props }: React.PropsWithChildren<Record<string, unknown>>) =>
       React.createElement('TouchableOpacity', { testID, accessibilityLabel, accessibilityRole, onPress, ...props }, children),
+    Pressable: ({ children, testID, accessibilityLabel, accessibilityRole, onPress, onPressIn, ...props }: React.PropsWithChildren<Record<string, unknown>>) =>
+      React.createElement('Pressable', { testID, accessibilityLabel, accessibilityRole, onPress, onPressIn, ...props }, children),
     FlatList: ({ data, keyExtractor, renderItem, ListEmptyComponent, testID, contentContainerStyle: _contentContainerStyle, ...props }: Record<string, unknown>) => {
       const items = data as unknown[];
       if (!items || items.length === 0) {
