@@ -61,7 +61,8 @@ describe('Android build configuration invariants', () => {
           Array.isArray(p) && p[0] === 'expo-build-properties',
       );
       const extraRules: string = buildProps?.[1]?.android?.extraProguardRules ?? '';
-      expect(extraRules).toContain('java.awt.Component');
+      // Wildcard form covers all java.awt classes including Component
+      expect(extraRules).toMatch(/java\.awt\.\*\*/);
     });
 
     test('no deprecated enableProguardInReleaseBuilds key', () => {
