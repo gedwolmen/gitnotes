@@ -67,7 +67,7 @@ export function TextInputOverlay({
         >
           <View
             style={[styles.sheet, { backgroundColor: colors.surface }]}
-            onStartShouldSetResponder={() => true}
+            pointerEvents="box-none"
           >
             <Text style={[styles.title, { color: colors.text }]}>Add Text</Text>
 

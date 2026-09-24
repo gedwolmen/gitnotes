@@ -136,7 +136,7 @@ export function Modal(props: ModalProps) {
               <Surface
                 elevation="floating"
                 radius="lg"
-                onStartShouldSetResponder={() => true}
+                pointerEvents="box-none"
                 style={[surfaceStyle, contentStyle]}
               >
                 {children}
@@ -146,7 +146,7 @@ export function Modal(props: ModalProps) {
             <Surface
               elevation="floating"
               radius="lg"
-              onStartShouldSetResponder={() => true}
+              pointerEvents="box-none"
               style={[surfaceStyle, contentStyle]}
             >
               {children}

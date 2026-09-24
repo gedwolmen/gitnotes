@@ -68,7 +68,7 @@ export function DocumentTypePickerModal({
         <KeyboardAvoidingContainer>
           <View
             style={[styles.sheet, { backgroundColor: colors.surface }]}
-            onStartShouldSetResponder={() => true}
+            pointerEvents="box-none"
           >
             {/* Handle */}
             <View style={[styles.handle, { backgroundColor: colors.border + '60' }]} />

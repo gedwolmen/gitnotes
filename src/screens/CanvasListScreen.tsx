@@ -382,7 +382,7 @@ export default function CanvasListScreen() {
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
             style={{ width: '100%' }}
           >
-            <View className="w-full rounded-lg p-5" style={{ backgroundColor: colors.surface }} onStartShouldSetResponder={() => true}>
+            <View className="w-full rounded-lg p-5" style={{ backgroundColor: colors.surface }} pointerEvents="box-none">
             <Text className="text-lg font-bold text-center mb-3" style={{ color: colors.text }}>{t('canvases.newCanvas')}</Text>
 
             <TextInput
@@ -559,7 +559,7 @@ export default function CanvasListScreen() {
           accessible={false}
           onPress={() => setShowDiagramRepoPicker(false)}
         >
-          <View className="w-full rounded-lg" style={{ backgroundColor: colors.surface, maxHeight: '70%' }} onStartShouldSetResponder={() => true}>
+          <View className="w-full rounded-lg" style={{ backgroundColor: colors.surface, maxHeight: '70%' }} pointerEvents="box-none">
             <View style={[styles.repoPickerHeader, { borderBottomColor: colors.border }]}>
               <Text style={[styles.repoPickerTitle, { color: colors.text }]}>{'Select Repository'}</Text>
               <TouchableOpacity onPress={() => setShowDiagramRepoPicker(false)}>
