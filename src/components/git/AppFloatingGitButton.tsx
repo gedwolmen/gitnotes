@@ -10,6 +10,7 @@ import { CommitService } from '@/services/git/CommitService';
 import type { Author } from '@/services/git/engine/GitEngine';
 import { AuthService } from '@/services/AuthService';
 import { emitGitContentRefresh, emitGitRefresh } from '@/hooks/useGitRefreshEvent';
+import { ThemeProvider } from '@/contexts/ThemeContext';
 import FloatingGitButton from './FloatingGitButton';
 import type { ReleaseSegment } from './useFloatingGitButtonAffordances';
 import type { RootStackParamList } from '@/navigation/types';
@@ -68,10 +69,16 @@ export default function AppFloatingGitButton() {
           });
           return;
         }
+
+        // Resolve author at action time via AuthService to avoid render-time
+        // useAccounts() context dependency that crashes on iOS when the
+        // AccountsProvider hasn't mounted yet.
         const summary = await AuthService.getActiveSummary();
-        const author: Author | null = summary
-          ? { name: summary.account.name, email: summary.account.email ?? '' }
-          : null;
+        const activeHost =
+          summary?.hosts.find((h) => h.id === summary.activeHostId) ?? summary?.hosts[0] ?? null;
+        const author: Author | null =
+          activeHost ? { name: activeHost.name, email: activeHost.email ?? '' } : null;
+
         if (!author) {
           toast.show({
             placement: 'top',
@@ -250,11 +257,13 @@ export default function AppFloatingGitButton() {
   }, [aggregatedState, repos, setPending, navigation]);
 
   return (
-    <FloatingGitButton
-      aggregatedState={aggregatedState}
-      onQuickTap={onQuickTap}
-      onReleaseSegment={handleReleaseSegment}
-      disabled={isDisabled}
-    />
+    <ThemeProvider>
+      <FloatingGitButton
+        aggregatedState={aggregatedState}
+        onQuickTap={onQuickTap}
+        onReleaseSegment={handleReleaseSegment}
+        disabled={isDisabled}
+      />
+    </ThemeProvider>
   );
 }

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { Diagram, DiagramCreateInput, DiagramUpdateInput } from '../models/Diagram';
 import { filterDiagramsBySearch } from '../models/Diagram';
 import { useDiagramStore } from '../stores/diagramStore';
@@ -19,6 +19,8 @@ interface DiagramContextType {
   clearError: () => void;
 }
 
+const DiagramContext = createContext<DiagramContextType | null>(null);
+
 export function DiagramProvider({ children }: { children: React.ReactNode }) {
   const loadDiagrams = useDiagramStore((s) => s.loadDiagrams);
   const refreshDiagramsFromStore = useDiagramStore((s) => s.refreshDiagrams);
@@ -33,10 +35,6 @@ export function DiagramProvider({ children }: { children: React.ReactNode }) {
     if (refreshSignal > 0) void refreshDiagramsFromStore();
   }, [refreshDiagramsFromStore, refreshSignal]);
 
-  return <>{children}</>;
-}
-
-export function useDiagrams(): DiagramContextType {
   const diagrams = useDiagramStore((s) => s.diagrams);
   const isLoading = useDiagramStore((s) => s.isLoading);
   const error = useDiagramStore((s) => s.error);
@@ -52,12 +50,12 @@ export function useDiagrams(): DiagramContextType {
     [diagrams, searchQuery],
   );
 
-  const getDiagramById = useMemo(
-    () => (id: string) => diagrams.find((d) => d.id === id),
+  const getDiagramById = useCallback(
+    (id: string) => diagrams.find((d) => d.id === id),
     [diagrams],
   );
 
-  return useMemo(
+  const value = useMemo(
     () => ({
       diagrams, isLoading, error, searchQuery, setSearchQuery, filteredDiagrams,
       createDiagram, updateDiagram, deleteDiagram, getDiagramById, refreshDiagrams, clearError,
@@ -65,4 +63,14 @@ export function useDiagrams(): DiagramContextType {
     [diagrams, isLoading, error, searchQuery, filteredDiagrams,
      createDiagram, updateDiagram, deleteDiagram, getDiagramById, refreshDiagrams, clearError],
   );
+
+  return <DiagramContext.Provider value={value}>{children}</DiagramContext.Provider>;
+}
+
+export function useDiagrams(): DiagramContextType {
+  const ctx = useContext(DiagramContext);
+  if (!ctx) {
+    throw new Error('useDiagrams must be used within a DiagramProvider');
+  }
+  return ctx;
 }
