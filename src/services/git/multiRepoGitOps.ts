@@ -5,8 +5,53 @@ import { gitOperationRegistry } from '@/stores/gitOperationStore';
 import type { GitRepository } from '@/services/GitService';
 import type { Author } from '@/services/git/engine/GitEngine';
 import { classifyPushError, type PushErrorKind } from '@/components/git/pushErrors';
+import { RepositoryAccessPolicyService, requireRepoSelected, requireWriteVerified } from '../RepositoryAccessPolicyService';
+import { AccountStorage } from '../AccountStorage';
+import type { CanonicalRepoId } from './contracts';
 
 export type { PushErrorKind };
+
+async function buildCanonicalRepoId(repo: GitRepository): Promise<CanonicalRepoId | null> {
+  const pathParts = repo.path.split('/');
+  if (pathParts.length !== 2 || !pathParts[0] || !pathParts[1]) {
+    return null;
+  }
+  const [owner, repoName] = pathParts;
+
+  let instanceBaseUrl: string | null = null;
+  if (repo.hostId) {
+    const connection = await AccountStorage.getHostConnection(repo.hostId);
+    instanceBaseUrl = connection?.instanceBaseUrl ?? null;
+  }
+
+  return RepositoryAccessPolicyService.makeCanonicalRepoId(
+    repo.provider ?? 'github',
+    instanceBaseUrl,
+    owner,
+    repoName,
+  );
+}
+
+function resolveHostId(repo: GitRepository): string {
+  if (repo.hostId) return repo.hostId;
+  return `default:${repo.provider ?? 'github'}:default`;
+}
+
+async function enforceSelectionForRepo(repo: GitRepository): Promise<void> {
+  const canonicalRepoId = await buildCanonicalRepoId(repo);
+  if (!canonicalRepoId) {
+    throw new Error(`Cannot build canonical repo ID for ${repo.path}`);
+  }
+  await requireRepoSelected(resolveHostId(repo), canonicalRepoId);
+}
+
+async function enforceWriteVerificationForRepo(repo: GitRepository): Promise<void> {
+  const canonicalRepoId = await buildCanonicalRepoId(repo);
+  if (!canonicalRepoId) {
+    throw new Error(`Cannot build canonical repo ID for ${repo.path}`);
+  }
+  await requireWriteVerified(resolveHostId(repo), canonicalRepoId);
+}
 
 export interface RepoOpOutcome {
   repoId: string;
@@ -29,9 +74,11 @@ export interface AggregateOpOutcome {
 export async function stageAllPending(
   repos: readonly GitRepository[],
 ): Promise<AggregateOpOutcome> {
+  await RepositoryAccessPolicyService.initialize();
   const outcomes = await Promise.all(
     repos.map(async (repo): Promise<RepoOpOutcome> => {
       try {
+        await enforceSelectionForRepo(repo);
         const localPath = GitFsService.workingTreeUri({ repoPath: repo.path });
         const files = await GitEngine.statuses(localPath);
         const toStage = files
@@ -55,9 +102,11 @@ export async function commitAll(
   message: string,
   author: Author,
 ): Promise<AggregateOpOutcome> {
+  await RepositoryAccessPolicyService.initialize();
   const outcomes = await Promise.all(
     repos.map(async (repo): Promise<RepoOpOutcome> => {
       try {
+        await enforceSelectionForRepo(repo);
         const localPath = GitFsService.workingTreeUri({ repoPath: repo.path });
         const files = await GitEngine.statuses(localPath);
         const stagedCount = files.filter((file) => file.staged).length;
@@ -77,9 +126,11 @@ export async function commitAll(
 export async function pushAll(
   repos: readonly GitRepository[],
 ): Promise<AggregateOpOutcome> {
+  await RepositoryAccessPolicyService.initialize();
   const outcomes = await Promise.all(
     repos.map(async (repo): Promise<RepoOpOutcome> => {
       try {
+        await enforceWriteVerificationForRepo(repo);
         const localPath = GitFsService.workingTreeUri({ repoPath: repo.path });
         const status = await GitEngine.status(repo.id, localPath).catch(() => null);
         if (!status || status.ahead <= 0) {
@@ -139,6 +190,7 @@ export async function commitAndPushAll(
   message: string,
   author: Author,
 ): Promise<AggregateOpOutcome> {
+  await RepositoryAccessPolicyService.initialize();
   const commitResult = await commitAll(repos, message, author);
   const pushResult = await pushAll(repos);
   return {

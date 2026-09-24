@@ -59,6 +59,7 @@
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "expo": "^57.0.9",
+    "expo-auth-session": "~57.0.12",
     "expo-background-task": "~57.0.17",
     "expo-blur": "~57.0.3",
     "expo-build-properties": "~57.0.17",
