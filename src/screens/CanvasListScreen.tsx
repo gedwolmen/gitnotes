@@ -98,9 +98,9 @@ export default function CanvasListScreen() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
   const isDeletingRef = useRef(false);
   const isCreatingRef = useRef(false);
-  const sizePickerContentRef = useRef<{ pressStartedInContent: boolean }>({ pressStartedInContent: false });
-  const diagramTitleContentRef = useRef<{ pressStartedInContent: boolean }>({ pressStartedInContent: false });
-  const diagramRepoPickerContentRef = useRef<{ pressStartedInContent: boolean }>({ pressStartedInContent: false });
+  const sizePickerContentLayout = useRef({ x: 0, y: 0, width: 0, height: 0 });
+  const diagramTitleContentLayout = useRef({ x: 0, y: 0, width: 0, height: 0 });
+  const diagramRepoPickerContentLayout = useRef({ x: 0, y: 0, width: 0, height: 0 });
 
   useFocusEffect(
     useCallback(() => {
@@ -377,14 +377,16 @@ export default function CanvasListScreen() {
         <Pressable
           testID="canvas-list.overlay.size-picker"
           style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.5)' }]}
-          onPressIn={() => { sizePickerContentRef.current.pressStartedInContent = false; }}
-          onPressOut={() => { sizePickerContentRef.current.pressStartedInContent = false; }}
-          onPress={() => {
-            if (!sizePickerContentRef.current.pressStartedInContent) setShowSizePicker(false);
+          onPress={(e) => {
+            const { pageX, pageY } = e.nativeEvent;
+            const { x, y, width, height } = sizePickerContentLayout.current;
+            if (pageX < x || pageX > x + width || pageY < y || pageY > y + height) {
+              setShowSizePicker(false);
+            }
           }}
         />
-        <Pressable style={styles.sizePickerModalContent} pointerEvents="box-none"
-          onPressIn={() => { sizePickerContentRef.current.pressStartedInContent = true; }}>
+        <View style={styles.sizePickerModalContent}
+          onLayout={(e) => { sizePickerContentLayout.current = e.nativeEvent.layout; }}>
           <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
             style={{ width: '100%' }}
@@ -469,7 +471,7 @@ export default function CanvasListScreen() {
             </TouchableOpacity>
           </View>
           </KeyboardAvoidingView>
-        </Pressable>
+        </View>
       </Modal>
 
       <DocumentTypePickerModal
@@ -487,14 +489,16 @@ export default function CanvasListScreen() {
       >
         <Pressable
           style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.5)' }]}
-          onPressIn={() => { diagramTitleContentRef.current.pressStartedInContent = false; }}
-          onPressOut={() => { diagramTitleContentRef.current.pressStartedInContent = false; }}
-          onPress={() => {
-            if (!diagramTitleContentRef.current.pressStartedInContent) setShowDiagramTitleModal(false);
+          onPress={(e) => {
+            const { pageX, pageY } = e.nativeEvent;
+            const { x, y, width, height } = diagramTitleContentLayout.current;
+            if (pageX < x || pageX > x + width || pageY < y || pageY > y + height) {
+              setShowDiagramTitleModal(false);
+            }
           }}
         />
-        <Pressable style={styles.diagramTitleModalContent} pointerEvents="box-none"
-          onPressIn={() => { diagramTitleContentRef.current.pressStartedInContent = true; }}>
+        <View style={styles.diagramTitleModalContent}
+          onLayout={(e) => { diagramTitleContentLayout.current = e.nativeEvent.layout; }}>
           <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
             style={{ width: '100%' }}
@@ -551,7 +555,7 @@ export default function CanvasListScreen() {
               </TouchableOpacity>
           </View>
           </KeyboardAvoidingView>
-        </Pressable>
+        </View>
       </Modal>
 
       <Modal
@@ -562,14 +566,16 @@ export default function CanvasListScreen() {
       >
         <Pressable
           style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.5)' }]}
-          onPressIn={() => { diagramRepoPickerContentRef.current.pressStartedInContent = false; }}
-          onPressOut={() => { diagramRepoPickerContentRef.current.pressStartedInContent = false; }}
-          onPress={() => {
-            if (!diagramRepoPickerContentRef.current.pressStartedInContent) setShowDiagramRepoPicker(false);
+          onPress={(e) => {
+            const { pageX, pageY } = e.nativeEvent;
+            const { x, y, width, height } = diagramRepoPickerContentLayout.current;
+            if (pageX < x || pageX > x + width || pageY < y || pageY > y + height) {
+              setShowDiagramRepoPicker(false);
+            }
           }}
         />
-        <Pressable style={styles.repoPickerModalContent} pointerEvents="box-none"
-          onPressIn={() => { diagramRepoPickerContentRef.current.pressStartedInContent = true; }}>
+        <View style={styles.repoPickerModalContent}
+          onLayout={(e) => { diagramRepoPickerContentLayout.current = e.nativeEvent.layout; }}>
           <View className="w-full rounded-lg" style={{ backgroundColor: colors.surface, maxHeight: '70%' }}>
             <View style={[styles.repoPickerHeader, { borderBottomColor: colors.border }]}>
               <Text style={[styles.repoPickerTitle, { color: colors.text }]}>{'Select Repository'}</Text>
@@ -615,7 +621,7 @@ export default function CanvasListScreen() {
               }
             />
           </View>
-        </Pressable>
+        </View>
       </Modal>
 
       <ScreenHeader
