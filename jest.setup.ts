@@ -1,3 +1,14 @@
+global.fetch = jest.fn(
+  () =>
+    Promise.resolve({
+      ok: true,
+      status: 200,
+      statusText: 'OK',
+      headers: new Headers({ 'content-type': 'application/json' }),
+      json: () => Promise.resolve({}),
+    }),
+) as unknown as typeof fetch;
+
 // NetInfo mock — CloneSyncService depends on it; default to online so
 // tryPushNowImpl attempts push in tests rather than queueing.
 jest.mock('@react-native-community/netinfo', () => ({
@@ -97,6 +108,10 @@ jest.mock('expo-localization', () => ({
 jest.mock('expo-crypto', () => ({
   randomUUID: () =>
     `test-${Math.random().toString(36).slice(2, 11)}-${Math.random().toString(36).slice(2, 11)}`,
+  getRandomBytesAsync: jest.fn().mockResolvedValue(new Uint8Array(64)),
+  digestStringAsync: jest.fn().mockResolvedValue('fakehash'),
+  CryptoDigestAlgorithm: { SHA256: 'SHA-256' },
+  CryptoEncoding: { BASE64: 'base64' },
 }));
 
 jest.mock('expo-blur', () => {

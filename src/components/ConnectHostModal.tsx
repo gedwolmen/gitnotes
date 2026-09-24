@@ -14,6 +14,13 @@ import { useTheme, useTokens } from '../contexts/ThemeContext';
 import { Modal } from './ui';
 import { useAccounts } from '../contexts/AccountsContext';
 import { GIT_HOST_API_BASES, GIT_HOST_LABELS, type GitHostProvider } from '../services/git/GitHost';
+import {
+  performGitHubOAuth,
+  probeGitHubOAuthSupport,
+  GITHUB_OAUTH_CLIENT_ID_KEY,
+  type OAuthAuthorizationPayload,
+} from '../services/GitHubOAuth';
+import { AccountStorage } from '../services/AccountStorage';
 
 type ThemeColors = {
   background: string;
@@ -70,6 +77,12 @@ const getTokenErrorKey = (reason: TokenReason | undefined, provider: string): st
  *   1. Pick a host (GitHub / GitLab / Gitea / Forgejo).
  *   2. (GitLab/Gitea/Forgejo) optionally override the instance URL for self-hosting.
  *   3. Paste a token and verify — confirmed identity is shown before save.
+ *
+ * OAuth path (GitHub only, when client ID is configured):
+ *   - "Sign in with GitHub" button probes OAuth availability and opens browser.
+ *   - After browser callback, the returned token is used via the same connectHost flow.
+ *   - If OAuth is unavailable (no client ID or host doesn't support it), the button
+ *     is hidden and the PAT path remains fully usable.
  */
 export function ConnectHostModal({
   visible,
@@ -89,6 +102,11 @@ export function ConnectHostModal({
   const [token, setToken] = useState('');
   const [tokenVisible, setTokenVisible] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
+  const [isOAuthLoading, setIsOAuthLoading] = useState(false);
+
+  // OAuth availability: null = not yet probed, true = available, false = unavailable.
+  const [oauthAvailable, setOauthAvailable] = useState<boolean | null>(null);
+  const [oauthLoading, setOauthLoading] = useState(false);
 
   // Reset state when modal closes or preset changes.
   useEffect(() => {
@@ -99,10 +117,48 @@ export function ConnectHostModal({
       setToken('');
       setTokenVisible(false);
       setIsTesting(false);
+      setIsOAuthLoading(false);
+      setOauthAvailable(null);
+      setOauthLoading(false);
     }
   }, [visible, presetProvider]);
 
   const supportsSelfHost = provider !== 'github';
+
+  // Probe OAuth availability when provider or instance URL changes.
+  useEffect(() => {
+    if (!visible) return;
+    let cancelled = false;
+
+    async function probe() {
+      setOauthAvailable(null);
+      setOauthLoading(true);
+
+      if (provider === 'github') {
+        const result = await probeGitHubOAuthSupport(provider, instanceBaseUrl);
+        if (!cancelled) {
+          setOauthAvailable(result.supported);
+        }
+      } else {
+        // For self-hosted hosts, use the generic OIDC discovery probe.
+        try {
+          const { probeOAuthSupport } = await import('../services/OAuthDiscovery');
+          const result = await probeOAuthSupport(instanceBaseUrl, provider);
+          if (!cancelled) {
+            setOauthAvailable(result.supported);
+          }
+        } catch {
+          if (!cancelled) setOauthAvailable(false);
+        }
+      }
+      if (!cancelled) setOauthLoading(false);
+    }
+
+    void probe();
+    return () => {
+      cancelled = true;
+    };
+  }, [visible, provider, instanceBaseUrl]);
 
   const handleSelectProvider = useCallback(
     (next: GitHostProvider) => {
@@ -183,6 +239,114 @@ export function ConnectHostModal({
     }
   }, [provider, token, supportsSelfHost, instanceBaseUrl, accountId, connectHost, onClose, t]);
 
+/**
+ * Sends the OAuth authorization payload to the backend for token exchange.
+ * The backend returns a credential without the provider access token
+ * ever reaching or persisting in the mobile app.
+ *
+ * TODO(backend): Implement the backend exchange endpoint.
+ * When implemented, this function should POST the payload to the backend
+ * and return the credential from the backend response.
+ */
+async function exchangeOAuthToken(
+  payload: OAuthAuthorizationPayload,
+): Promise<{ ok: true; credential: string } | { ok: false }> {
+  // TODO(backend): POST to backend exchange endpoint
+  // const response = await fetch('https://api.gitnotes.app/v1/oauth/exchange', {
+  //   method: 'POST',
+  //   headers: { 'Content-Type': 'application/json' },
+  //   body: JSON.stringify(payload),
+  // });
+  // const result = await response.json();
+  // return { ok: true, credential: result.credential };
+  void payload;
+  return { ok: false };
+}
+
+  const handleOAuthSignIn = useCallback(async () => {
+    if (provider !== 'github') return;
+
+    setIsOAuthLoading(true);
+    try {
+      const clientId = await AccountStorage.getString(GITHUB_OAUTH_CLIENT_ID_KEY);
+      if (!clientId?.trim()) {
+        Alert.alert(
+          t('connectHost.oauth.configRequiredTitle'),
+          t('connectHost.oauth.configRequiredBody'),
+        );
+        setIsOAuthLoading(false);
+        return;
+      }
+
+      const result = await performGitHubOAuth(clientId.trim(), instanceBaseUrl);
+
+      if (!result.ok) {
+        switch (result.reason) {
+          case 'user_cancelled':
+            break;
+          case 'missing_client_id':
+            Alert.alert(t('connectHost.oauth.configRequiredTitle'), t('connectHost.oauth.configRequiredBody'));
+            break;
+          case 'provider_denied':
+            Alert.alert(
+              t('connectHost.oauth.deniedTitle'),
+              result.errorDescription ?? t('connectHost.oauth.deniedBody'),
+            );
+            break;
+          case 'state_mismatch':
+            Alert.alert(t('connectHost.error.invalidToken'), t('connectHost.oauth.stateMismatch'));
+            break;
+          case 'callback_mismatch':
+            Alert.alert(t('connectHost.error.networkTitle'), t('connectHost.oauth.exchangeFailed'));
+            break;
+          case 'network':
+            Alert.alert(t('connectHost.error.networkTitle'), t('connectHost.error.networkBody'));
+            break;
+          default:
+            Alert.alert(t('connectHost.error.networkTitle'), t('connectHost.oauth.exchangeFailed'));
+        }
+        setIsOAuthLoading(false);
+        return;
+      }
+
+      // Send authorization payload to backend for token exchange.
+      // The provider access token never reaches the mobile app.
+      const exchangeResult = await exchangeOAuthToken(result.payload);
+      if (!exchangeResult.ok) {
+        Alert.alert(
+          t('connectHost.oauth.exchangeFailedTitle') ?? t('connectHost.error.networkTitle'),
+          t('connectHost.oauth.exchangeFailedBody') ?? t('connectHost.oauth.exchangeFailed'),
+        );
+        setIsOAuthLoading(false);
+        return;
+      }
+
+      // Got a credential from backend — use it via connectHost.
+      const connectResult = await connectHost({
+        provider: 'github',
+        token: exchangeResult.credential,
+        instanceBaseUrl: undefined,
+        accountId,
+      });
+
+      if (!connectResult.ok) {
+        const errorKey = getTokenErrorKey(connectResult.reason, 'github');
+        Alert.alert(t('connectHost.error.invalidToken'), t(errorKey));
+        setIsOAuthLoading(false);
+        return;
+      }
+
+      onClose();
+    } catch (err) {
+      Alert.alert(
+        t('connectHost.error.networkTitle'),
+        err instanceof Error ? err.message : t('connectHost.error.networkBody'),
+      );
+    } finally {
+      setIsOAuthLoading(false);
+    }
+  }, [provider, instanceBaseUrl, accountId, connectHost, onClose, t]);
+
   const accountLoginHint = useMemo(() => {
     if (!accountId) return null;
     for (const summary of accountSummaries) {
@@ -190,6 +354,10 @@ export function ConnectHostModal({
     }
     return null;
   }, [accountId, accountSummaries]);
+
+  const showOAuthUnavailable = oauthAvailable === false && !oauthLoading;
+  const showOAuthButton = oauthAvailable === true && !oauthLoading;
+  const isLoading = isTesting || isOAuthLoading;
 
   return (
     <Modal
@@ -297,6 +465,78 @@ export function ConnectHostModal({
               }}
             />
           </>
+        ) : null}
+
+        {/* OAuth unavailable notice — shown only for self-hosted hosts without OIDC */}
+        {showOAuthUnavailable ? (
+          <View
+            style={{
+              backgroundColor: colors.surface,
+              borderRadius: 12,
+              borderWidth: 1,
+              borderColor: colors.border,
+              padding: spacing[3],
+              marginBottom: spacing[3],
+            }}
+          >
+            <Text style={{ color: colors.textSecondary, fontSize: 13 }}>
+              {t('connectHost.oauth.unavailable')}
+            </Text>
+          </View>
+        ) : null}
+
+        {/* OAuth loading indicator */}
+        {oauthLoading ? (
+          <View style={[styles.oauthLoadingRow, { marginBottom: spacing[3] }]}>
+            <ActivityIndicator size="small" color={colors.primary} />
+            <Text style={{ color: colors.textSecondary, fontSize: 13, marginLeft: spacing[2] }}>
+              {t('connectHost.oauth.probing')}
+            </Text>
+          </View>
+        ) : null}
+
+        {/* OAuth sign-in button */}
+        {provider === 'github' && !oauthLoading ? (
+          <TouchableOpacity
+            onPress={handleOAuthSignIn}
+            disabled={isLoading}
+            testID="connect-host-oauth-button"
+            style={{
+              paddingVertical: spacing[3],
+              borderRadius: 12,
+              alignItems: 'center',
+              borderWidth: 1,
+              borderColor: showOAuthButton ? colors.primary : colors.border,
+              backgroundColor: showOAuthButton ? colors.primary + '12' : colors.surface,
+              marginBottom: spacing[3],
+              opacity: isLoading ? 0.6 : 1,
+            }}
+          >
+            {isOAuthLoading ? (
+              <ActivityIndicator size="small" color={colors.primary} />
+            ) : (
+              <Text
+                style={{
+                  color: showOAuthButton ? colors.primary : colors.textSecondary,
+                  fontSize: 14,
+                  fontWeight: '600',
+                }}
+              >
+                {showOAuthButton ? t('connectHost.oauth.signInWithGitHub') : t('connectHost.oauth.signInWithGitHubDisabled')}
+              </Text>
+            )}
+          </TouchableOpacity>
+        ) : null}
+
+        {/* Divider between OAuth and PAT */}
+        {provider === 'github' && oauthAvailable !== null && !oauthLoading ? (
+          <View style={[styles.divider, { marginBottom: spacing[3] }]}>
+            <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+            <Text style={[styles.dividerText, { color: colors.textSecondary }]}>
+              {t('connectHost.oauth.or')}
+            </Text>
+            <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+          </View>
         ) : null}
 
         <Text
@@ -448,5 +688,23 @@ const styles = StyleSheet.create({
   tokenRow: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  oauthLoadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  dividerLine: {
+    flex: 1,
+    height: StyleSheet.hairlineWidth,
+  },
+  dividerText: {
+    fontSize: 12,
+    fontWeight: '500',
   },
 });

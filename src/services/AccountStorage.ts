@@ -228,6 +228,25 @@ const sanitizeAccount = (acc: StoredAccount): StoredAccount => ({
 });
 
 export class AccountStorage {
+  // ── Generic string storage ───────────────────────────────────────────
+
+  static async getString(key: string): Promise<string | null> {
+    if (Platform.OS === 'web') return AsyncStorage.getItem(key);
+    try {
+      return await SecureStore.getItemAsync(key);
+    } catch {
+      return null;
+    }
+  }
+
+  static async setString(key: string, value: string): Promise<void> {
+    if (Platform.OS === 'web') {
+      await AsyncStorage.setItem(key, value);
+    } else {
+      await SecureStore.setItemAsync(key, value);
+    }
+  }
+
   // ── Accounts ─────────────────────────────────────────────────────────
 
   static async listAccounts(): Promise<StoredAccount[]> {

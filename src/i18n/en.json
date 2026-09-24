@@ -555,6 +555,21 @@
       "invalidTokenBody": "The token was rejected. It may be invalid, expired, or revoked — or lack the required repository permissions. Check the token in your provider's settings and update or regenerate it if needed.",
       "networkTitle": "Connection failed",
       "networkBody": "Could not reach the host. Check your network and try again."
+    },
+    "oauth": {
+      "signInWithGitHub": "Sign in with GitHub",
+      "signInWithGitHubDisabled": "Sign in with GitHub",
+      "unavailable": "OAuth unavailable for this host. Use a personal access token or SSH.",
+      "probing": "Checking OAuth support…",
+      "or": "or",
+      "configRequiredTitle": "OAuth Not Configured",
+      "configRequiredBody": "A GitHub OAuth App client ID is required. Configure it in Settings to enable OAuth sign-in.",
+      "deniedTitle": "Authorization Denied",
+      "deniedBody": "The authorization request was cancelled or denied. No token was saved.",
+      "stateMismatch": "OAuth state mismatch — possible cross-site request. Please try again.",
+      "exchangeFailed": "OAuth token exchange failed. Please try again or use a personal access token.",
+      "exchangeFailedTitle": "OAuth Exchange Unavailable",
+      "exchangeFailedBody": "OAuth token exchange is not yet available. Please use a personal access token instead."
     }
   },
   "ai": {

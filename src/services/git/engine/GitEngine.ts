@@ -14,6 +14,16 @@
 import { requireNativeModule, type EventSubscription } from 'expo-modules-core';
 import { Platform } from 'react-native';
 import { AuthService } from '../../AuthService';
+import {
+  get as credentialStoreGet,
+  save as credentialStoreSave,
+  delete as credentialStoreDelete,
+  type StoredCredential,
+  type DoneClaim,
+} from './CredentialStore';
+import type { GitHostProvider } from '../GitHost';
+import { parseCanonicalRepoId } from '../contracts';
+import { AccountStorage } from '../../AccountStorage';
 
 // Shape of the native module surface. Named (not `typeof GitEngineModule`) so the
 // generic below is the full interface, not the flow-narrowed `null` initializer type.
@@ -89,13 +99,8 @@ if (
   );
 }
 
-// Stub for missing auth modules
-const CredentialStore = {
-  save: async (_repoId: string, _credential: Credential) => {/* noop */},
-  get: async (_repoId: string) => null as Credential | null,
-  delete: async (_repoId: string) => {/* noop */},
-};
-type Credential = { kind: string; username?: string; privateKey?: string; publicKey?: string | null; passphrase?: string | null; token?: string };
+// Internal credential type used for native bridge conversion
+type InternalCredential = { kind: string; username?: string; privateKey?: string; publicKey?: string | null; passphrase?: string | null; token?: string };
 
 // Stub types from ../../../../modules/GitEngine
 type Author = { name: string; email: string };
@@ -111,14 +116,14 @@ type FileDiff = { oldPath: string; newPath: string; hunks: unknown[]; path: stri
 type FileStatus = { path: string; status: string; staged?: boolean };
 type FileStatusKind = string;
 type GeneratedKey = { publicKey: string; privateKey: string };
-type GitEngineError = { message: string; corruption?: boolean };
+type GitEngineError = { message: string; corruption?: boolean; kind?: GitOpErrorKind };
 type GitProgressEvent = { phase: string; loaded: number; total: number; kind?: string; received: number; percent: number };
 type GitProgressKind = string;
 type HunkSelection = { lineIndices: number[] };
 type NativeCredential = { kind: string; username?: string; privateKey?: string; publicKey?: string | null; passphrase?: string | null; password?: string };
 type PullKind = string;
 type NativePullResult = { kind: PullKind; message: string; conflicts: NativePullConflict[] };
-type PullResult = { ok: boolean; error?: string };
+type PullResult = { ok: boolean; error?: string; kind?: GitOpErrorKind };
 type PushIntegrateKind = string;
 type PushIntegrateResult = { ok: boolean; error?: string; kind?: string; message: string; conflicts: { path: string }[]; pushed: number; integrate?: string; integrated?: string };
 type PushResult = { ok: boolean; error?: string };
@@ -156,6 +161,88 @@ export type {
   RepoStatus,
 };
 
+// Git operation error classification
+export type GitOpErrorKind = 'auth' | 'network' | 'permission' | 'corruption' | 'unknown';
+
+// Provider-aware username routing for git transport credentials
+function getProviderFromRepoId(repoId: string | null | undefined): GitHostProvider | null {
+  if (!repoId) return null;
+  const parsed = parseCanonicalRepoId(repoId);
+  return parsed?.provider ?? null;
+}
+
+// Returns the appropriate username for HTTP Basic Auth based on provider
+function getUsernameForProvider(provider: GitHostProvider | null, hostLogin?: string): string {
+  switch (provider) {
+    case 'github':
+      return 'x-access-token';
+    case 'gitlab':
+      return 'oauth2';
+    case 'gitea':
+    case 'forgejo':
+      return hostLogin ?? 'git';
+    default:
+      return 'x-access-token';
+  }
+}
+
+// Convert StoredCredential from CredentialStore to InternalCredential for native bridge
+async function storedToInternalCredential(
+  stored: StoredCredential,
+  provider: GitHostProvider | null,
+  hostLogin?: string,
+): Promise<InternalCredential> {
+  const username = getUsernameForProvider(provider, hostLogin);
+  if (stored.kind === 'ssh') {
+    return {
+      kind: 'SSH',
+      username: 'git',
+      privateKey: stored.privateKey,
+      publicKey: stored.publicKey ?? null,
+      passphrase: stored.passphrase ?? null,
+    };
+  }
+  if (stored.kind === 'OAuth') {
+    return {
+      kind: 'token',
+      username,
+      token: stored.accessToken,
+    };
+  }
+  if (stored.kind === 'github_classic_pat' || stored.kind === 'github_fine_grained_pat' || stored.kind === 'pat') {
+    return {
+      kind: 'token',
+      username,
+      token: stored.token,
+    };
+  }
+  return { kind: 'token', username: 'git', token: '' };
+}
+
+// Classify a git error message into a typed error kind
+export function classifyGitError(error: unknown): GitOpErrorKind {
+  const message = error instanceof Error ? error.message : typeof error === 'string' ? error : String(error);
+  const lower = message.toLowerCase();
+  if (/authentication|credentials|401|unauthorized|git-receive-pack|bad credentials|incorrect password|invalid token|token expired/i.test(lower)) {
+    return 'auth';
+  }
+  if (/network|dns|connection|timeout|refused|temporary failure|couldn't connect/i.test(lower)) {
+    return 'network';
+  }
+  if (/permission|access denied|forbidden|private repo|not found|404/i.test(lower)) {
+    return 'permission';
+  }
+  if (/index|object|odb|repository|corrupt|loose object|checksum mismatch|reference invalid/i.test(lower)) {
+    return 'corruption';
+  }
+  return 'unknown';
+}
+
+// Check if an error is an authentication failure
+function isAuthError(error: unknown): boolean {
+  return classifyGitError(error) === 'auth';
+}
+
 function normalizeError(error: unknown): GitEngineError {
   const raw = error instanceof Error ? error : new Error(typeof error === 'string' ? error : String(error));
   const normalized = raw as GitEngineError;
@@ -188,8 +275,8 @@ export async function engineName(): Promise<string> {
   return run(() => GitEngineModule!.engineName(), 'stub');
 }
 
-/** Map an app-level `Credential` to the native credential shape. */
-export function toNativeCredential(credential: Credential): NativeCredential {
+/** Map an internal credential to the native credential shape. */
+export function toNativeCredential(credential: InternalCredential): NativeCredential {
   if (credential.kind === 'SSH') {
     return {
       kind: 'ssh',
@@ -199,13 +286,6 @@ export function toNativeCredential(credential: Credential): NativeCredential {
       passphrase: credential.passphrase ?? null,
     };
   }
-  if (credential.kind === 'OAuth' && credential.token) {
-    return {
-      kind: 'userpass',
-      username: credential.username ?? 'git',
-      password: credential.token,
-    };
-  }
   return {
     kind: 'userpass',
     username: credential.username ?? 'git',
@@ -213,20 +293,56 @@ export function toNativeCredential(credential: Credential): NativeCredential {
   };
 }
 
+// Convert StoredCredential from CredentialStore directly to NativeCredential for native bridge
+async function storedToNativeCredential(
+  stored: StoredCredential,
+  provider: GitHostProvider | null,
+  hostLogin?: string,
+): Promise<NativeCredential> {
+  const username = getUsernameForProvider(provider, hostLogin);
+  if (stored.kind === 'ssh') {
+    return {
+      kind: 'ssh',
+      username: 'git',
+      privateKey: stored.privateKey,
+      publicKey: stored.publicKey ?? null,
+      passphrase: stored.passphrase ?? null,
+    };
+  }
+  if (stored.kind === 'OAuth') {
+    return {
+      kind: 'userpass',
+      username,
+      password: stored.accessToken,
+    };
+  }
+  if (stored.kind === 'github_classic_pat' || stored.kind === 'github_fine_grained_pat' || stored.kind === 'pat') {
+    return {
+      kind: 'userpass',
+      username,
+      password: stored.token,
+    };
+  }
+  return { kind: 'userpass', username: 'git', password: '' };
+}
+
 /**
  * Register the credential the Rust engine should use for `repoId`'s remotes.
  * Persists the credential to expo-secure-store AND updates the engine's
  * in-memory per-repo map. `repoId` is the id the app registered the repo under.
  */
-export async function setCredential(repoId: string, credential: Credential): Promise<void> {
-  await CredentialStore.save(repoId, credential);
+export async function setCredential(repoId: string, credential: StoredCredential): Promise<void> {
+  await credentialStoreSave(repoId, credential);
   if (!GitEngineModule) return;
-  return run(() => GitEngineModule!.setCredential(repoId, toNativeCredential(credential)), undefined);
+  const provider = getProviderFromRepoId(repoId);
+  const hostConnection = provider ? await AccountStorage.getHostConnection(repoId) : null;
+  const nativeCred = await storedToNativeCredential(credential, provider, hostConnection?.hostLogin);
+  return run(() => GitEngineModule!.setCredential(repoId, nativeCred), undefined);
 }
 
 /** Remove the credential for `repoId` from the store and the engine map. */
 export async function clearCredential(repoId: string): Promise<void> {
-  await CredentialStore.delete(repoId);
+  await credentialStoreDelete(repoId);
   if (!GitEngineModule) return;
   await GitEngineModule!.clearCredential(repoId);
 }
@@ -262,17 +378,15 @@ async function ensureCredentialForOp(repoId: string | null | undefined): Promise
   const existing = await GitEngineModule!.getCredential(repoId);
   if (existing?.kind === 'ssh') return;
 
-  const stored = await CredentialStore.get(repoId);
-  if (stored) {
-    await GitEngineModule!.setCredential(repoId, toNativeCredential(stored)).catch(() => undefined);
+  const done = await credentialStoreGet(repoId);
+  if (!done.ok) {
     return;
   }
-
-  const token = await AuthService.getToken();
-  if (token) {
-    const credential = { kind: 'token' as const, username: 'x-access-token', token };
-    await GitEngineModule!.setCredential(repoId, toNativeCredential(credential)).catch(() => undefined);
-  }
+  const stored = done.credential;
+  const provider = getProviderFromRepoId(repoId);
+  const hostConnection = provider ? await AccountStorage.getHostConnection(repoId) : null;
+  const nativeCred = await storedToNativeCredential(stored, provider, hostConnection?.hostLogin);
+  await GitEngineModule!.setCredential(repoId, nativeCred).catch(() => undefined);
 }
 
 /** Subscribe to engine progress events (clone/fetch/push/transfer). */
@@ -467,7 +581,26 @@ export async function fetch(
     throw new Error('GitEngine native module unavailable: cannot fetch');
   }
   await ensureCredentialForOp(repoId);
-  return run(() => GitEngineModule!.fetch(repoPath, remoteName, repoId ?? null), undefined);
+  try {
+    return await run(() => GitEngineModule!.fetch(repoPath, remoteName, repoId ?? null), undefined);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const kind = classifyGitError(error);
+    if (isAuthError(error) && repoId) {
+      await clearEngineCredential(repoId);
+      await ensureCredentialForOp(repoId);
+      try {
+        return await run(() => GitEngineModule!.fetch(repoPath, remoteName, repoId ?? null), undefined);
+      } catch {
+        const classifiedError = new Error(message) as GitEngineError;
+        classifiedError.kind = kind;
+        throw classifiedError;
+      }
+    }
+    const classifiedError = new Error(message) as GitEngineError;
+    classifiedError.kind = kind;
+    throw classifiedError;
+  }
 }
 
 export async function pull(
@@ -479,12 +612,33 @@ export async function pull(
     return { ok: false, error: 'GitEngine native module unavailable' };
   }
   await ensureCredentialForOp(repoId);
-  const native = await run(
-    () => GitEngineModule!.pull(repoPath, remoteName, repoId ?? null),
-    { kind: 'Unknown', message: 'unavailable', conflicts: [] },
-  );
-  const ok = native.kind === 'FastForward' || native.kind === 'UpToDate' || native.kind === 'Merged';
-  return ok ? { ok: true } : { ok: false, error: native.message || 'pull failed' };
+  try {
+    const native = await run(
+      () => GitEngineModule!.pull(repoPath, remoteName, repoId ?? null),
+      { kind: 'Unknown', message: 'unavailable', conflicts: [] },
+    );
+    const ok = native.kind === 'FastForward' || native.kind === 'UpToDate' || native.kind === 'Merged';
+    return ok ? { ok: true } : { ok: false, error: native.message || 'pull failed' };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const kind = classifyGitError(error);
+    if (isAuthError(error) && repoId) {
+      await clearEngineCredential(repoId);
+      await ensureCredentialForOp(repoId);
+      try {
+        const native = await run(
+          () => GitEngineModule!.pull(repoPath, remoteName, repoId ?? null),
+          { kind: 'Unknown', message: 'unavailable', conflicts: [] },
+        );
+        const ok = native.kind === 'FastForward' || native.kind === 'UpToDate' || native.kind === 'Merged';
+        if (ok) return { ok: true };
+        return { ok: false, error: message, kind };
+      } catch {
+        return { ok: false, error: message, kind };
+      }
+    }
+    return { ok: false, error: message, kind };
+  }
 }
 
 /**
