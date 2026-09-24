@@ -351,3 +351,223 @@ describe('ConnectHostModal token error guidance', () => {
     });
   });
 });
+
+describe('ConnectHostModal OAuth flow', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  // ─── Mock OAuth dependencies ─────────────────────────────────────────────────
+  const mockProbeGitHubOAuthSupport = jest.fn();
+  const mockPerformGitHubOAuth = jest.fn();
+  const mockAccountStorageGetString = jest.fn();
+
+  jest.mock('@/services/GitHubOAuth', () => ({
+    probeGitHubOAuthSupport: (...args: unknown[]) => mockProbeGitHubOAuthSupport(...args),
+    performGitHubOAuth: (...args: unknown[]) => mockPerformGitHubOAuth(...args),
+    GITHUB_OAUTH_CLIENT_ID_KEY: 'gitnotes_github_oauth_client_id',
+  }));
+
+  jest.mock('@/services/AccountStorage', () => ({
+    AccountStorage: {
+      getString: (...args: unknown[]) => mockAccountStorageGetString(...args),
+    },
+  }));
+
+  // ─── Helpers ─────────────────────────────────────────────────────────────────
+  const renderModalWithOAuth = (props = {}) => {
+    return render(<ConnectHostModal {...defaultProps} {...props} />);
+  };
+
+  describe('OAuth availability probe', () => {
+    it('calls probeGitHubOAuthSupport when modal becomes visible with GitHub', async () => {
+      mockProbeGitHubOAuthSupport.mockResolvedValueOnce({ supported: true, authorizationEndpoint: 'https://github.com/login/oauth/authorize', tokenEndpoint: 'https://github.com/login/oauth/access_token' });
+
+      const { queryByTestId } = renderModalWithOAuth();
+
+      await act(async () => {
+        // Wait for the OAuth probe effect to run
+        await new Promise((r) => setTimeout(r, 0));
+      });
+
+      expect(mockProbeGitHubOAuthSupport).toHaveBeenCalledWith('github', 'https://api.github.com');
+    });
+
+    it('shows OAuth unavailable message when probe returns supported:false', async () => {
+      mockProbeGitHubOAuthSupport.mockResolvedValueOnce({ supported: false, reason: 'not_oauth' });
+
+      const { queryByText } = renderModalWithOAuth();
+
+      await act(async () => {
+        await new Promise((r) => setTimeout(r, 0));
+      });
+
+      // OAuth unavailable notice should be shown.
+      expect(queryByText('connectHost.oauth.unavailable')).not.toBeNull();
+    });
+
+    it('does NOT show OAuth unavailable message when probe returns supported:true', async () => {
+      mockProbeGitHubOAuthSupport.mockResolvedValueOnce({ supported: true, authorizationEndpoint: 'https://github.com/login/oauth/authorize', tokenEndpoint: 'https://github.com/login/oauth/access_token' });
+
+      const { queryByText } = renderModalWithOAuth();
+
+      await act(async () => {
+        await new Promise((r) => setTimeout(r, 0));
+      });
+
+      expect(queryByText('connectHost.oauth.unavailable')).toBeNull();
+    });
+  });
+
+  describe('OAuth sign-in button', () => {
+    it('shows "Sign in with GitHub" when OAuth is available for GitHub provider', async () => {
+      mockProbeGitHubOAuthSupport.mockResolvedValueOnce({ supported: true, authorizationEndpoint: 'https://github.com/login/oauth/authorize', tokenEndpoint: 'https://github.com/login/oauth/access_token' });
+
+      const { queryByTestId } = renderModalWithOAuth();
+
+      await act(async () => {
+        await new Promise((r) => setTimeout(r, 0));
+      });
+
+      expect(queryByTestId('connect-host-oauth-button')).not.toBeNull();
+    });
+
+    it('does not show OAuth button for GitLab provider', async () => {
+      mockProbeGitHubOAuthSupport.mockResolvedValueOnce({ supported: true, authorizationEndpoint: 'https://gitlab.com/oauth/authorize', tokenEndpoint: 'https://gitlab.com/oauth/token' });
+
+      const { queryByTestId } = renderModalWithOAuth();
+
+      // Select GitLab
+      await act(async () => {
+        await new Promise((r) => setTimeout(r, 0));
+      });
+
+      // The OAuth button should not be visible for GitLab (only GitHub supports browser OAuth here).
+      expect(queryByTestId('connect-host-oauth-button')).toBeNull();
+    });
+  });
+
+  describe('handleOAuthSignIn', () => {
+    it('shows config required alert when client ID is not set', async () => {
+      mockProbeGitHubOAuthSupport.mockResolvedValueOnce({ supported: true, authorizationEndpoint: 'https://github.com/login/oauth/authorize', tokenEndpoint: 'https://github.com/login/oauth/access_token' });
+      mockAccountStorageGetString.mockResolvedValueOnce(null);
+
+      const { queryByTestId } = renderModalWithOAuth();
+
+      await act(async () => {
+        await new Promise((r) => setTimeout(r, 0));
+      });
+
+      await act(async () => {
+        fireEvent.press(queryByTestId('connect-host-oauth-button')!);
+      });
+
+      await waitFor(() => {
+        expect(alert).toHaveBeenCalledWith(
+          'connectHost.oauth.configRequiredTitle',
+          'connectHost.oauth.configRequiredBody',
+        );
+      });
+    });
+
+    it('calls performGitHubOAuth with client ID when client ID is set', async () => {
+      mockProbeGitHubOAuthSupport.mockResolvedValueOnce({ supported: true, authorizationEndpoint: 'https://github.com/login/oauth/authorize', tokenEndpoint: 'https://github.com/login/oauth/access_token' });
+      mockAccountStorageGetString.mockResolvedValueOnce('test_client_id_123');
+      mockPerformGitHubOAuth.mockResolvedValueOnce({ ok: false, reason: 'user_cancelled' });
+
+      const { queryByTestId } = renderModalWithOAuth();
+
+      await act(async () => {
+        await new Promise((r) => setTimeout(r, 0));
+      });
+
+      await act(async () => {
+        fireEvent.press(queryByTestId('connect-host-oauth-button')!);
+      });
+
+      await waitFor(() => {
+        expect(mockPerformGitHubOAuth).toHaveBeenCalledWith('test_client_id_123', 'https://api.github.com');
+      });
+    });
+
+    it('shows denied alert when OAuth flow is rejected by provider', async () => {
+      mockProbeGitHubOAuthSupport.mockResolvedValueOnce({ supported: true, authorizationEndpoint: 'https://github.com/login/oauth/authorize', tokenEndpoint: 'https://github.com/login/oauth/access_token' });
+      mockAccountStorageGetString.mockResolvedValueOnce('test_client_id_123');
+      mockPerformGitHubOAuth.mockResolvedValueOnce({
+        ok: false,
+        reason: 'provider_denied',
+        errorDescription: 'The user cancelled the authorization request.',
+      });
+
+      const { queryByTestId } = renderModalWithOAuth();
+
+      await act(async () => {
+        await new Promise((r) => setTimeout(r, 0));
+      });
+
+      await act(async () => {
+        fireEvent.press(queryByTestId('connect-host-oauth-button')!);
+      });
+
+      await waitFor(() => {
+        expect(alert).toHaveBeenCalledWith(
+          'connectHost.oauth.deniedTitle',
+          'The user cancelled the authorization request.',
+        );
+      });
+    });
+
+    it('silently handles user cancelled OAuth (no alert)', async () => {
+      mockProbeGitHubOAuthSupport.mockResolvedValueOnce({ supported: true, authorizationEndpoint: 'https://github.com/login/oauth/authorize', tokenEndpoint: 'https://github.com/login/oauth/access_token' });
+      mockAccountStorageGetString.mockResolvedValueOnce('test_client_id_123');
+      mockPerformGitHubOAuth.mockResolvedValueOnce({ ok: false, reason: 'user_cancelled' });
+
+      const { queryByTestId } = renderModalWithOAuth();
+
+      await act(async () => {
+        await new Promise((r) => setTimeout(r, 0));
+      });
+
+      await act(async () => {
+        fireEvent.press(queryByTestId('connect-host-oauth-button')!);
+      });
+
+      await act(async () => {
+        await new Promise((r) => setTimeout(r, 0));
+      });
+
+      // user_cancelled should not show an alert.
+      expect(alert).not.toHaveBeenCalled();
+    });
+
+    it('calls connectHost with the returned token on OAuth success', async () => {
+      mockProbeGitHubOAuthSupport.mockResolvedValueOnce({ supported: true, authorizationEndpoint: 'https://github.com/login/oauth/authorize', tokenEndpoint: 'https://github.com/login/oauth/access_token' });
+      mockAccountStorageGetString.mockResolvedValueOnce('test_client_id_123');
+      mockPerformGitHubOAuth.mockResolvedValueOnce({ ok: true, token: 'oauth_access_token_xyz' });
+      mockConnectHost.mockResolvedValueOnce({ ok: true });
+
+      const onClose = jest.fn();
+      const { queryByTestId } = renderModalWithOAuth({ onClose });
+
+      await act(async () => {
+        await new Promise((r) => setTimeout(r, 0));
+      });
+
+      await act(async () => {
+        fireEvent.press(queryByTestId('connect-host-oauth-button')!);
+      });
+
+      await waitFor(() => {
+        expect(mockConnectHost).toHaveBeenCalledWith({
+          provider: 'github',
+          token: 'oauth_access_token_xyz',
+          instanceBaseUrl: undefined,
+          accountId: undefined,
+        });
+      });
+
+      // Modal should close on success.
+      expect(onClose).toHaveBeenCalled();
+    });
+  });
+});

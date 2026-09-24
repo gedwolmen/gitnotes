@@ -104,11 +104,11 @@ async function runImport(
           const sshKeys = await AccountStorage.getSshKey(hostConnection.id);
           if (sshKeys) {
             await setCredential(repo.id, {
-              kind: 'SSH',
-              username: 'git',
+              kind: 'ssh',
               privateKey: sshKeys.privateKey,
               publicKey: sshKeys.publicKey,
               passphrase: null,
+              fingerprint: null,
             });
             const info = parseRepoPath(repoPath);
             if (info) {
