@@ -486,11 +486,11 @@ export default function CanvasListScreen() {
           accessible={false}
           onPress={() => setShowDiagramTitleModal(false)}
         >
-          <KeyboardAvoidingView
+            <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
             style={{ width: '100%' }}
           >
-            <View className="w-full rounded-lg p-5" style={{ backgroundColor: colors.surface }} onStartShouldSetResponder={() => true}>
+            <View className="w-full rounded-lg p-5" style={{ backgroundColor: colors.surface }} pointerEvents="box-none">
               <Text className="text-lg font-bold text-center mb-3" style={{ color: colors.text }}>
                 {'New ASCII Diagram'}
               </Text>
@@ -510,9 +510,6 @@ export default function CanvasListScreen() {
 
               <TouchableOpacity
                 testID="canvas-list.button.diagram-repo"
-                accessible
-                accessibilityRole="button"
-                accessibilityLabel={'Select repository'}
                 className="flex-row justify-between items-center py-3 px-4 rounded-sm border mb-3"
                 style={{ borderColor: colors.border }}
                 onPress={() => setShowDiagramRepoPicker(true)}
