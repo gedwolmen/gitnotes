@@ -27,6 +27,7 @@ import { useResponsive } from '../hooks/useResponsive';
 import { Button, Card, Modal, ScreenHeader, useScreenHeaderHeight, useTabBarHeight } from '../components/ui';
 import { BentoRecent } from '../components/home/BentoRecent';
 import { QuickAccessShelf } from '../components/home/QuickAccessShelf';
+import { HomeTile } from '../components/home/HomeTile';
 import { buildPinnedFeed, buildRecentFeed, RecentItem } from '../utils/recentItems';
 import { HomeNoteContextMenu } from '../components/home/HomeNoteContextMenu';
 import ColorPicker from '../components/ColorPicker';
@@ -292,56 +293,48 @@ export default function HomeScreen() {
       <DailyQuoteCard quote={quote} isLoading={quoteLoading} error={quoteError} onRefresh={quoteRefresh} />
       <View className="gap-3 mt-2 mb-6">
         <View className="flex-row items-stretch gap-3 overflow-hidden">
-          <Pressable
-            testID="home.button.create-note"
+          <HomeTile
+            variant="primary"
+            icon="document-text"
+            badgeColor="#FFFFFF"
+            badgeSize={36}
+            iconColor={colors.primary}
+            titleNode={
+              <Text className="text-xl font-bold text-white" style={{ letterSpacing: -0.3 }}>{t('notes.newNote')}</Text>
+            }
+            subtitleNode={
+              <Text className="text-xs font-medium text-white opacity-80">{t('home.bento.blankNote')}</Text>
+            }
+            showTabletDecoration={isTablet}
             onPress={handleCreateNote}
             onLongPress={() => {
               HapticService.medium();
               setPickerRemember(false);
               setShowFormatPicker(true);
             }}
-            style={({ pressed }) => [
-              { flex: 1, minWidth: 0, height: 130, borderRadius: 20, padding: 16, overflow: 'hidden', justifyContent: 'flex-end', backgroundColor: colors.primary, opacity: pressed ? 0.92 : 1, transform: [{ scale: pressed ? 0.985 : 1 }] },
-            ]}
-          >
-            <View className="absolute top-4 left-4 w-9 h-9 rounded-full bg-white items-center justify-center">
-              <Ionicons name="document-text" size={18} color={colors.primary} />
-            </View>
-            {isTablet && (
-            <View className="absolute" style={{ top: -50, right: -50, opacity: 0.3 }}>
-              <Ionicons name="document-text" size={120} color="#FFFFFF" />
-            </View>
-            )}
-            <View className="gap-1">
-              <Text className="text-xl font-bold text-white" style={{ letterSpacing: -0.3 }}>{t('notes.newNote')}</Text>
-              <Text className="text-xs font-medium text-white opacity-80">{t('home.bento.blankNote')}</Text>
-            </View>
-          </Pressable>
+            testID="home.button.create-note"
+          />
 
-          <Pressable
-            testID="home.button.open-journal"
-            onPress={handleOpenTodaysJournal}
-            style={({ pressed }) => [
-              { flex: 1, minWidth: 0, height: 130, borderRadius: 20, padding: 16, overflow: 'hidden', justifyContent: 'flex-end', backgroundColor: colors.primary, opacity: pressed ? 0.92 : 1, transform: [{ scale: pressed ? 0.985 : 1 }] },
-            ]}
-          >
-            <View className="absolute top-4 left-4 w-9 h-9 rounded-full bg-white items-center justify-center">
-              <Ionicons name="journal-outline" size={18} color={colors.primary} />
-            </View>
-            {isTablet && (
-            <View className="absolute" style={{ top: -50, right: -50, opacity: 0.3 }}>
-              <Ionicons name="journal-outline" size={120} color="#FFFFFF" />
-            </View>
-            )}
-            <View className="gap-1">
+          <HomeTile
+            variant="primary"
+            icon="journal-outline"
+            badgeColor="#FFFFFF"
+            badgeSize={36}
+            iconColor={colors.primary}
+            titleNode={
               <Text className="text-xl font-bold text-white" style={{ letterSpacing: -0.3 }} numberOfLines={1}>
                 {hasTodaysJournal ? t('home.bento.todaysJournal') : t('home.bento.newJournal')}
               </Text>
+            }
+            subtitleNode={
               <Text className="text-xs font-medium text-white opacity-80" numberOfLines={1}>
                 {todaysJournalTitle.replace('Journal ', '')}
               </Text>
-            </View>
-          </Pressable>
+            }
+            showTabletDecoration={isTablet}
+            onPress={handleOpenTodaysJournal}
+            testID="home.button.open-journal"
+          />
         </View>
 
         <Pressable
@@ -358,42 +351,51 @@ export default function HomeScreen() {
         </Pressable>
 
         <View className="flex-row items-stretch gap-3 overflow-hidden">
-          <Pressable
-            testID="home.button.open-templates"
-            onPress={handleOpenTemplates}
-            style={({ pressed }) => [
-              { flex: 1, height: 130, borderRadius: 20, paddingLeft: 16, paddingRight: 16, paddingBottom: 16, paddingTop: 20, borderWidth: 0.5, justifyContent: 'space-between', overflow: 'hidden', backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.92 : 1, transform: [{ scale: pressed ? 0.985 : 1 }] },
-            ]}
-          >
-            <View className="w-10 h-10 rounded-md items-center justify-center" style={{ backgroundColor: colors.primary + '1F' }}>
-              <Ionicons name="copy-outline" size={22} color={colors.primary} />
-            </View>
-            <View className="gap-0.5">
+          <HomeTile
+            variant="secondary"
+            icon="copy-outline"
+            titleNode={
               <Text className="text-base font-bold" style={{ color: colors.text, letterSpacing: -0.2 }}>{t('home.bento.fromTemplate')}</Text>
+            }
+            subtitleNode={
               <Text className="text-xs font-medium" style={{ color: colors.textSecondary }}>{t('home.bento.fromTemplateSub')}</Text>
-            </View>
-          </Pressable>
-          <Pressable
-            testID="home.button.navigate"
-            onPress={() => navigation.navigate('MainTabs', { screen: 'CanvasList' })}
-            style={({ pressed }) => [
-              { flex: 1, height: 130, borderRadius: 20, paddingLeft: 16, paddingRight: 16, paddingBottom: 16, paddingTop: 20, borderWidth: 0.5, justifyContent: 'space-between', overflow: 'hidden', backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.92 : 1, transform: [{ scale: pressed ? 0.985 : 1 }] },
-            ]}
-          >
-            <View className="w-10 h-10 rounded-md items-center justify-center" style={{ backgroundColor: colors.accent + '1F' }}>
-              <Ionicons name="easel-outline" size={22} color={colors.accent} />
-            </View>
-            <View className="gap-0.5">
-              <View className="flex-row items-center gap-1.5">
-                <Text className="text-base font-bold" style={{ color: colors.text, letterSpacing: -0.2 }}>{t('canvases.title')}</Text>
-              </View>
+            }
+            contentPosition="space-between"
+            onPress={handleOpenTemplates}
+            testID="home.button.open-templates"
+          />
+          <HomeTile
+            variant="secondary"
+            icon="easel-outline"
+            titleNode={
+              <Text className="text-base font-bold" style={{ color: colors.text, letterSpacing: -0.2 }}>{t('canvases.title')}</Text>
+            }
+            subtitleNode={
               <Text className="text-xs font-medium" style={{ color: colors.textSecondary }}>{t('home.bento.canvasesSub')}</Text>
-            </View>
-          </Pressable>
+            }
+            contentPosition="space-between"
+            onPress={() => navigation.navigate('MainTabs', { screen: 'CanvasList' })}
+            testID="home.button.navigate"
+          />
         </View>
 
-        <Pressable
-          testID="home.button.open-thought-dump"
+        <HomeTile
+          variant="accent"
+          icon="bulb-outline"
+          badgeColor="rgba(255,255,255,0.2)"
+          badgeSize={40}
+          titleNode={
+            <View className="flex-row items-center gap-1.5">
+              <Text className="text-base font-bold" style={{ color: '#FFFFFF', letterSpacing: -0.2 }}>{t('thoughtDump.title')}</Text>
+            </View>
+          }
+          subtitleNode={
+            <Text className="text-xs font-medium" style={{ color: 'rgba(255,255,255,0.85)' }} numberOfLines={3}>
+              {t('home.bento.thoughtDumpSub')}
+            </Text>
+          }
+          height={130}
+          contentPosition="space-between"
           onPress={() => {
             HapticService.medium();
             if (!isPro) {
@@ -402,22 +404,8 @@ export default function HomeScreen() {
             }
             navigation.navigate('ThoughtDump');
           }}
-          style={({ pressed }) => [
-            { width: '100%', minHeight: 130, borderRadius: 20, padding: 16, justifyContent: 'space-between', overflow: 'hidden', backgroundColor: colors.accent, opacity: pressed ? 0.92 : 1, transform: [{ scale: pressed ? 0.985 : 1 }] },
-          ]}
-        >
-          <View className="w-10 h-10 rounded-md items-center justify-center" style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}>
-            <Ionicons name="bulb-outline" size={22} color="#FFFFFF" />
-          </View>
-          <View style={{ gap: 6 }}>
-            <View className="flex-row items-center gap-1.5">
-              <Text className="text-base font-bold" style={{ color: '#FFFFFF', letterSpacing: -0.2 }}>{t('thoughtDump.title')}</Text>
-            </View>
-            <Text className="text-xs font-medium" style={{ color: 'rgba(255,255,255,0.85)' }} numberOfLines={3}>
-              {t('home.bento.thoughtDumpSub')}
-            </Text>
-          </View>
-        </Pressable>
+          testID="home.button.open-thought-dump"
+        />
       </View>
 
       <QuickAccessShelf items={pinnedItems} onOpen={handleOpenRecentItem} onLongPress={handleLongPressRecentItem} />
