@@ -15,12 +15,16 @@ export interface EmptyStateProps {
 
 export function EmptyState({ icon, title, subtitle, iconColor, testID, style }: EmptyStateProps) {
   const { colors } = useTheme();
+  const accessibilityLabel = subtitle ? `${title}. ${subtitle}` : title;
 
   return (
     <View
       className="flex-1 items-center justify-center py-16 px-6"
       style={style}
       testID={testID}
+      accessible
+      accessibilityRole="text"
+      accessibilityLabel={accessibilityLabel}
     >
       <Ionicons name={icon} size={48} color={iconColor ?? colors.textSecondary} />
       <Text className="text-[17px] font-semibold mt-4 text-center text-text" style={{ color: colors.text }}>
