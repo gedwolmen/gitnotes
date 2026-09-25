@@ -16,6 +16,8 @@ export function OfflineBanner() {
     <View
       className="mx-4 mb-3 px-3.5 py-2.5 rounded-[14px] border"
       style={{ backgroundColor: `${colors.error}20`, borderColor: `${colors.error}33` }}
+      accessible
+      accessibilityLabel={t('sync.offlineBanner')}
     >
       <Text className="text-sm font-semibold" style={{ color: colors.error }}>
         {t('sync.offlineBanner')}

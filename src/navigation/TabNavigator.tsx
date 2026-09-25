@@ -36,7 +36,7 @@ const TAB_ICONS: Record<string, { focused: IoniconName; outline: IoniconName; la
 };
 
 function TabletRail({ state, navigation }: BottomTabBarProps) {
-  const { colors, isDark } = useTheme();
+  const { colors } = useTheme();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
 
@@ -45,7 +45,7 @@ function TabletRail({ state, navigation }: BottomTabBarProps) {
       style={[
         railStyles.rail,
         {
-          backgroundColor: isDark ? '#1c1c1e' : '#f8f8f8',
+          backgroundColor: colors.surface,
           borderTopColor: colors.border,
           paddingBottom: insets.bottom + 6,
         },

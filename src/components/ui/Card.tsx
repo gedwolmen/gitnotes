@@ -4,6 +4,7 @@ import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-na
 import * as Haptics from 'expo-haptics';
 import { Surface } from './Surface';
 import { useTokens } from '../../contexts/ThemeContext';
+import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { Radius } from '../../theme/tokens';
 
 export interface CardProps extends AccessibilityProps {
@@ -21,21 +22,26 @@ export function Card(props: CardProps) {
   const { onPress, onLongPress, disabled, radius = 'lg', padding, style, testID, children, ...accessibilityProps } = props;
   const { spacing } = useTokens();
   const [isPressed, setIsPressed] = useState(false);
+  const reducedMotion = useReducedMotion();
   const scale = useSharedValue(1);
   const interactive = !!onPress || !!onLongPress;
 
   const handlePressIn = useCallback(() => {
     if (!interactive) return;
-    scale.value = withSpring(0.98, { mass: 0.4, damping: 14, stiffness: 220 });
+    if (!reducedMotion) {
+      scale.value = withSpring(0.98, { mass: 0.4, damping: 14, stiffness: 220 });
+    }
     setIsPressed(true);
     Haptics.selectionAsync().catch(() => undefined);
-  }, [scale, interactive]);
+  }, [scale, interactive, reducedMotion]);
 
   const handlePressOut = useCallback(() => {
     if (!interactive) return;
-    scale.value = withSpring(1, { mass: 0.4, damping: 14, stiffness: 220 });
+    if (!reducedMotion) {
+      scale.value = withSpring(1, { mass: 0.4, damping: 14, stiffness: 220 });
+    }
     setIsPressed(false);
-  }, [scale, interactive]);
+  }, [scale, interactive, reducedMotion]);
 
   const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
 
@@ -58,6 +64,8 @@ export function Card(props: CardProps) {
     <Animated.View style={[animatedStyle, { opacity: disabled ? 0.5 : 1 }]}>
       <Pressable
         testID={testID}
+        accessibilityRole="button"
+        accessibilityState={{ disabled }}
         onPress={disabled ? undefined : onPress}
         onLongPress={disabled ? undefined : onLongPress}
         onPressIn={disabled ? undefined : handlePressIn}

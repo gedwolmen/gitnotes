@@ -4,6 +4,7 @@ import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-na
 import * as Haptics from 'expo-haptics';
 import { Surface } from './Surface';
 import { useTokens, useTheme } from '../../contexts/ThemeContext';
+import { useReducedMotion } from '../../hooks/useReducedMotion';
 import type { Radius } from '../../theme/tokens';
 import { cn } from '../../lib/utils';
 
@@ -68,20 +69,25 @@ export function Button(props: ButtonProps) {
   const { colors, type } = useTokens();
   const { style: themeStyle } = useTheme();
   const [isPressed, setIsPressed] = useState(false);
+  const reducedMotion = useReducedMotion();
   const scale = useSharedValue(1);
   const sizeStyle = SIZE_STYLES[size ?? 'md'];
   const fontSize = size === 'xs' ? type.xs : size === 'sm' ? type.sm : type.md;
 
   const handlePressIn = useCallback(() => {
-    scale.value = withSpring(0.97, { mass: 0.4, damping: 14, stiffness: 220 });
+    if (!reducedMotion) {
+      scale.value = withSpring(0.97, { mass: 0.4, damping: 14, stiffness: 220 });
+    }
     setIsPressed(true);
     Haptics.selectionAsync().catch(() => undefined);
-  }, [scale]);
+  }, [scale, reducedMotion]);
 
   const handlePressOut = useCallback(() => {
-    scale.value = withSpring(1, { mass: 0.4, damping: 14, stiffness: 220 });
+    if (!reducedMotion) {
+      scale.value = withSpring(1, { mass: 0.4, damping: 14, stiffness: 220 });
+    }
     setIsPressed(false);
-  }, [scale]);
+  }, [scale, reducedMotion]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
@@ -163,6 +169,7 @@ export function Button(props: ButtonProps) {
         testID={testID}
         accessibilityRole="button"
         accessibilityLabel={accessibilityLabel}
+        accessibilityState={{ disabled }}
         onPress={disabled ? undefined : onPress}
         onLongPress={disabled ? undefined : onLongPress}
         onPressIn={disabled ? undefined : handlePressIn}
@@ -198,6 +205,7 @@ export function Button(props: ButtonProps) {
         testID={testID}
         accessibilityRole="button"
         accessibilityLabel={accessibilityLabel}
+        accessibilityState={{ disabled }}
         onPress={disabled ? undefined : onPress}
         onLongPress={disabled ? undefined : onLongPress}
         onPressIn={disabled ? undefined : handlePressIn}

@@ -3,6 +3,7 @@ import { ActivityIndicator, Animated, Easing, Pressable, StyleSheet, Text, View 
 import { BlurView } from 'expo-blur';
 
 import { useTheme, useTokens } from '../../contexts/ThemeContext';
+import { useReducedMotion } from '../../hooks/useReducedMotion';
 
 export interface SavingOverlayProps {
   visible: boolean;
@@ -10,21 +11,24 @@ export interface SavingOverlayProps {
   testID?: string;
 }
 
-// Blocking overlay shown while a save is in flight. Keeps button labels
-// (and therefore layout) stable instead of swapping in "Saving…" text.
 export function SavingOverlay({ visible, label, testID = 'saving-overlay' }: SavingOverlayProps) {
   const { isDark } = useTheme();
   const { colors, spacing, type } = useTokens();
-  const opacity = useRef(new Animated.Value(0)).current;
+  const reducedMotion = useReducedMotion();
+  const opacity = useRef(new Animated.Value(visible ? 1 : 0)).current;
 
   useEffect(() => {
+    if (reducedMotion) {
+      opacity.setValue(visible ? 1 : 0);
+      return;
+    }
     Animated.timing(opacity, {
       toValue: visible ? 1 : 0,
       duration: 180,
       easing: Easing.out(Easing.quad),
       useNativeDriver: true,
     }).start();
-  }, [visible, opacity]);
+  }, [visible, opacity, reducedMotion]);
 
   return (
     <Animated.View
