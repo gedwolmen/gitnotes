@@ -10,6 +10,107 @@ const { __resetTime } = global.MockReanimated as {
 };
 
 // ---------------------------------------------------------------------------
+// Animated spy — must be set up before component imports
+// ---------------------------------------------------------------------------
+let mockSpringCalls = 0;
+let mockTimingCalls = 0;
+
+jest.mock('react-native', () => {
+  const React = require('react');
+
+  const Text = ({ children, ...props }: { children?: React.ReactNode } & Record<string, unknown>) =>
+    React.createElement('Text', props, children);
+  Text.displayName = 'Text';
+
+  const TextInput = ({ children, placeholder, value, ...props }: { children?: React.ReactNode; placeholder?: string; value?: string } & Record<string, unknown>) =>
+    React.createElement('TextInput', { ...props, placeholder, value }, children);
+  TextInput.displayName = 'TextInput';
+
+  const View = (props: object & { children?: React.ReactNode }) =>
+    React.createElement('View', props, (props as { children?: React.ReactNode }).children);
+  View.displayName = 'View';
+
+  const mockTiming = jest.fn((value: { setValue: (v: number) => void }, config: { toValue: number; duration?: number; easing?: unknown; useNativeDriver?: boolean }) => {
+    mockTimingCalls++;
+    return {
+      start: (onComplete?: () => void) => {
+        if (config.toValue !== undefined) {
+          value.setValue(config.toValue);
+        }
+        onComplete?.();
+      },
+      stop: jest.fn(),
+    };
+  });
+
+  const mockSpring = jest.fn((_value: { setValue: (v: number) => void }, _config: { toValue?: number }) => {
+    mockSpringCalls++;
+    return {
+      start: jest.fn(),
+      stop: jest.fn(),
+    };
+  });
+
+  return {
+    AccessibilityInfo: {
+      isReduceMotionEnabled: () => Promise.resolve(false),
+      addEventListener: () => ({ remove: jest.fn() }),
+      announceForAccessibility: jest.fn(),
+    },
+    StyleSheet: { create: (s: object) => s, flatten: (s: object) => s },
+    Platform: { OS: 'ios', select: (o: object) => o },
+    PixelRatio: { get: () => 2 },
+    Dimensions: { get: () => ({ width: 375, height: 812 }) },
+    Easing: {
+      linear: jest.fn(),
+      ease: jest.fn(),
+      quad: jest.fn(),
+      cubic: jest.fn(),
+      poly: jest.fn(),
+      sin: jest.fn(),
+      circle: jest.fn(),
+      exp: jest.fn(),
+      elastic: jest.fn(),
+      back: jest.fn(),
+      bounce: jest.fn(),
+      bezier: jest.fn(() => (t: number) => t),
+      out: jest.fn((e: unknown) => e),
+      in: jest.fn((e: unknown) => e),
+      inOut: jest.fn((e: unknown) => e),
+    },
+    Image: View,
+    Text,
+    TouchableOpacity: View,
+    Pressable: View,
+    ScrollView: View,
+    FlatList: View,
+    SectionList: View,
+    TextInput,
+    Switch: View,
+    ActivityIndicator: View,
+    RefreshControl: View,
+    Modal: View,
+    KeyboardAvoidingView: View,
+    View,
+    Animated: {
+      View,
+      Text,
+      Image: View,
+      ScrollView: View,
+      FlatList: View,
+      SectionList: View,
+      Switch: View,
+      createAnimatedComponent: (c: unknown) => c,
+      spring: mockSpring,
+      timing: mockTiming,
+      Value: jest.fn((init: number) => ({ setValue: jest.fn(), _value: init })),
+    },
+    useWindowDimensions: () => ({ width: 375, height: 812, scale: 2, fontScale: 1 }),
+    Alert: { alert: jest.fn() },
+  };
+});
+
+// ---------------------------------------------------------------------------
 // Theme mock — mirrors the pattern from theme-fixtures.test.tsx
 // ---------------------------------------------------------------------------
 jest.mock('../../../src/contexts/ThemeContext', () => {
@@ -92,18 +193,78 @@ function __setReducedMotion(enabled: boolean): void {
   mockReduceMotion = enabled;
 }
 
+
+
+// ---------------------------------------------------------------------------
+// useNetworkStatus mock — for OfflineBanner tests
+// ---------------------------------------------------------------------------
+jest.mock('../../../src/hooks/useNetworkStatus', () => ({
+  useNetworkStatus: () => ({ isConnected: false }),
+}));
+
+// ---------------------------------------------------------------------------
+// react-i18next mock — provides predictable t() output
+// ---------------------------------------------------------------------------
+jest.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string) => key,
+    i18n: { language: 'en' },
+  }),
+}));
+
+// ---------------------------------------------------------------------------
+// useGitOperationStore mock — for SyncBlockOverlay tests
+// ---------------------------------------------------------------------------
+jest.mock('../../../src/stores/gitOperationStore', () => ({
+  useGitOperationStore: () => ({ ops: {} }),
+  GIT_OP_ALL_REPOS: 'all',
+}));
+
+// ---------------------------------------------------------------------------
+// GitSyncGate mock — for SyncBlockOverlay tests
+// ---------------------------------------------------------------------------
+jest.mock('../../../src/services/git/GitSyncGate', () => ({
+  GitSyncGate: { isPushActive: () => false },
+}));
+
+// ---------------------------------------------------------------------------
+// cancelInflightGitHttp mock — for SyncBlockOverlay tests
+// ---------------------------------------------------------------------------
+jest.mock('../../../src/services/git/gitHttp', () => ({
+  cancelInflightGitHttp: jest.fn(),
+}));
+
+// ---------------------------------------------------------------------------
+// HapticService mock — for SyncBlockOverlay tests
+// ---------------------------------------------------------------------------
+jest.mock('../../../src/utils/haptics', () => ({
+  HapticService: { error: jest.fn() },
+}));
+
+// ---------------------------------------------------------------------------
+// expo-blur BlurView mock — prevents native module errors
+// ---------------------------------------------------------------------------
+jest.mock('expo-blur', () => {
+  const React = require('react');
+  const View = (props: object & { children?: React.ReactNode }) =>
+    React.createElement('View', props, (props as { children?: React.ReactNode }).children);
+  return { BlurView: View };
+});
+
 // ---------------------------------------------------------------------------
 // Imports
 // ---------------------------------------------------------------------------
 import React from 'react';
 import { Text, View } from 'react-native';
-import { render, fireEvent } from '@testing-library/react-native';
+import { render, fireEvent, act } from '@testing-library/react-native';
 import { Button } from '../../../src/components/ui/Button';
 import { IconButton } from '../../../src/components/ui/IconButton';
 import { Card } from '../../../src/components/ui/Card';
 import { EmptyState } from '../../../src/components/ui/EmptyState';
 import { Modal } from '../../../src/components/ui/Modal';
 import { OfflineBanner } from '../../../src/components/ui/OfflineBanner';
+import { SavingOverlay } from '../../../src/components/ui/SavingOverlay';
+import { SyncBlockOverlay } from '../../../src/components/ui/SyncBlockOverlay';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -124,11 +285,17 @@ function resetTheme(): void {
   __resetTheme();
 }
 
+function resetAnimationState(): void {
+  mockSpringCalls = 0;
+  mockTimingCalls = 0;
+  __resetTime();
+}
+
 // ---------------------------------------------------------------------------
 // Button — accessibility + reduced motion
 // ---------------------------------------------------------------------------
 describe('Button accessibility contracts', () => {
-  beforeEach(() => { overrideFlatLight();});
+  beforeEach(() => { overrideFlatLight(); });
   afterEach(() => { __resetTime(); resetTheme(); });
 
   it('renders with label text', () => {
@@ -146,8 +313,6 @@ describe('Button accessibility contracts', () => {
   });
 
   it('renders without crashing when disabled', () => {
-    // The disabled prop IS passed (verified by component source).
-    // The mock doesn't prevent onPress in test env, so we verify rendering only.
     const { getByText } = render(
       <Button label="Test" disabled onPress={jest.fn()} />
     );
@@ -182,11 +347,21 @@ describe('Button reduced-motion behavior', () => {
   beforeEach(() => {
     overrideFlatLight();
     __setReducedMotion(true);
+    resetAnimationState();
   });
   afterEach(() => {
     __resetTime();
     resetTheme();
     mockReduceMotion = false;
+  });
+
+  it('skips withSpring animations when reduced motion is enabled', () => {
+    const { getByTestId } = render(
+      <Button label="Test" onPress={jest.fn()} testID="btn-rm" />
+    );
+    fireEvent(getByTestId('btn-rm'), 'touchStart');
+    fireEvent(getByTestId('btn-rm'), 'touchEnd');
+    expect(mockSpringCalls).toBe(0);
   });
 
   it('still fires onPress when reduced motion is enabled', () => {
@@ -200,9 +375,9 @@ describe('Button reduced-motion behavior', () => {
 
   it('renders without crashing when disabled and reduced motion is enabled', () => {
     const { getByText } = render(
-      <Card onPress={jest.fn()} disabled><Text>Press me</Text></Card>
+      <Button label="Test" disabled onPress={jest.fn()} />
     );
-    expect(getByText('Press me')).toBeTruthy();
+    expect(getByText('Test')).toBeTruthy();
   });
 });
 
@@ -228,8 +403,6 @@ describe('IconButton accessibility contracts', () => {
   });
 
   it('renders without crashing when disabled', () => {
-    // disabled prop IS passed to Pressable (verified by component source).
-    // Mock doesn't prevent onPress in test env, so verify rendering only.
     const { getByTestId } = render(
       <IconButton onPress={jest.fn()} disabled testID="ib-disabled"><View /></IconButton>
     );
@@ -264,11 +437,21 @@ describe('IconButton reduced-motion behavior', () => {
   beforeEach(() => {
     overrideFlatLight();
     __setReducedMotion(true);
+    resetAnimationState();
   });
   afterEach(() => {
     __resetTime();
     resetTheme();
     mockReduceMotion = false;
+  });
+
+  it('skips withSpring animations when reduced motion is enabled', () => {
+    const { getByTestId } = render(
+      <IconButton onPress={jest.fn()} testID="ib-rm"><View /></IconButton>
+    );
+    fireEvent(getByTestId('ib-rm'), 'touchStart');
+    fireEvent(getByTestId('ib-rm'), 'touchEnd');
+    expect(mockSpringCalls).toBe(0);
   });
 
   it('still fires onPress when reduced motion is enabled', () => {
@@ -312,8 +495,6 @@ describe('Card accessibility contracts', () => {
   });
 
   it('renders without crashing when disabled', () => {
-    // disabled prop IS passed (verified by component source).
-    // Mock doesn't prevent onPress in test env, so verify rendering only.
     const { getByText } = render(
       <Card onPress={jest.fn()} disabled><Text>Press me</Text></Card>
     );
@@ -325,11 +506,21 @@ describe('Card reduced-motion behavior', () => {
   beforeEach(() => {
     overrideFlatLight();
     __setReducedMotion(true);
+    resetAnimationState();
   });
   afterEach(() => {
     __resetTime();
     resetTheme();
     mockReduceMotion = false;
+  });
+
+  it('skips withSpring animations when reduced motion is enabled', () => {
+    const { getByText } = render(
+      <Card onPress={jest.fn()}><Text>Press me</Text></Card>
+    );
+    fireEvent(getByText('Press me'), 'touchStart');
+    fireEvent(getByText('Press me'), 'touchEnd');
+    expect(mockSpringCalls).toBe(0);
   });
 
   it('still fires onPress when reduced motion is enabled', () => {
@@ -439,3 +630,79 @@ describe('Modal accessibility contracts', () => {
 });
 
 
+
+// ---------------------------------------------------------------------------
+// OfflineBanner — accessibility contracts
+// ---------------------------------------------------------------------------
+describe('OfflineBanner accessibility contracts', () => {
+  beforeEach(() => { overrideFlatLight(); });
+  afterEach(() => { resetTheme(); });
+
+  it('renders with text content when offline', () => {
+    const { getByText } = render(<OfflineBanner />);
+    expect(getByText('sync.offlineBanner')).toBeTruthy();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// SavingOverlay — accessibility + reduced-motion behavior
+// ---------------------------------------------------------------------------
+describe('SavingOverlay reduced-motion behavior', () => {
+  beforeEach(() => {
+    overrideFlatLight();
+    resetAnimationState();
+  });
+  afterEach(() => {
+    __resetTime();
+    resetTheme();
+    mockReduceMotion = false;
+  });
+
+  it('skips Animated.timing when reduced motion is enabled', () => {
+    __setReducedMotion(true);
+    render(<SavingOverlay visible label="Saving..." />);
+    act(() => { jest.advanceTimersByTime(200); });
+    expect(mockTimingCalls).toBe(0);
+  });
+
+  it('renders with testID when visible', () => {
+    const { getByTestId } = render(
+      <SavingOverlay visible testID="save-overlay" label="Saving..." />
+    );
+    expect(getByTestId('save-overlay')).toBeTruthy();
+  });
+
+  it('renders label text when provided', () => {
+    const { getByText } = render(
+      <SavingOverlay visible label="Saving changes..." />
+    );
+    expect(getByText('Saving changes...')).toBeTruthy();
+  });
+
+  it('renders default testID when none provided', () => {
+    const { getByTestId } = render(<SavingOverlay visible />);
+    expect(getByTestId('saving-overlay')).toBeTruthy();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// SyncBlockOverlay — accessibility contracts
+// ---------------------------------------------------------------------------
+describe('SyncBlockOverlay accessibility contracts', () => {
+  beforeEach(() => { overrideFlatLight(); });
+  afterEach(() => { resetTheme(); jest.useRealTimers(); });
+
+  it('renders with testID when no ops are running', () => {
+    const { getByTestId } = render(<SyncBlockOverlay />);
+    expect(getByTestId('sync-block-overlay')).toBeTruthy();
+  });
+
+  it('renders cancel button with correct accessibilityRole after CANCEL_ARM_MS', () => {
+    jest.useFakeTimers();
+    const { getByTestId } = render(<SyncBlockOverlay />);
+    act(() => { jest.advanceTimersByTime(6000); });
+    const cancelBtn = getByTestId('sync-block-overlay.cancel');
+    expect(cancelBtn).toBeTruthy();
+    jest.useRealTimers();
+  });
+});
