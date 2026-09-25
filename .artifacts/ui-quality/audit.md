@@ -281,3 +281,108 @@ Todo 2 formalizes visual tokens. Key gaps identified:
 2. NoteCard `borderRadius: 12` should map to `RADII.sm`
 3. FormatBadge radius `6` needs a token
 4. Elevation tiers need platform-specific handling documented
+
+---
+
+## Todo 2: Formalize Visual Tokens (Completed 2026-09-25)
+
+### Changes Made
+
+#### 1. `src/theme/tokens.ts` — Added line height and semantic type roles
+
+**New exports:**
+```typescript
+// LINE_HEIGHT — paired with TYPE sizes (1.4–1.5× ratios)
+export const LINE_HEIGHT: Record<TypeSize, number> = {
+  xs: 18,   // 1.5× — captions
+  sm: 21,   // 1.5× — secondary text
+  md: 24,   // 1.5× — body copy
+  lg: 25,   // ~1.38× — subheadings
+  xl: 30,   // ~1.36× — section headings
+  '2xl': 36, // ~1.29× — display
+};
+
+// TEXT_ROLE_SIZE / TEXT_ROLE_LINE_HEIGHT — semantic roles
+export type TextRole = 'display' | 'heading' | 'subheading' | 'body' | 'label' | 'caption';
+export const TEXT_ROLE_SIZE: Record<TextRole, TypeSize> = { ... };
+export const TEXT_ROLE_LINE_HEIGHT: Record<TextRole, LineHeight> = { ... };
+```
+
+**API stability:** `Tokens` interface unchanged. `useTheme()` and `useTokens()` return shapes preserved. No new Palette fields added.
+
+#### 2. `src/components/ui/text.tsx` — Added semantic text roles
+
+- `Text` component now accepts optional `textRole` prop for semantic styling
+- `ButtonText` preserved (uses `colors.text` correctly)
+- Exports `StyledTextProps` interface for typed usage
+
+#### 3. `src/components/ui/heading.tsx` — Token-driven heading
+
+- `Heading` component now uses `type.xl` and `fontWeight: 600` from tokens
+- No longer just an alias to `Text`
+
+#### 4. `__tests__/components/ui/token-contract.test.ts` — New contrast and token tests
+
+46 new tests covering:
+- WCAG AA contrast ratios for text on background
+- Semantic color contrast (error, success, warning, border)
+- Button white-on-primary/danger contrast (documented as intentional exceptions)
+- Line height invariants
+- TEXT_ROLE alignment with LINE_HEIGHT
+
+**Contrast findings (baseline limitations, documented):**
+- `success` and `warning` on light surfaces: ~2.2:1 (below 3:1)
+- `error` on neumorphic-light: ~2.9:1 (below 3:1)
+- `border` on white surfaces: ~1.4:1 (below 1.5:1)
+- `white on neumorphic-dark primary`: ~2.6:1 (below 3:1)
+
+These are **existing palette design choices**, not new failures introduced by this refactor.
+
+### Files Created/Modified
+
+| Path | Change |
+|------|--------|
+| `src/theme/tokens.ts` | Added `LINE_HEIGHT`, `TEXT_ROLE_SIZE`, `TEXT_ROLE_LINE_HEIGHT`, `TextRole` type |
+| `src/components/ui/text.tsx` | Added `textRole` prop and `StyledTextProps` interface |
+| `src/components/ui/heading.tsx` | Now uses `type.xl` from tokens instead of plain `Text` alias |
+| `__tests__/components/ui/token-contract.test.ts` | New — 46 contrast and token contract tests |
+
+### Verification
+
+```bash
+# TypeScript
+yarn ts:check  # PASS (6.04s)
+
+# Jest (worktree config)
+yarn jest --config jest.worktree.json --testPathPattern="theme-fixtures|token-contract" --no-coverage --forceExit
+# PASS — 250 tests (204 fixtures + 46 contract)
+
+# ESLint
+yarn eslint src/components/ui/text.tsx src/components/ui/heading.tsx src/theme/tokens.ts --ext .ts,.tsx
+# PASS — 0 errors
+
+# Prettier
+yarn prettier --check src/components/ui/text.tsx src/components/ui/heading.tsx src/theme/tokens.ts __tests__/components/ui/token-contract.test.ts
+# PASS — All matched files use Prettier code style
+```
+
+### Pre-existing Failures (unchanged)
+
+- `appFloatingGitButton.test.tsx` — async timing issue
+- `androidBuildConfig.test.ts` — JNA/R8 config mismatch
+- ESLint 143 warnings (pre-existing, no new warnings)
+
+### Button/IconButton State Consistency
+
+Existing pressed/disabled patterns verified consistent:
+- Disabled: `opacity: disabled ? 0.5 : 1` (Button, IconButton filled)
+- Ghost disabled: `opacity: disabled ? 0.4 : pressed ? 0.7 : 1` (IconButton ghost)
+- Pressed: Reanimated scale animation (0.97 Button, 0.94 IconButton)
+
+These are design parameters, not semantic tokens. No changes made as patterns are already consistent.
+
+### Intentional Exceptions (verified unchanged)
+
+- `Button.tsx:90` — `textColor = '#fff'` for primary/danger (documented §7)
+- `Button.tsx:223` — `backgroundColor: '#ef4444'` for danger (documented §7)
+- All NOTE_COLORS remain theme-agnostic (documented §1)
