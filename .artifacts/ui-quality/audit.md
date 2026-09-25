@@ -1,0 +1,283 @@
+# UI Quality Audit — Todo 1 Baseline
+
+> Generated: 2026-09-25
+> Branch: chore/ui-quality-upgrade-todo1
+> Scope: borderRadius, spacing, typography, raw colors, accessibility props, intentional exceptions
+
+## Summary
+
+This audit inventories hardcoded visual values across `src/components/` and `src/screens/` that bypass the existing token system (`RADII`, `SPACING`, `TYPE`, `Palette`). It also documents intentional exceptions that must not be refactored away.
+
+**No new token family or ThemeContext field is invented.** All findings use the existing `RADII`/`SPACING`/`TYPE`/`Palette` vocabulary.
+
+---
+
+## Token System Reference
+
+### RADII (src/theme/tokens.ts)
+```
+sm → 12    md → 18    lg → 24    pill → 999
+```
+No other radius values exist in the token file.
+
+### SPACING (src/theme/tokens.ts)
+```
+1 → 4    2 → 8    3 → 12    4 → 16    5 → 20    6 → 24    8 → 32
+```
+
+### TYPE (src/theme/tokens.ts)
+```
+xs → 12    sm → 14    md → 16    lg → 18    xl → 22    2xl → 28
+```
+
+### Palette Fields (17 keys)
+`bg`, `surface`, `highlight`, `shadow`, `text`, `textSecondary`, `accent`, `accentMuted`, `error`, `success`, `warning`, `background`, `surfaceSecondary`, `primary`, `border`, `card`, `elevated`
+
+---
+
+## Intentional Exceptions
+
+The following are **documented intentional exceptions** and must NOT be refactored:
+
+### 1. NOTE_COLORS — theme-agnostic note labels
+**File:** `src/theme/tokens.ts:113-122`
+```
+red: '#ef4444', orange: '#f97316', yellow: '#eab308',
+green: '#22c55e', blue: '#3b82f6', purple: '#8b5cf6',
+pink: '#ec4899', gray: '#6b7280'
+```
+These are user-assignable note color labels, intentionally theme-agnostic — same hex in light and dark. They render as card border accents in `NoteCard` and as swatches in `ColorPicker`. **Do not make these theme-aware.**
+
+### 2. Graph node colors — fixed semantic mapping
+**File:** `src/screens/GraphViewScreen.tsx:302-309`
+```typescript
+'#ef4444' '#f97316' '#eab308' '#22c55e' '#3b82f6'
+'#a855f7' '#ec4899' '#6b7280'
+```
+Fixed color mapping for graph visualization nodes. These are not theme tokens — they map to note label colors for visual consistency in the graph view.
+
+### 3. HALO_COLOR — floating button halo
+**File:** `src/components/git/gitButtonGeometry.ts:38`
+```typescript
+const HALO_COLOR = '#3b82f6'; // tailwind blue-500
+```
+Intentional constant for the floating git button halo ring. Documented inline.
+
+### 4. FloatingGitButton status colors
+**File:** `src/components/git/FloatingGitButton.tsx:95-105`
+- `#ffffff` — white (clean working tree indicator)
+- `#f59e0b` — amber (unpushed/uncommitted status)
+Status colors for git state. These are intentional and documented inline.
+
+### 5. VideoViewer background
+**File:** `src/screens/VideoViewerScreen.tsx:111,161`
+```typescript
+backgroundColor: '#000'
+```
+Intentional — video players use pure black background for contrast.
+
+### 6. AppLoadingView splash colors
+**File:** `src/components/ui/AppLoadingView.tsx:18,26`
+```typescript
+backgroundColor: isDark ? '#0E0E0E' : '#ffffff'
+ActivityIndicator color: isDark ? '#ffffff' : '#007AFF'
+```
+Splash screen activity indicator. Intentional static colors for the loading screen before theme is resolved.
+
+### 7. Primary/danger button text — white contrast
+**File:** `src/components/ui/Button.tsx:90,223`
+```typescript
+const textColor = variant === 'primary' || variant === 'danger' ? '#fff' : colors.text
+// variant="danger" → backgroundColor: '#ef4444'
+```
+Intentional: primary and danger buttons use white text on colored backgrounds for WCAG contrast. The danger background `#ef4444` is a semantic red.
+
+### 8. Platform-specific shadow semantics
+**File:** `src/components/NoteCard.tsx:179-188`
+```typescript
+ios: { shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 }
+android: { elevation: 3 }
+```
+Platform-specific shadows — iOS uses shadow props, Android uses elevation. This is correct platform-specific behavior.
+
+### 9. Modal overlay opacity
+**File:** `src/components/ui/Modal.tsx:94,99`
+```typescript
+backgroundColor: 'rgba(0,0,0,0.18)'
+```
+Intentional fixed overlay opacity for modal backdrop.
+
+### 10. Toggle thumb geometry
+**File:** `src/components/ui/Toggle.tsx:15-17`
+```typescript
+const TRACK_WIDTH = 52;
+const TRACK_HEIGHT = 30;
+const THUMB = 22;
+```
+Fixed pixel geometry for the toggle track and thumb. These are not semantic tokens but are internal to the Toggle component's implementation.
+
+### 11. ScreenHeader Android blur tint
+**File:** `src/components/ui/ScreenHeader.tsx:98`
+```typescript
+backgroundColor: isDark ? 'rgba(30,30,30,0.85)' : 'rgba(255,255,255,0.85)'
+```
+Android uses semi-transparent overlay instead of BlurView.
+
+---
+
+## Unintentional Hardcoded Values — Scope for Later Todos
+
+### borderRadius not using RADII
+
+The following components have numeric `borderRadius` values that could use `RADII` tokens:
+
+| File | Value | Suggested Token |
+|------|-------|----------------|
+| `src/components/NoteCard.tsx:175` | `12` | `RADII.sm` |
+| `src/components/NoteCard.tsx:206` | `10` | (no match — add `sm` = 10?) |
+| `src/components/NoteCard.tsx:250` | `6` | (no match) |
+| `src/components/NoteCard.tsx:269` | `12` | `RADII.sm` |
+| `src/components/TagChips.tsx:77` | `10` | (no match) |
+| `src/components/home/DailyQuoteCard.tsx` | multiple | — |
+| `src/components/home/BentoTile.tsx` | multiple (12, 11, 6, 10) | — |
+| `src/components/canvas/AcceptDiscardBar.tsx` | multiple (8, 4, 18, 6) | — |
+| `src/components/ai/ChatMessageBubble.tsx` | multiple (12, 2, 8, 10) | — |
+| `src/components/todos/TodoCard.tsx` | multiple (12, 5, 10) | — |
+| `src/components/editor/NoteEditorForm.tsx` | multiple (10, 16) | — |
+
+**Assessment:** `RADII` has `sm=12, md=18, lg=24, pill=999`. Many values like `6`, `10`, `11` have no matching token. A future token (`xs` or a `RADII` extension) would be needed to replace these.
+
+### Raw colors not using Palette tokens
+
+| File | Value | Category |
+|------|-------|----------|
+| `src/components/ui/ErrorBoundary.tsx:64,70,75` | `'#333'`, `'#5b7cec'`, `'#fff'` | Error state — intentional fallback |
+| `src/components/ui/AppLoadingView.tsx:18,26` | `'#0E0E0E'`, `'#ffffff'`, `'#007AFF'` | Splash only — intentional |
+| `src/components/home/BentoTile.tsx:208` | `'#FFFFFF'` | Thumbnail wrap |
+| `src/components/notes/NotesFilterModal.tsx:421` | `'#fff'` | Apply button text |
+| `src/components/git/HoldToPushRing.tsx:69` | `'#ffffff'` | Ring fill |
+| `src/components/git/ConflictRouteBanner.tsx:30,41` | `'#d97706'`, `'#6e6e73'` | Conflict banner icons |
+| `src/components/git/UnpushedCommitsModal.tsx:74,80` | `'#3b82f6'`, `'#6e6e73'` | Icon colors |
+| `src/components/git/GitErrorBanner.tsx:43,52` | `'#e07a7a'`, `'#6e6e73'` | Error/warning icons |
+| `src/screens/HomeScreen.tsx:312,333,410,414` | `'#FFFFFF'` | Icon/text on colored backgrounds |
+| `src/screens/CalendarScreen.tsx:126,140` | `'#FFFFFF'` | Calendar day background |
+| `src/screens/OnboardingScreen.tsx:182` | `'#FF3B30'` | Error text |
+| `src/screens/ExploreConflictScreen.tsx:109,150` | `'#fff'` | Text on colored background |
+| `src/screens/HomeScreen.tsx` | `'#FFFFFF'` | HomeScreen icon colors |
+
+### fontSize not using TYPE tokens
+
+376 instances across 77 files. Most are in-renderer content (code blocks, chat bubbles, structured data) rather than shared UI chrome. Key files needing attention in later todos:
+
+- `src/components/StructuredRenderer.tsx` — code/prose rendering
+- `src/components/ai/ChatMessageBubble.tsx` — chat content
+- `src/components/canvas/CanvasEditorContent.tsx` — canvas annotations
+- `src/components/editor/NoteViewer.tsx` — rendered markdown
+
+### Spacing (gap/padding/margin)
+
+228 instances across 70 files. Many are in complex-renderer components (canvas, structured renderer, chat) where precise control is needed. The shared UI components (`Surface`, `Card`, `Button`, `Group`, `ScreenHeader`) mostly use `spacing[]` correctly.
+
+---
+
+## Accessibility Props — Existing Patterns
+
+The codebase already uses accessibility props on interactive elements:
+
+| Pattern | Example |
+|---------|---------|
+| `accessibilityRole="button"` | Button, IconButton, Card, TabBar tabs |
+| `accessibilityLabel` | All icon-only controls, TabBar tabs |
+| `accessibilityState={selected: true}` | TabBar active tab |
+| `accessibilityRole="progressbar"` | AppLoadingView |
+| `importantForAccessibility="no-hide-descendants"` | Modal backdrop (BlurView) |
+| `accessibilityElementsHidden` | Modal backdrop (BlurView) |
+
+**Gap:** IconButton has `accessibilityLabel` but ghost variant passes it to Pressable while non-ghost passes it to Surface — verified correct. No missing role/label on shared primitives found.
+
+---
+
+## Fixture Coverage
+
+The deterministic fixture test (`__tests__/components/ui/theme-fixtures.test.tsx`) covers:
+
+| Fixture | Surface | Card | Button | IconButton | Chip | Toggle | EmptyState | Input | NoteCard |
+|---------|---------|------|--------|-----------|------|--------|------------|-------|----------|
+| flat-light | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| flat-dark | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| neumorphic-light | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| neumorphic-dark | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+
+Token invariant tests verify:
+- All 17 Palette keys present in all 4 palettes
+- `resolveColors()` maps style×isDark → correct palette
+- `RADII` has sm/md/lg/pill
+- `SPACING` has 1-8
+- `TYPE` has xs/sm/md/lg/xl/2xl
+- All 4 palettes have identical key sets
+
+---
+
+## Pre-existing Failures (recorded baseline)
+
+**Tests:** `yarn jest --no-coverage --forceExit`
+```
+Test Suites: 2 failed, 72 passed, 74 total
+Tests: 3 failed, 792 passed, 795 total
+```
+
+Failed suites:
+1. `__tests__/components/git/appFloatingGitButton.test.tsx` — `expect(mockNavigate).toHaveBeenCalledTimes(2)` — async timing issue
+2. `__tests__/plugins/androidBuildConfig.test.ts` — 2 tests about JNA `Pointer.peer` and `java.awt.Component` R8 rules — config mismatch
+
+**ESLint:** `yarn eslint src --ext .ts,.tsx`
+```
+143 problems (0 errors, 143 warnings)
+```
+All warnings are pre-existing (`@typescript-eslint/no-explicit-any`, `prefer-const`, `@typescript-eslint/no-unused-vars`). No new warnings introduced by fixture files.
+
+**TypeScript:** `yarn ts:check` — clean (8.87s)
+
+---
+
+## Files Created/Modified by Todo 1
+
+| Path | Change |
+|------|--------|
+| `__tests__/components/ui/theme-fixtures.test.tsx` | New — 204 deterministic fixture tests |
+| `.artifacts/ui-quality/audit.md` | New — this audit document |
+| `jest.worktree.json` | Temp — worktree jest config override (not committed to main) |
+
+**Production files modified:** none (Todo 1 is pure baseline/audit)
+
+---
+
+## Verification Fix (2026-09-25)
+
+**Problem:** The root `jest.config.js` has `testPathIgnorePatterns: ['/.worktrees/']` which causes Jest to ignore test files inside `.worktrees/` directories. The fixture test `__tests__/components/ui/theme-fixtures.test.tsx` in the worktree was not discoverable by the standard `yarn jest` command.
+
+**Solution:** Created a minimal `jest.worktree.json` that duplicates the essential fields from the root config (preset, transform, moduleNameMapper, transformIgnorePatterns, setupFiles) but overrides `testPathIgnorePatterns` to use a negative lookahead pattern that allows the `ui-quality-upgrade` worktree while still ignoring other worktrees.
+
+**Reproducible command (run from worktree root):**
+```bash
+yarn jest --config jest.worktree.json --testPathPattern=theme-fixtures --no-coverage --forceExit
+```
+
+**Result:**
+```
+Test Suites: 1 passed, 1 total
+Tests:       204 passed, 204 total
+Time:        1.419 s
+```
+
+**Cleanup:** `jest.worktree.json` is a temporary artifact kept in the worktree for reproducibility. It is NOT committed to the feature branch or main. After the PR is merged, this file should be removed from the worktree.
+
+---
+
+## Next Steps (Todo 2 scope)
+
+Todo 2 formalizes visual tokens. Key gaps identified:
+1. `RADII` needs `xs=6` or `RADII` extension for values like `6`, `10`, `11` found in components
+2. NoteCard `borderRadius: 12` should map to `RADII.sm`
+3. FormatBadge radius `6` needs a token
+4. Elevation tiers need platform-specific handling documented
