@@ -102,8 +102,8 @@ import { Button } from '../../../src/components/ui/Button';
 import { IconButton } from '../../../src/components/ui/IconButton';
 import { Card } from '../../../src/components/ui/Card';
 import { EmptyState } from '../../../src/components/ui/EmptyState';
-import { OfflineBanner } from '../../../src/components/ui/OfflineBanner';
 import { Modal } from '../../../src/components/ui/Modal';
+import { OfflineBanner } from '../../../src/components/ui/OfflineBanner';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -437,3 +437,5 @@ describe('Modal accessibility contracts', () => {
     expect(getByText('Cannot dismiss')).toBeTruthy();
   });
 });
+
+
