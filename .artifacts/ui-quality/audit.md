@@ -386,3 +386,92 @@ These are design parameters, not semantic tokens. No changes made as patterns ar
 - `Button.tsx:90` — `textColor = '#fff'` for primary/danger (documented §7)
 - `Button.tsx:223` — `backgroundColor: '#ef4444'` for danger (documented §7)
 - All NOTE_COLORS remain theme-agnostic (documented §1)
+
+---
+
+## Todo 4: Home Dashboard Hierarchy (commit 45a34a63)
+
+### Evidence Status
+
+**Screenshot blocker (documented, not fixable without native rebuild):**
+
+The `ios/` directory in this worktree contains only `Podfile` and `Podfile.properties.json` — no `.xcodeproj` or `.xcworkspace`. This is an Expo managed workflow project. Generating the iOS native directory requires `npx expo prebuild`, which creates native iOS project files from `app.json`/`package.json`. Without a checked-in `ios/` directory (or an existing derived-data build), the worktree cannot be launched directly on the simulator from the current state.
+
+The installed GitNotēs app (`com.xaventra.gitnotes`) on the booted simulator was built from `origin/main`, not from this worktree's `chore/ui-quality-upgrade-todo1` branch. A screenshot of that installed app would show pre-change behavior only.
+
+**Screenshot captured:** `home-flat-light.png` — **WITHDRAWN as evidence**. This is a screenshot of the iOS SpringBoard (home screen), not the GitNotēs app. It does not prove or disprove the HomeScreen refactor.
+
+**Acceptable evidence for this worktree:**
+- ts:check — clean (6.57s)
+- 11 HomeTile tests — all passing
+- 57 combined tests (HomeTile + token-contract) — all passing
+- ESLint on all touched home files — 0 errors
+- Prettier — clean
+- Code diff: `HomeScreen.tsx` reduced by ~84 lines of inline tile Pressables; new `HomeTile.tsx` exports a typed shared component
+
+### What Changed
+
+**New file:** `src/components/home/HomeTile.tsx`
+- Typed `HomeTileVariant = 'primary' | 'secondary' | 'accent'`
+- `HOME_TILE_HEIGHT` and `HOME_TILE_RADIUS` export maps
+- Shared tile composition: badge, title, subtitle, decoration, pressed transform
+- `contentPosition` prop (`'flex-end'` | `'space-between'`)
+- `titleNode` / `subtitleNode` overrides for rich formatting
+- Pressed state: `opacity: 0.92, scale: 0.985` (consistent across variants)
+- Intentional white-on-colored-background preserved (primary/accent variants)
+
+**Modified:** `src/screens/HomeScreen.tsx`
+- `HomeTile` import added
+- 5 inline `Pressable` tile blocks replaced with `HomeTile` components
+- All 6 testIDs preserved: `home.button.{create-note,open-journal,open-calendar,open-templates,navigate,open-thought-dump}`
+- All navigation paths unchanged
+- Pro gate calls unchanged (`handleOpenTemplates`, thought-dump onPress)
+- Long-press on create-note → format picker preserved
+- Color picker, context menu, share, delete, toggle-pin callbacks unchanged
+
+**New test file:** `__tests__/components/home/HomeTile.test.tsx`
+- 11 tests: render, press, long-press, variant, titleNode, subtitleNode, showTabletDecoration, height override, contentPosition, disabled
+- Uses ThemeContext mock (no native dependency)
+
+### Verification
+
+```bash
+yarn ts:check
+# Done in 6.57s — 0 errors
+
+yarn eslint src/screens/HomeScreen.tsx src/components/home/HomeTile.tsx --ext .ts,.tsx
+# Done in 1.74s — 0 errors
+
+yarn prettier --check src/screens/HomeScreen.tsx src/components/home/HomeTile.tsx
+# All matched files use Prettier code style!
+
+node --experimental-vm-modules node_modules/.bin/jest \
+  __tests__/components/home/HomeTile.test.tsx \
+  __tests__/components/ui/token-contract.test.ts \
+  --no-coverage --forceExit --testPathIgnorePatterns 'node_modules/'
+# Test Suites: 2 passed, 2 total
+# Tests: 57 passed, 57 total
+```
+
+### Preserved Invariants
+
+| Invariant | Status |
+|-----------|--------|
+| All 6 dashboard tile testIDs | Preserved |
+| Navigation to NoteEditor (create, journal, open) | Preserved |
+| Navigation to Calendar | Preserved |
+| Navigation to CanvasList | Preserved |
+| Navigation to ThoughtDump (Pro-gated) | Preserved |
+| Pro gate on templates | Preserved |
+| Long-press create-note → format picker | Preserved |
+| Color picker on recent item | Preserved |
+| Context menu (share, pin, delete) | Preserved |
+| requireRepo guards | Preserved |
+| DailyQuoteCard states (loading/error/refresh) | Preserved (unchanged) |
+| BentoRecent, QuickAccessShelf | Preserved (unchanged) |
+| BentoTile | Preserved (unchanged) |
+
+### Intentional Exceptions Verified
+
+- `home.button.open-thought-dump` — white-on-accent (`rgba(255,255,255,0.2)` badge bg, `#FFFFFF` icon/text) — preserved as intentional
+- `home.button.create-note` / `open-journal` — white badge on primary — preserved as intentional
