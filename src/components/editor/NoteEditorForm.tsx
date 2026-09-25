@@ -2,7 +2,7 @@ import React, { useRef } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-import { useTheme } from '../../contexts/ThemeContext';
+import { useTheme, useTokens } from '../../contexts/ThemeContext';
 import { NoteFormat } from '../../models/Note';
 import { HapticService } from '../../utils/haptics';
 import { canPersistNoteTags } from '../../utils/noteTagSupport';
@@ -48,20 +48,21 @@ export function NoteEditorForm({
   onContentChange,
 }: NoteEditorFormProps) {
   const { colors } = useTheme();
+  const { spacing, type } = useTokens();
   const bodyRef = useRef<MarkdownEditorHandle>(null);
 
   return (
     <View style={styles.container}>
     <ScrollView
       style={styles.scrollView}
-      contentContainerStyle={styles.editorContent}
+      contentContainerStyle={[styles.editorContent, { paddingBottom: 120 }]}
       keyboardShouldPersistTaps="handled"
       // Keep the focused body TextInput visible above the keyboard +
       // sticky format toolbar (#727) — without this the multiline input
       // sits behind the keyboard and users type blind on iOS.
       automaticallyAdjustKeyboardInsets
     >
-      <View testID="note-editor-form.picker.repo" style={styles.gitContextContainer}>
+      <View testID="note-editor-form.picker.repo" style={[styles.gitContextContainer, { paddingHorizontal: spacing[4], paddingTop: spacing[3], paddingBottom: spacing[5] }]}>
         <GitContextPicker
           repo={repo}
           entityType="note"
@@ -71,7 +72,7 @@ export function NoteEditorForm({
 
       <TextInput
         testID="note-editor-form.input.title"
-        style={[styles.titleInput, { color: colors.text, borderBottomColor: colors.border }]}
+        style={[styles.titleInput, { color: colors.text, borderBottomColor: colors.border, fontSize: type.xl, paddingHorizontal: spacing[4], paddingVertical: spacing[4] }]}
         placeholder="Note Title"
         placeholderTextColor={colors.textSecondary}
         value={title}
@@ -90,7 +91,7 @@ export function NoteEditorForm({
         accessibilityRole="button"
         style={[
           styles.folderSelector,
-          { backgroundColor: colors.surfaceSecondary, borderColor: colors.border },
+          { backgroundColor: colors.surfaceSecondary, borderColor: colors.border, marginHorizontal: spacing[4], marginTop: spacing[3], marginBottom: spacing[1], paddingHorizontal: spacing[3], paddingVertical: spacing[3] },
           !repo && styles.folderSelectorDisabled,
         ]}
         onPress={() => {
@@ -118,7 +119,7 @@ export function NoteEditorForm({
         </Text>
       ) : null}
 
-      <View style={[styles.formatRow, { borderBottomColor: colors.border }]}> 
+      <View style={[styles.formatRow, { borderBottomColor: colors.border, paddingHorizontal: spacing[4], paddingVertical: spacing[2] + 1 }]}>
         <Ionicons name="document-outline" size={18} color={colors.textSecondary} />
         <Text style={[styles.formatRowLabel, { color: colors.textSecondary }]}>Format</Text>
         <View style={styles.formatOptions}>
@@ -149,14 +150,14 @@ export function NoteEditorForm({
       {canPersistNoteTags(noteFormat) ? <View testID="note-editor-form.input.tags"><TagInput tags={tags} onTagsChange={onTagsChange} /></View> : null}
 
       {canvasJsonRefs.length > 0 ? (
-        <View style={styles.canvasChipsRow}>
+        <View style={[styles.canvasChipsRow, { paddingHorizontal: spacing[4], paddingTop: spacing[2] }]}>
           <Text style={[styles.canvasChipsLabel, { color: colors.textSecondary }]}>Canvases</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.canvasChipsScroll}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.canvasChipsScroll, { paddingRight: spacing[4] }]}>
             {canvasJsonRefs.map((uri, index) => (
               <TouchableOpacity
                 key={uri}
                 testID="note-editor-form.button.edit-canvas"
-                style={[styles.canvasChip, { borderColor: colors.border, backgroundColor: colors.surfaceSecondary }]}
+                style={[styles.canvasChip, { borderColor: colors.border, backgroundColor: colors.surfaceSecondary, marginRight: spacing[2] }]}
                 onPress={() => onEditCanvasJson(uri)}
                 activeOpacity={0.7}
               >
@@ -196,29 +197,18 @@ export function NoteEditorForm({
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scrollView: { flex: 1 },
-  editorContent: { paddingBottom: 120 },
+  editorContent: {},
   stickyToolbar: {
     borderTopWidth: StyleSheet.hairlineWidth,
   },
-  gitContextContainer: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 24,
-  },
+  gitContextContainer: {},
   titleInput: {
-    fontSize: 24,
     fontWeight: '600',
-    padding: 16,
     borderBottomWidth: 1,
   },
   folderSelector: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginHorizontal: 16,
-    marginTop: 12,
-    marginBottom: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
     borderRadius: 10,
     borderWidth: 1,
     gap: 10,
@@ -244,8 +234,6 @@ const styles = StyleSheet.create({
   formatRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
     borderBottomWidth: 1,
     gap: 8,
   },
@@ -269,11 +257,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     fontFamily: 'monospace',
   },
-  canvasChipsRow: {
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 4,
-  },
+  canvasChipsRow: {},
   canvasChipsLabel: {
     fontSize: 11,
     fontWeight: '600',
@@ -283,7 +267,6 @@ const styles = StyleSheet.create({
   },
   canvasChipsScroll: {
     gap: 8,
-    paddingRight: 16,
   },
   canvasChip: {
     flexDirection: 'row',
@@ -293,7 +276,6 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 16,
     borderWidth: 1,
-    marginRight: 8,
   },
   canvasChipText: {
     fontSize: 13,

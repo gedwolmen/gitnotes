@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '../contexts/ThemeContext';
+import { useTheme, useTokens } from '../contexts/ThemeContext';
 import { Chip, Input } from './ui';
 
 interface TagInputProps {
@@ -20,6 +20,7 @@ export default function TagInput({
   const [inputValue, setInputValue] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const { colors } = useTheme();
+  const { spacing, type } = useTokens();
 
   const tagChipBorderStyle = React.useMemo(
     () => ({
@@ -38,14 +39,14 @@ export default function TagInput({
       setInputValue('');
       setShowSuggestions(false);
     },
-    [tags, onTagsChange, maxTags]
+    [tags, onTagsChange, maxTags],
   );
 
   const handleRemoveTag = useCallback(
     (tagToRemove: string) => {
       onTagsChange(tags.filter((tag) => tag !== tagToRemove));
     },
-    [tags, onTagsChange]
+    [tags, onTagsChange],
   );
 
   const handleInputChange = useCallback((text: string) => {
@@ -61,11 +62,11 @@ export default function TagInput({
 
   const filteredSuggestions = suggestions.filter(
     (suggestion) =>
-      suggestion.toLowerCase().includes(inputValue.toLowerCase()) && !tags.includes(suggestion)
+      suggestion.toLowerCase().includes(inputValue.toLowerCase()) && !tags.includes(suggestion),
   );
 
   return (
-    <View style={[styles.container, { borderTopColor: colors.border }]}>
+    <View style={[styles.container, { borderTopColor: colors.border, paddingTop: spacing[2], paddingHorizontal: spacing[4] }]}>
       <View style={styles.tagsContainer}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tagsScrollView}>
           {tags.map((tag) => (
@@ -94,7 +95,7 @@ export default function TagInput({
       />
 
       {showSuggestions && filteredSuggestions.length > 0 && (
-        <View style={[styles.suggestionsContainer, { backgroundColor: colors.surface }]}>
+        <View style={[styles.suggestionsContainer, { backgroundColor: colors.surface, marginTop: spacing[2], padding: spacing[2], borderRadius: 8 }]}>
           {filteredSuggestions.slice(0, 5).map((suggestion) => (
             <Chip
               key={suggestion}
@@ -108,7 +109,7 @@ export default function TagInput({
       )}
 
       {tags.length >= maxTags && (
-        <Text style={[styles.limitText, { color: colors.error }]}>Maximum {maxTags} tags reached</Text>
+        <Text style={[styles.limitText, { color: colors.error, fontSize: type.xs }]}>Maximum {maxTags} tags reached</Text>
       )}
     </View>
   );
@@ -117,8 +118,6 @@ export default function TagInput({
 const styles = StyleSheet.create({
   container: {
     borderTopWidth: 1,
-    paddingTop: 8,
-    paddingHorizontal: 16,
   },
   tagsContainer: {
     marginBottom: 8,
@@ -140,7 +139,6 @@ const styles = StyleSheet.create({
   },
   suggestionChip: {},
   limitText: {
-    fontSize: 12,
     marginTop: 4,
     textAlign: 'center',
   },

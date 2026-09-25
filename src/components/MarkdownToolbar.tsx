@@ -1,7 +1,7 @@
 import React from 'react';
 import { ScrollView, StyleSheet, TouchableOpacity, Text, View } from 'react-native';
 
-import { useTheme } from '../contexts/ThemeContext';
+import { useTheme, useTokens } from '../contexts/ThemeContext';
 import type { FormatAction } from '../utils/markdownFormatting';
 import { getToolbarButtons } from '../utils/formatToolbarPresets';
 import type { NoteFormat } from '../models/Note';
@@ -16,6 +16,7 @@ type Props = {
 
 export function MarkdownToolbar({ onFormat, format }: Props) {
   const { colors } = useTheme();
+  const { spacing, type, radii } = useTokens();
   const buttons = getToolbarButtons(format);
 
   return (
@@ -24,18 +25,19 @@ export function MarkdownToolbar({ onFormat, format }: Props) {
         horizontal
         showsHorizontalScrollIndicator={false}
         style={styles.container}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingHorizontal: spacing[2], paddingVertical: spacing[1], gap: spacing[1] }]}
       >
         {buttons.map(({ label, action, testID: btnTestID }) => (
           <TouchableOpacity
             key={label}
             testID={btnTestID}
             onPress={() => onFormat(action)}
-            style={[styles.button, { backgroundColor: colors.surfaceSecondary }]}
+            style={[styles.button, { backgroundColor: colors.surfaceSecondary, paddingHorizontal: spacing[2] + 2, paddingVertical: spacing[1] + 1, borderRadius: radii.sm }]}
             accessibilityLabel={label}
             accessibilityRole="button"
+            accessibilityState={{ disabled: false }}
           >
-            <Text style={[styles.buttonText, { color: colors.text }]}>{label}</Text>
+            <Text style={[styles.buttonText, { color: colors.text, fontSize: type.sm, fontWeight: '600' }]}>{label}</Text>
           </TouchableOpacity>
         ))}
       </ScrollView>
@@ -51,17 +53,9 @@ const styles = StyleSheet.create({
   content: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    gap: 4,
   },
-  button: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 6,
-  },
+  button: {},
   buttonText: {
-    fontSize: 14,
     fontWeight: '600',
   },
 });
