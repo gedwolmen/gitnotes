@@ -11,39 +11,24 @@
  * - app.json: Bundle ID and scheme (gitnotes only)
  */
 
-import { existsSync } from 'fs';
-import { join, resolve } from 'path';
+import { resolve } from 'path';
 
 import type {
-  CaptureRequest,
   CaptureResult,
   DryRunResult,
   IOSCaptureRequest,
   AndroidCaptureRequest,
   PreflightResult,
 } from './types';
-import { CaptureError, PreflightError } from './types';
+import { PreflightError } from './types';
 
 import { runPreflight, formatPreflightResult, NodeProcessExecutor } from './preflight';
-import { captureIOS, buildIOSCommands, listIOSDevices } from './ios-simctl';
-import {
-  captureAndroid,
-  buildAndroidCommands,
-  listAndroidDevices,
-  findAPKPath,
-  verifyAPKPath,
-} from './android-adb';
+import { captureIOS, buildIOSCommands } from './ios-simctl';
+import { captureAndroid, buildAndroidCommands, findAPKPath } from './android-adb';
 
 import { OUTPUT_DIRS, type DeviceProfile, type Orientation, type Route } from '../config';
 
-import {
-  generateRunId,
-  createSourceCapture,
-  buildManifest,
-  writeManifest,
-  safeResolveOutputPath,
-  buildDeepLink,
-} from '../manifest';
+import { generateRunId, buildDeepLink } from '../manifest';
 
 // ------------------------------------------------------------------------------------------------
 // Capture Options
@@ -203,7 +188,6 @@ export async function runCapture(options: CaptureOptions = {}): Promise<CaptureR
   const {
     dryRun = false,
     outputDir = OUTPUT_DIRS.captures,
-    overwrite = false,
     skipIOS = false,
     skipAndroid = false,
     executor = new NodeProcessExecutor(),

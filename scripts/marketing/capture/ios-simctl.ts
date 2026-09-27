@@ -13,19 +13,13 @@
 
 import { dirname, resolve } from 'path';
 
-import { mkdirSync, writeFileSync } from 'fs';
+import { mkdirSync } from 'fs';
 
 import type {
   IOSCaptureRequest,
   IOSCaptureResult,
   ProcessExecutor,
   IOSSimulatorDevice,
-} from './types';
-import {
-  CaptureCommandError,
-  DeviceNotFoundError,
-  OutputValidationError,
-  ToolNotFoundError,
 } from './types';
 import { checkIOSDevices } from './preflight';
 
@@ -74,7 +68,7 @@ export async function captureIOS(
 
   if (deviceId === 'booted') {
     // Find booted device
-    const { devices, bootedDevice } = await checkIOSDevices(xcrunPath, executor);
+    const { bootedDevice } = await checkIOSDevices(xcrunPath, executor);
 
     if (!bootedDevice) {
       return {

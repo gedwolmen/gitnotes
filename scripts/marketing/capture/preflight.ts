@@ -17,7 +17,7 @@
  */
 
 import { existsSync } from 'fs';
-import { join, resolve } from 'path';
+import { join } from 'path';
 import { cwd } from 'process';
 
 import type {
@@ -28,7 +28,7 @@ import type {
   ProcessExecutor,
   ExecResult,
 } from './types';
-import { PreflightError, ToolNotFoundError } from './types';
+import { PreflightError } from './types';
 
 // ------------------------------------------------------------------------------------------------
 // Environment Variable Defaults

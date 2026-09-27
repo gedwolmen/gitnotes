@@ -25,7 +25,6 @@ import type {
   ProcessExecutor,
   AndroidEmulatorDevice,
 } from './types';
-import { CaptureCommandError, DeviceNotFoundError, OutputValidationError } from './types';
 import { checkAndroidDevices } from './preflight';
 
 import { ENV_PATHS } from './preflight';
@@ -138,7 +137,7 @@ export async function captureAndroid(
 
   if (!deviceId || deviceId === 'emulator') {
     // Find running emulator
-    const { devices, runningDevice } = await checkAndroidDevices(adbPath, executor);
+    const { runningDevice } = await checkAndroidDevices(adbPath, executor);
 
     if (!runningDevice) {
       return {
@@ -152,7 +151,7 @@ export async function captureAndroid(
     deviceId = runningDevice.serial;
   } else {
     // Verify device exists and is running
-    const { devices, runningDevice } = await checkAndroidDevices(adbPath, executor);
+    const { devices } = await checkAndroidDevices(adbPath, executor);
     const device = devices.find((d) => d.serial === deviceId || d.model?.includes(deviceId));
 
     if (!device || device.state !== 'device') {
