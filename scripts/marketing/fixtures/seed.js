@@ -8,13 +8,14 @@
  * Usage:
  *   node scripts/marketing/fixtures/seed.js --reset    # Reset and reseed
  *   node scripts/marketing/fixtures/seed.js --status  # Show fixture status
- *   node scripts/marketing/fixtures/seed.js --verify  # Verify idempotency
+ *   node scripts/marketing/fixtures/seed.js --verify  # Verify idempotency (byte-identical)
+ *   node scripts/marketing/fixtures/seed.js --capture <route> [--confirm]  # Capture checkpoint
  *
  * Exit codes:
  *   0 - Success
  *   1 - General error
  *   2 - Missing prerequisites
- *   3 - Manual checkpoint required (blocked)
+ *   3 - Manual checkpoint blocked (requires --confirm for graph-view, chat)
  */
 
 // ------------------------------------------------------------------------------------------------
@@ -33,7 +34,13 @@ function fixtureId(seed, suffix) {
 }
 
 // ------------------------------------------------------------------------------------------------
-// Serializers (inlined from types.ts to avoid TS compilation)
+// Deterministic Base Date (fixed for reproducible manifests)
+// ------------------------------------------------------------------------------------------------
+
+const BASE_DATE = '2024-03-15T10:00:00.000Z';
+
+// ------------------------------------------------------------------------------------------------
+// Serializers
 // ------------------------------------------------------------------------------------------------
 
 function serializeNote(note) {
@@ -107,10 +114,8 @@ function serializeChat(thread) {
 }
 
 // ------------------------------------------------------------------------------------------------
-// Fixture Data Generators
+// Fixture Data Generators (all timestamps deterministic)
 // ------------------------------------------------------------------------------------------------
-
-const BASE_DATE = '2024-03-15T10:00:00.000Z';
 
 function createFixtureNotes() {
   return [
@@ -346,13 +351,13 @@ function createRouteCheckpoints(notes, canvas, chatThread) {
       route: 'home',
       deepLink: 'gitnotes://home',
       status: 'automated',
-      capturedAt: new Date().toISOString(),
+      capturedAt: BASE_DATE,
     },
     {
       route: 'notes',
       deepLink: 'gitnotes://notes',
       status: 'automated',
-      capturedAt: new Date().toISOString(),
+      capturedAt: BASE_DATE,
     },
     {
       route: 'note-editor',
@@ -362,27 +367,27 @@ function createRouteCheckpoints(notes, canvas, chatThread) {
       linkedNoteIds: notes.map(function (n) {
         return n.id;
       }),
-      capturedAt: new Date().toISOString(),
+      capturedAt: BASE_DATE,
     },
     {
       route: 'canvas-editor',
       deepLink: 'gitnotes://canvas/' + canvas.id,
       status: 'automated',
       canvasId: canvas.id,
-      capturedAt: new Date().toISOString(),
+      capturedAt: BASE_DATE,
     },
     {
       route: 'todos',
       deepLink: 'gitnotes://home',
       status: 'automated',
-      capturedAt: new Date().toISOString(),
+      capturedAt: BASE_DATE,
       reason: 'No direct deep link - app navigates to Todos tab',
     },
     {
       route: 'explore',
       deepLink: 'gitnotes://explore',
       status: 'automated',
-      capturedAt: new Date().toISOString(),
+      capturedAt: BASE_DATE,
     },
     {
       route: 'graph-view',
@@ -400,7 +405,7 @@ function createRouteCheckpoints(notes, canvas, chatThread) {
   ];
 }
 
-function createFixtureManifest(fixtureId, repoPath, dataPath) {
+function createFixtureManifest(fixtureIdVal, repoPath, dataPath) {
   const notes = createFixtureNotes();
   const todos = createFixtureTodos();
   const canvas = createFixtureCanvas();
@@ -409,8 +414,9 @@ function createFixtureManifest(fixtureId, repoPath, dataPath) {
   const checkpoints = createRouteCheckpoints(notes, canvas, chatThread);
 
   return {
-    fixtureId: fixtureId,
-    generatedAt: new Date().toISOString(),
+    fixtureId: fixtureIdVal,
+    // Deterministic timestamp - same BASE_DATE for all fixture runs
+    generatedAt: BASE_DATE,
     repoPath: repoPath,
     dataPath: dataPath,
     notes: notes,
@@ -432,6 +438,7 @@ const FIXTURE_ROOT = OUTPUT_ROOT + '/fixture-data';
 const REPO_PATH = FIXTURE_ROOT + '/repo';
 const DATA_PATH = FIXTURE_ROOT + '/data';
 const RUNS_PATH = OUTPUT_ROOT + '/runs';
+const MANIFEST_PATH = FIXTURE_ROOT + '/manifest.json';
 
 // ------------------------------------------------------------------------------------------------
 // Node Built-ins
@@ -515,8 +522,12 @@ function initGitRepo(repoPath, userName, userEmail) {
   }
 }
 
-function gitAddCommit(repoPath, message, authorName, authorEmail, files) {
-  const filePaths = Object.keys(files);
+/**
+ * Git commit with DETERMINISTIC timestamp from commit declaration.
+ * Uses the declared timestamp for author/committer dates, not new Date().
+ */
+function gitAddCommit(repoPath, commit) {
+  const filePaths = Object.keys(commit.files);
   for (let i = 0; i < filePaths.length; i++) {
     const filePath = filePaths[i];
     const fullPath = join(repoPath, filePath);
@@ -524,21 +535,22 @@ function gitAddCommit(repoPath, message, authorName, authorEmail, files) {
     if (!existsSync(dir)) {
       mkdirSync(dir, { recursive: true });
     }
-    writeFileSync(fullPath, files[filePath], 'utf8');
+    writeFileSync(fullPath, commit.files[filePath], 'utf8');
   }
 
   execSync('git add .', { cwd: repoPath, stdio: 'pipe' });
 
-  const authorDate = new Date().toISOString();
+  // Use the DECLARED timestamp from commit metadata, not new Date()
+  const authorDate = commit.timestamp;
   const env = {
-    GIT_AUTHOR_NAME: authorName,
-    GIT_AUTHOR_EMAIL: authorEmail,
-    GIT_COMMITTER_NAME: authorName,
-    GIT_COMMITTER_EMAIL: authorEmail,
+    GIT_AUTHOR_NAME: commit.authorName,
+    GIT_AUTHOR_EMAIL: commit.authorEmail,
+    GIT_COMMITTER_NAME: commit.authorName,
+    GIT_COMMITTER_EMAIL: commit.authorEmail,
   };
 
   try {
-    const cmd = 'git commit -m "' + message + '" --date="' + authorDate + '" --allow-empty';
+    const cmd = 'git commit -m "' + commit.message + '" --date="' + authorDate + '" --allow-empty';
     execSync(cmd, { cwd: repoPath, stdio: 'pipe', env: Object.assign({}, process.env, env) });
   } catch {
     // Ignore empty commit errors
@@ -570,7 +582,7 @@ function resetFixtures() {
 }
 
 // ------------------------------------------------------------------------------------------------
-// Seed Notes
+// Seed Functions
 // ------------------------------------------------------------------------------------------------
 
 function seedNotes(manifest) {
@@ -586,10 +598,6 @@ function seedNotes(manifest) {
   logSuccess('Seeded ' + manifest.notes.length + ' notes');
 }
 
-// ------------------------------------------------------------------------------------------------
-// Seed Todos
-// ------------------------------------------------------------------------------------------------
-
 function seedTodos(manifest) {
   log('Seeding fixture todos...');
 
@@ -603,10 +611,6 @@ function seedTodos(manifest) {
   logSuccess('Seeded ' + manifest.todos.length + ' todos');
 }
 
-// ------------------------------------------------------------------------------------------------
-// Seed Canvas
-// ------------------------------------------------------------------------------------------------
-
 function seedCanvas(manifest) {
   log('Seeding fixture canvas...');
 
@@ -617,10 +621,6 @@ function seedCanvas(manifest) {
 
   logSuccess('Seeded 1 canvas');
 }
-
-// ------------------------------------------------------------------------------------------------
-// Seed Chat Thread
-// ------------------------------------------------------------------------------------------------
 
 function seedChatThread(manifest) {
   log('Seeding fixture chat thread...');
@@ -633,10 +633,6 @@ function seedChatThread(manifest) {
   logSuccess('Seeded 1 chat thread');
 }
 
-// ------------------------------------------------------------------------------------------------
-// Seed Git Repository
-// ------------------------------------------------------------------------------------------------
-
 function seedGitRepo(manifest) {
   log('Seeding fixture git repository...');
 
@@ -644,31 +640,62 @@ function seedGitRepo(manifest) {
 
   initGitRepo(REPO_PATH, git.userName, git.userEmail);
 
+  // Use each commit's DECLARED timestamp for git author/committer dates
   for (let i = 0; i < git.commits.length; i++) {
     const commit = git.commits[i];
     if (commit.files) {
-      gitAddCommit(REPO_PATH, commit.message, commit.authorName, commit.authorEmail, commit.files);
+      gitAddCommit(REPO_PATH, commit);
     }
   }
 
   logSuccess('Seeded fixture git repository');
 }
 
-// ------------------------------------------------------------------------------------------------
-// Write Manifest
-// ------------------------------------------------------------------------------------------------
-
 function writeFixtureManifest(manifest) {
-  const manifestPath = FIXTURE_ROOT + '/manifest.json';
-  writeFileSync(manifestPath, JSON.stringify(manifest, null, 2), 'utf8');
-  logSuccess('Fixture manifest written to ' + manifestPath);
+  writeFileSync(MANIFEST_PATH, JSON.stringify(manifest, null, 2), 'utf8');
+  logSuccess('Fixture manifest written to ' + MANIFEST_PATH);
 }
 
 // ------------------------------------------------------------------------------------------------
-// Verify Idempotency
+// Manifest Verification
 // ------------------------------------------------------------------------------------------------
 
-function verifyIdempotency(manifest1, manifest2) {
+function readManifest() {
+  if (!existsSync(MANIFEST_PATH)) {
+    return null;
+  }
+  return JSON.parse(readFileSync(MANIFEST_PATH, 'utf8'));
+}
+
+function verifyManifestByteIdentical(manifest1, manifest2) {
+  const issues = [];
+
+  // Compare stringified JSON directly (byte-identical check)
+  const str1 = JSON.stringify(manifest1);
+  const str2 = JSON.stringify(manifest2);
+
+  if (str1 !== str2) {
+    issues.push('Manifests are not byte-identical');
+    // Additional diagnostic info
+    if (manifest1.fixtureId !== manifest2.fixtureId) {
+      issues.push('  - fixtureId differs');
+    }
+    if (manifest1.generatedAt !== manifest2.generatedAt) {
+      issues.push(
+        '  - generatedAt differs: ' + manifest1.generatedAt + ' vs ' + manifest2.generatedAt,
+      );
+    }
+    const checkpoints1 = JSON.stringify(manifest1.checkpoints);
+    const checkpoints2 = JSON.stringify(manifest2.checkpoints);
+    if (checkpoints1 !== checkpoints2) {
+      issues.push('  - checkpoints differ');
+    }
+  }
+
+  return issues;
+}
+
+function verifyStructuralIdempotency(manifest1, manifest2) {
   const issues = [];
 
   if (manifest1.fixtureId !== manifest2.fixtureId) {
@@ -711,18 +738,16 @@ function verifyIdempotency(manifest1, manifest2) {
 }
 
 // ------------------------------------------------------------------------------------------------
-// Show Status
+// Status Display
 // ------------------------------------------------------------------------------------------------
 
 function showStatus() {
-  const manifestPath = FIXTURE_ROOT + '/manifest.json';
+  const manifest = readManifest();
 
-  if (!existsSync(manifestPath)) {
+  if (!manifest) {
     logWarn('No fixture manifest found. Run with --reset first.');
     return;
   }
-
-  const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
 
   console.log('\n=== Fixture Status ===');
   console.log('Fixture ID: ' + manifest.fixtureId);
@@ -755,7 +780,88 @@ function showStatus() {
   console.log('\n=== File Structure ===');
   console.log('Repo: ' + REPO_PATH);
   console.log('Data: ' + DATA_PATH);
-  console.log('Manifest: ' + manifestPath);
+  console.log('Manifest: ' + MANIFEST_PATH);
+}
+
+// ------------------------------------------------------------------------------------------------
+// Manual Checkpoint Capture
+// ------------------------------------------------------------------------------------------------
+
+function captureCheckpoint(route, confirmed) {
+  const manifest = readManifest();
+
+  if (!manifest) {
+    logError('No fixture manifest found. Run with --reset first.');
+    process.exit(1);
+  }
+
+  const checkpoint = manifest.checkpoints.find(function (cp) {
+    return cp.route === route;
+  });
+
+  if (!checkpoint) {
+    logError('Unknown route: ' + route);
+    console.log(
+      'Available routes: ' +
+        manifest.checkpoints
+          .map(function (cp) {
+            return cp.route;
+          })
+          .join(', '),
+    );
+    process.exit(1);
+  }
+
+  if (checkpoint.status !== 'manual-confirm') {
+    logError('Route ' + route + ' is automated, not manual-confirm');
+    process.exit(1);
+  }
+
+  console.log('\n=== Manual Checkpoint: ' + route + ' ===');
+  console.log('Deep Link: ' + checkpoint.deepLink);
+  console.log('Thread ID: ' + (checkpoint.threadId || 'N/A'));
+  console.log('Reason: ' + checkpoint.reason);
+
+  if (confirmed) {
+    console.log('\n[CONFIRMED] Manual capture accepted for ' + route);
+    console.log('Status: confirmed');
+
+    // Write confirmed checkpoint record
+    const captureRecord = {
+      route: route,
+      deepLink: checkpoint.deepLink,
+      status: 'confirmed',
+      capturedAt: new Date().toISOString(),
+      threadId: checkpoint.threadId,
+    };
+
+    const capturePath = RUNS_PATH + '/checkpoint-' + route + '.json';
+    writeFileSync(capturePath, JSON.stringify(captureRecord, null, 2), 'utf8');
+    console.log('Capture record: ' + capturePath);
+
+    return 0;
+  } else {
+    console.log('\n[BLOCKED] Manual capture requires --confirm flag');
+    console.log('Status: blocked');
+    console.log('\nTo confirm capture, run with --confirm:');
+    console.log('  node scripts/marketing/fixtures/seed.js --capture ' + route + ' --confirm');
+
+    // Write blocked record
+    const blockedRecord = {
+      route: route,
+      deepLink: checkpoint.deepLink,
+      status: 'blocked',
+      blockedAt: new Date().toISOString(),
+      reason: checkpoint.reason,
+    };
+
+    const blockedPath = RUNS_PATH + '/checkpoint-' + route + '-blocked.json';
+    writeFileSync(blockedPath, JSON.stringify(blockedRecord, null, 2), 'utf8');
+    console.log('Blocked record: ' + blockedPath);
+
+    // Exit 3 = blocked (manual checkpoint requires --confirm)
+    process.exit(3);
+  }
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -769,19 +875,45 @@ function generateFixtureId() {
 function main() {
   const args = process.argv.slice(2);
 
+  if (args.length === 0) {
+    console.log(
+      '\nMarketing Fixture Seed CLI\n' +
+        '========================\n\n' +
+        'Usage:\n' +
+        '  node scripts/marketing/fixtures/seed.js --reset                    Reset and seed fixtures\n' +
+        '  node scripts/marketing/fixtures/seed.js --status                   Show fixture status\n' +
+        '  node scripts/marketing/fixtures/seed.js --verify                   Verify byte-identical idempotency\n' +
+        '  node scripts/marketing/fixtures/seed.js --capture <route> [--confirm]  Capture manual checkpoint\n\n' +
+        'Options:\n' +
+        '  --reset    Reset and reseed all fixture data\n' +
+        '  --status   Display current fixture status\n' +
+        '  --verify   Run twice and compare manifests for byte-identical idempotency\n' +
+        '  --capture  Capture a manual checkpoint route (requires --confirm for graph-view, chat)\n' +
+        '  --confirm  Confirm manual checkpoint capture (use with --capture)\n\n' +
+        'Exit codes:\n' +
+        '  0  Success\n' +
+        '  1  Error\n' +
+        '  2  Missing prerequisites\n' +
+        '  3  Manual checkpoint blocked (use --confirm)\n',
+    );
+    return;
+  }
+
+  // --status
   if (args.indexOf('--status') !== -1) {
     showStatus();
     return;
   }
 
+  // --reset
   if (args.indexOf('--reset') !== -1) {
     log('Starting fixture seed (--reset)...');
 
     try {
       resetFixtures();
 
-      const fixtureId = generateFixtureId();
-      const manifest = createFixtureManifest(fixtureId, REPO_PATH, DATA_PATH);
+      const fixtureIdVal = generateFixtureId();
+      const manifest = createFixtureManifest(fixtureIdVal, REPO_PATH, DATA_PATH);
 
       seedNotes(manifest);
       seedTodos(manifest);
@@ -801,24 +933,24 @@ function main() {
     }
   }
 
+  // --verify (byte-identical manifest comparison)
   if (args.indexOf('--verify') !== -1) {
-    log('Verifying idempotency (twice-run)...');
+    log('Verifying byte-identical idempotency...');
 
     try {
-      const manifestPath = FIXTURE_ROOT + '/manifest.json';
-      if (!existsSync(manifestPath)) {
+      if (!existsSync(MANIFEST_PATH)) {
         logError('No fixture manifest found. Run with --reset first.');
         process.exit(1);
       }
 
-      const manifest1 = JSON.parse(readFileSync(manifestPath, 'utf8'));
+      const manifest1 = readManifest();
 
+      // Backup original manifest
       const backupPath = OUTPUT_ROOT + '/.fixture-manifest-backup.json';
-      if (existsSync(manifestPath)) {
-        cpSync(manifestPath, backupPath);
-      }
+      cpSync(MANIFEST_PATH, backupPath);
 
       try {
+        // Second seed
         resetFixtures();
         const fixtureIdVal = generateFixtureId();
         const manifest2 = createFixtureManifest(fixtureIdVal, REPO_PATH, DATA_PATH);
@@ -829,26 +961,37 @@ function main() {
         seedGitRepo(manifest2);
         writeFixtureManifest(manifest2);
 
-        const issues = verifyIdempotency(manifest1, manifest2);
+        // Read freshly written manifest
+        const manifest2Fresh = readManifest();
 
-        if (issues.length === 0) {
-          logSuccess('Idempotency verified - manifests match!');
-          console.log('\n=== Idempotency Check PASSED ===');
+        // Byte-identical check (strict)
+        const byteIssues = verifyManifestByteIdentical(manifest1, manifest2Fresh);
+
+        // Structural check (looser)
+        const structuralIssues = verifyStructuralIdempotency(manifest1, manifest2Fresh);
+
+        const allIssues = byteIssues.concat(structuralIssues);
+
+        if (allIssues.length === 0) {
+          logSuccess('Byte-identical idempotency verified!');
+          console.log('\n=== Byte-Identical Idempotency Check PASSED ===');
           console.log('Fixture ID: ' + manifest1.fixtureId);
+          console.log('Generated timestamp: ' + manifest1.generatedAt);
           console.log('Note IDs: ' + manifest1.notes.length + ' notes');
           console.log('Canvas ID: ' + manifest1.canvas.id);
           console.log('Checkpoints: ' + manifest1.checkpoints.length + ' routes');
         } else {
           logError('Idempotency check FAILED');
           console.log('\n=== Idempotency Issues ===');
-          for (let i = 0; i < issues.length; i++) {
-            console.log('  - ' + issues[i]);
+          for (let i = 0; i < allIssues.length; i++) {
+            console.log('  - ' + allIssues[i]);
           }
           process.exit(1);
         }
       } finally {
-        cpSync(backupPath, manifestPath);
-        rmSync(backupPath);
+        // Restore original
+        cpSync(backupPath, MANIFEST_PATH);
+        rmSync(backupPath, { force: true });
       }
 
       return;
@@ -858,9 +1001,28 @@ function main() {
     }
   }
 
-  console.log(
-    '\nMarketing Fixture Seed CLI\n=========================\n\nUsage:\n  node scripts/marketing/fixtures/seed.js --reset   Reset and seed fixtures\n  node scripts/marketing/fixtures/seed.js --status  Show fixture status\n  node scripts/marketing/fixtures/seed.js --verify  Verify idempotency\n\nOptions:\n  --reset   Reset and reseed all fixture data\n  --status  Display current fixture status\n  --verify  Run twice and compare manifests for idempotency\n\nExit codes:\n  0  Success\n  1  Error\n  2  Missing prerequisites\n',
-  );
+  // --capture <route> [--confirm]
+  const captureIndex = args.indexOf('--capture');
+  if (captureIndex !== -1) {
+    const route = args[captureIndex + 1];
+    const confirmed = args.indexOf('--confirm') !== -1;
+
+    if (!route) {
+      logError('--capture requires a route argument');
+      console.log(
+        'Available routes: home, notes, note-editor, canvas-editor, todos, explore, graph-view, chat',
+      );
+      process.exit(1);
+    }
+
+    const exitCode = captureCheckpoint(route, confirmed);
+    process.exit(exitCode);
+  }
+
+  // Unknown arguments
+  logError('Unknown arguments: ' + args.join(' '));
+  console.log('\nRun --help for usage information');
+  process.exit(1);
 }
 
 main();

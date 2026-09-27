@@ -18,6 +18,7 @@ const FIXTURE_ROOT = join(WORKTREE_ROOT, 'assets/marketing/fixture-data');
 const REPO_PATH = join(FIXTURE_ROOT, 'repo');
 const DATA_PATH = join(FIXTURE_ROOT, 'data');
 const MANIFEST_PATH = join(FIXTURE_ROOT, 'manifest.json');
+const RUNS_PATH = join(WORKTREE_ROOT, 'assets/marketing/runs');
 
 // ------------------------------------------------------------------------------------------------
 // Helpers
@@ -40,6 +41,9 @@ function runSeed(...args) {
 function cleanFixtures() {
   if (existsSync(FIXTURE_ROOT)) {
     rmSync(FIXTURE_ROOT, { recursive: true, force: true });
+  }
+  if (existsSync(RUNS_PATH)) {
+    rmSync(RUNS_PATH, { recursive: true, force: true });
   }
 }
 
@@ -191,7 +195,7 @@ describe('marketing/fixtures/seed.js - CLI Interface', () => {
   });
 });
 
-describe('marketing/fixtures/seed.js - Idempotency', () => {
+describe('marketing/fixtures/seed.js - Byte-Identical Idempotency', () => {
   beforeEach(() => {
     cleanFixtures();
   });
@@ -200,34 +204,222 @@ describe('marketing/fixtures/seed.js - Idempotency', () => {
     cleanFixtures();
   });
 
-  test('manifest is identical on repeated seeds', () => {
-    // Run 1
+  test('manifest is BYTE-identical on repeated seeds (literal JSON diff)', () => {
+    // First seed
     runSeed('--reset');
-    const manifest1 = JSON.parse(readFileSync(MANIFEST_PATH, 'utf8'));
+    const manifest1Str = readFileSync(MANIFEST_PATH, 'utf8');
 
-    // Run 2
+    // Second seed
     runSeed('--reset');
-    const manifest2 = JSON.parse(readFileSync(MANIFEST_PATH, 'utf8'));
+    const manifest2Str = readFileSync(MANIFEST_PATH, 'utf8');
 
-    // Compare
-    expect(manifest1.fixtureId).toBe(manifest2.fixtureId);
-    expect(manifest1.notes.map(n => n.id)).toEqual(manifest2.notes.map(n => n.id));
-    expect(manifest1.canvas.id).toBe(manifest2.canvas.id);
-    expect(manifest1.chatThread.id).toBe(manifest2.chatThread.id);
+    // Literal string comparison - must be EXACTLY identical
+    expect(manifest1Str).toBe(manifest2Str);
   });
 
-  test('note content is identical on repeated seeds', () => {
-    // Run 1
+  test('generatedAt timestamp is deterministic (same BASE_DATE on every run)', () => {
     runSeed('--reset');
     const manifest1 = JSON.parse(readFileSync(MANIFEST_PATH, 'utf8'));
 
-    // Run 2
     runSeed('--reset');
     const manifest2 = JSON.parse(readFileSync(MANIFEST_PATH, 'utf8'));
 
-    // Compare note content
-    expect(manifest1.notes[0].content).toBe(manifest2.notes[0].content);
-    expect(manifest1.notes[0].title).toBe(manifest2.notes[0].title);
+    expect(manifest1.generatedAt).toBe(manifest2.generatedAt);
+    expect(manifest1.generatedAt).toBe('2024-03-15T10:00:00.000Z');
+  });
+
+  test('checkpoint capturedAt timestamps are deterministic', () => {
+    runSeed('--reset');
+    const manifest1 = JSON.parse(readFileSync(MANIFEST_PATH, 'utf8'));
+
+    runSeed('--reset');
+    const manifest2 = JSON.parse(readFileSync(MANIFEST_PATH, 'utf8'));
+
+    for (let i = 0; i < manifest1.checkpoints.length; i++) {
+      expect(manifest1.checkpoints[i].capturedAt).toBe(manifest2.checkpoints[i].capturedAt);
+    }
+  });
+
+  test('all fixture data timestamps use BASE_DATE', () => {
+    runSeed('--reset');
+    const manifest = JSON.parse(readFileSync(MANIFEST_PATH, 'utf8'));
+
+    // Manifest-level timestamp
+    expect(manifest.generatedAt).toBe('2024-03-15T10:00:00.000Z');
+
+    // Note timestamps
+    for (const note of manifest.notes) {
+      expect(note.createdAt).toBe('2024-03-15T10:00:00.000Z');
+      expect(note.updatedAt).toBe('2024-03-15T10:00:00.000Z');
+    }
+
+    // Todo timestamps
+    for (const todo of manifest.todos) {
+      expect(todo.createdAt).toBe('2024-03-15T10:00:00.000Z');
+      expect(todo.updatedAt).toBe('2024-03-15T10:00:00.000Z');
+    }
+
+    // Canvas timestamps
+    expect(manifest.canvas.createdAt).toBe('2024-03-15T10:00:00.000Z');
+    expect(manifest.canvas.updatedAt).toBe('2024-03-15T10:00:00.000Z');
+
+    // Chat thread timestamps
+    expect(manifest.chatThread.createdAt).toBe('2024-03-15T10:00:00.000Z');
+    expect(manifest.chatThread.updatedAt).toBe('2024-03-15T10:00:00.000Z');
+  });
+});
+
+describe('marketing/fixtures/seed.js - Git Deterministic Timestamps', () => {
+  beforeEach(() => {
+    cleanFixtures();
+  });
+
+  afterEach(() => {
+    cleanFixtures();
+  });
+
+  test('git commits use DECLARED timestamps, not new Date()', () => {
+    runSeed('--reset');
+
+    const manifest = JSON.parse(readFileSync(MANIFEST_PATH, 'utf8'));
+
+    // Verify git commits use declared timestamps from fixture data
+    expect(manifest.git.commits[0].timestamp).toBe('2024-01-01T10:00:00.000Z');
+    expect(manifest.git.commits[1].timestamp).toBe('2024-01-02T10:00:00.000Z');
+  });
+
+  test('git log shows deterministic commit dates', () => {
+    runSeed('--reset');
+
+    // Get git log in commit order
+    const log1 = execSync('git log --format="%H|%ai|%s" --reverse', {
+      cwd: REPO_PATH,
+      encoding: 'utf8',
+    });
+
+    const lines = log1.trim().split('\n');
+    expect(lines.length).toBeGreaterThan(0);
+
+    // First commit should have timestamp 2024-01-01T10:00:00
+    const firstCommit = lines[0].split('|');
+    expect(firstCommit[1]).toMatch(/^2024-01-01/);
+  });
+});
+
+describe('marketing/fixtures/seed.js - Manual Checkpoint Capture', () => {
+  beforeEach(() => {
+    cleanFixtures();
+    // Ensure runs directory exists
+    const { mkdirSync } = require('fs');
+    mkdirSync(RUNS_PATH, { recursive: true });
+  });
+
+  afterEach(() => {
+    cleanFixtures();
+  });
+
+  describe('graph-view (manual-confirm)', () => {
+    test('without --confirm, exits 3 and writes blocked record', () => {
+      runSeed('--reset');
+
+      const result = runSeed('--capture', 'graph-view');
+
+      expect(result.exitCode).toBe(3); // BLOCKED status
+      expect(result.stderr).toContain('[BLOCKED]');
+
+      // Check blocked record exists
+      const blockedPath = join(RUNS_PATH, 'checkpoint-graph-view-blocked.json');
+      expect(existsSync(blockedPath)).toBe(true);
+
+      const blocked = JSON.parse(readFileSync(blockedPath, 'utf8'));
+      expect(blocked.status).toBe('blocked');
+      expect(blocked.route).toBe('graph-view');
+    });
+
+    test('with --confirm, exits 0 and writes confirmed record', () => {
+      runSeed('--reset');
+
+      const result = runSeed('--capture', 'graph-view', '--confirm');
+
+      expect(result.exitCode).toBe(0);
+      expect(result.stderr).toContain('[CONFIRMED]');
+
+      // Check confirmed record exists
+      const capturePath = join(RUNS_PATH, 'checkpoint-graph-view.json');
+      expect(existsSync(capturePath)).toBe(true);
+
+      const confirmed = JSON.parse(readFileSync(capturePath, 'utf8'));
+      expect(confirmed.status).toBe('confirmed');
+      expect(confirmed.route).toBe('graph-view');
+    });
+
+    test('never claims graph-view is automated', () => {
+      runSeed('--reset');
+
+      // Without --confirm
+      runSeed('--capture', 'graph-view');
+      const blockedPath = join(RUNS_PATH, 'checkpoint-graph-view-blocked.json');
+      const blocked = JSON.parse(readFileSync(blockedPath, 'utf8'));
+      expect(blocked.status).not.toBe('automated');
+
+      // With --confirm
+      const capturePath = join(RUNS_PATH, 'checkpoint-graph-view.json');
+      if (existsSync(capturePath)) rmSync(capturePath, { force: true });
+      runSeed('--capture', 'graph-view', '--confirm');
+      const confirmed = JSON.parse(readFileSync(capturePath, 'utf8'));
+      expect(confirmed.status).not.toBe('automated');
+    });
+  });
+
+  describe('chat (manual-confirm)', () => {
+    test('without --confirm, exits 3 and writes blocked record', () => {
+      runSeed('--reset');
+
+      const result = runSeed('--capture', 'chat');
+
+      expect(result.exitCode).toBe(3);
+      expect(result.stderr).toContain('[BLOCKED]');
+
+      const blockedPath = join(RUNS_PATH, 'checkpoint-chat-blocked.json');
+      expect(existsSync(blockedPath)).toBe(true);
+
+      const blocked = JSON.parse(readFileSync(blockedPath, 'utf8'));
+      expect(blocked.status).toBe('blocked');
+    });
+
+    test('with --confirm, exits 0 and writes confirmed record', () => {
+      runSeed('--reset');
+
+      const result = runSeed('--capture', 'chat', '--confirm');
+
+      expect(result.exitCode).toBe(0);
+      expect(result.stderr).toContain('[CONFIRMED]');
+
+      const capturePath = join(RUNS_PATH, 'checkpoint-chat.json');
+      expect(existsSync(capturePath)).toBe(true);
+
+      const confirmed = JSON.parse(readFileSync(capturePath, 'utf8'));
+      expect(confirmed.status).toBe('confirmed');
+    });
+  });
+
+  describe('automated routes reject --capture', () => {
+    test('note-editor (automated) is rejected', () => {
+      runSeed('--reset');
+
+      const result = runSeed('--capture', 'note-editor', '--confirm');
+
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain('automated');
+    });
+
+    test('home (automated) is rejected', () => {
+      runSeed('--reset');
+
+      const result = runSeed('--capture', 'home', '--confirm');
+
+      expect(result.exitCode).toBe(1);
+    });
   });
 });
 
@@ -243,7 +435,6 @@ describe('marketing/fixtures/seed.js - Path Safety', () => {
   test('does not create files outside fixture root', () => {
     runSeed('--reset');
 
-    // Fixture files should only be under FIXTURE_ROOT
     const manifest = JSON.parse(readFileSync(MANIFEST_PATH, 'utf8'));
 
     expect(manifest.repoPath).toContain('assets/marketing');
