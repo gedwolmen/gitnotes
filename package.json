@@ -31,7 +31,22 @@
     "branding:check": "node scripts/generate-branding.js --check",
     "postinstall": "patch-package",
     "eas-build-pre-install": "bash scripts/eas/pre-install.sh",
-    "eas-build-post-install": "bash scripts/eas/post-install.sh"
+    "eas-build-post-install": "bash scripts/eas/post-install.sh",
+    "marketing": "npx tsx scripts/marketing/index.ts",
+    "marketing:preflight": "npx tsx scripts/marketing/index.ts preflight",
+    "marketing:capture": "npx tsx scripts/marketing/index.ts capture",
+    "marketing:capture:dry-run": "npx tsx scripts/marketing/index.ts capture --dry-run",
+    "marketing:store": "npx tsx scripts/marketing/index.ts store",
+    "marketing:store:dry-run": "npx tsx scripts/marketing/index.ts store --dry-run",
+    "marketing:video": "npx tsx scripts/marketing/index.ts video",
+    "marketing:video:dry-run": "npx tsx scripts/marketing/index.ts video --dry-run",
+    "marketing:generate": "npx tsx scripts/marketing/index.ts generate",
+    "marketing:generate:dry-run": "npx tsx scripts/marketing/index.ts generate --dry-run",
+    "marketing:clean": "npx tsx scripts/marketing/index.ts clean",
+    "marketing:clean:dry-run": "npx tsx scripts/marketing/index.ts clean --dry-run",
+    "marketing:manifest": "npx tsx scripts/marketing/index.ts manifest",
+    "marketing:studio": "yarn --cwd marketing",
+    "marketing:help": "npx tsx scripts/marketing/index.ts --help"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^4.0.38",
@@ -144,6 +159,7 @@
     "react-test-renderer": "19.2.3",
     "sharp": "^0.35.4",
     "tailwindcss": "^4.3.3",
+    "tsx": "4.23.15",
     "typescript": "~6.0.3"
   },
   "lint-staged": {

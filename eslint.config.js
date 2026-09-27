@@ -30,6 +30,7 @@ module.exports = [
         RequestInit: 'readonly',
         RequestInfo: 'readonly',
         BodyInit: 'readonly',
+        JSX: 'readonly',
       },
     },
     plugins: {
