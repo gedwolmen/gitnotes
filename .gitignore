@@ -101,6 +101,13 @@ yarn-error.log*
 # App Store screenshots (local marketing assets)
 appstore_screenshots/
 
+# Marketing asset pipeline - generated output (source contracts/docs remain tracked)
+assets/marketing/runs/
+assets/marketing/exports/
+assets/marketing/captures/
+assets/marketing/store/
+assets/marketing/social/
+
 # Xcode StoreKit configuration (workspace-specific; regenerated from App Store Connect)
 *.storekit
 
