@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+
+# Playwright
+test-results/
+playwright-report/
+chromium/
+.webkit/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Vite
+*.local
+
+# Vitest
+coverage/
+
+# Temporary files
+*.tmp
+*.temp

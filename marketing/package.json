@@ -1,0 +1,41 @@
+{
+  "name": "@gitnotes/marketing",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Standalone Motion/React composition package for deterministic social story preview and checkpoint rendering",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:checkpoints": "vitest run tests/checkpoints.test.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src --ext .ts,.tsx",
+    "playwright:install": "playwright install chromium",
+    "serve": "vite preview --port 4173"
+  },
+  "dependencies": {
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "motion": "11.18.2"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.49.1",
+    "@types/react": "18.3.18",
+    "@types/react-dom": "18.3.5",
+    "@typescript-eslint/eslint-plugin": "8.22.0",
+    "@typescript-eslint/parser": "8.22.0",
+    "@vitejs/plugin-react": "4.3.4",
+    "eslint": "9.18.0",
+    "eslint-plugin-react-hooks": "5.1.0",
+    "eslint-plugin-react-refresh": "0.4.16",
+    "typescript": "5.7.2",
+    "vite": "6.0.7",
+    "vitest": "3.0.3"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
