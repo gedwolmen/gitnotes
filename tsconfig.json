@@ -48,6 +48,7 @@
     "metro.config.js",
     "**/__tests__/**",
     "**/*.test.ts",
-    "**/*.test.tsx"
+    "**/*.test.tsx",
+    "marketing"
   ]
 }
