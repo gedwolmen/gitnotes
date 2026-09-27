@@ -14,6 +14,7 @@
 import { dirname, resolve } from 'path';
 
 import { mkdirSync } from 'fs';
+import { spawn } from 'child_process';
 
 import type {
   IOSCaptureRequest,
@@ -31,9 +32,6 @@ import { ENV_PATHS } from './preflight';
 
 /** Default wait time after opening URL (ms) */
 const DEFAULT_WAIT_MS = 2000;
-
-/** Default capture timeout (ms) */
-const DEFAULT_TIMEOUT_MS = 30000;
 
 /** Minimum valid screenshot size (bytes) */
 const MIN_SCREENSHOT_SIZE = 1000;
@@ -102,25 +100,19 @@ export async function captureIOS(
 
   commands.push(`xcrun simctl status_bar ${deviceId} nutrition enable`);
 
-  // Open deep link
-  const deepLinkCmd = `xcrun simctl openurl ${deviceId} "${request.deepLink}"`;
-  commands.push(deepLinkCmd);
+  // Open deep link using detached spawn to avoid exec hang
+  // xcrun simctl openurl blocks until the app terminates on iOS 26.5+
+  const deepLinkArgs = ['simctl', 'openurl', deviceId, request.deepLink];
+  commands.push(`xcrun ${deepLinkArgs.join(' ')}`);
 
   const waitMs = request.waitMs ?? DEFAULT_WAIT_MS;
 
   try {
-    const openResult = await executor.exec(deepLinkCmd, { timeoutMs: DEFAULT_TIMEOUT_MS });
-
-    if (openResult.exitCode !== 0) {
-      return {
-        success: false,
-        deviceId,
-        deviceName,
-        error: `Failed to open URL: ${openResult.stderr}`,
-        commands,
-        elapsedMs: Date.now() - startTime,
-      };
-    }
+    const child = spawn('xcrun', deepLinkArgs, {
+      detached: true,
+      stdio: 'ignore',
+    });
+    child.unref();
 
     // Wait for app to load
     commands.push(`# Waiting ${waitMs}ms for app to load...`);
@@ -136,7 +128,7 @@ export async function captureIOS(
     };
   }
 
-  // Capture screenshot
+  // Capture screenshot using detached spawn to avoid exec hang on iOS 26.5+
   const screenshotPath = resolve(request.outputPath);
 
   // Ensure output directory exists
@@ -147,24 +139,18 @@ export async function captureIOS(
     // Ignore - may already exist
   }
 
-  const captureCmd = `xcrun simctl io ${deviceId} screenshot "${screenshotPath}"`;
-  commands.push(captureCmd);
+  const screenshotArgs = ['simctl', 'io', deviceId, 'screenshot', screenshotPath];
+  commands.push(`xcrun ${screenshotArgs.join(' ')}`);
 
   try {
-    const captureResult = await executor.exec(captureCmd, {
-      timeoutMs: request.timeoutMs ?? DEFAULT_TIMEOUT_MS,
+    const child = spawn('xcrun', screenshotArgs, {
+      detached: true,
+      stdio: 'ignore',
     });
+    child.unref();
 
-    if (captureResult.exitCode !== 0) {
-      return {
-        success: false,
-        deviceId,
-        deviceName,
-        error: `Screenshot failed: ${captureResult.stderr}`,
-        commands,
-        elapsedMs: Date.now() - startTime,
-      };
-    }
+    // Wait for screenshot to complete
+    await sleep(1000);
 
     // Validate output file
     const stats = await executor.stat(screenshotPath);
