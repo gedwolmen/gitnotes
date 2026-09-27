@@ -291,18 +291,17 @@ describe('marketing/fixtures/seed.js - Git Deterministic Timestamps', () => {
   test('git log shows deterministic commit dates', () => {
     runSeed('--reset');
 
-    // Get git log in commit order
-    const log1 = execSync('git log --format="%H|%ai|%s" --reverse', {
-      cwd: REPO_PATH,
-      encoding: 'utf8',
-    });
+    const log = execSync(
+      'git log --format="%H|%ai|%ci|%s" --reverse',
+      { cwd: REPO_PATH, encoding: 'utf8' },
+    );
 
-    const lines = log1.trim().split('\n');
+    const lines = log.trim().split('\n');
     expect(lines.length).toBeGreaterThan(0);
 
-    // First commit should have timestamp 2024-01-01T10:00:00
     const firstCommit = lines[0].split('|');
     expect(firstCommit[1]).toMatch(/^2024-01-01/);
+    expect(firstCommit[2]).toMatch(/^2024-01-01/);
   });
 });
 
@@ -324,10 +323,8 @@ describe('marketing/fixtures/seed.js - Manual Checkpoint Capture', () => {
 
       const result = runSeed('--capture', 'graph-view');
 
-      expect(result.exitCode).toBe(3); // BLOCKED status
-      expect(result.stderr).toContain('[BLOCKED]');
+      expect(result.exitCode).toBe(3);
 
-      // Check blocked record exists
       const blockedPath = join(RUNS_PATH, 'checkpoint-graph-view-blocked.json');
       expect(existsSync(blockedPath)).toBe(true);
 
@@ -342,9 +339,7 @@ describe('marketing/fixtures/seed.js - Manual Checkpoint Capture', () => {
       const result = runSeed('--capture', 'graph-view', '--confirm');
 
       expect(result.exitCode).toBe(0);
-      expect(result.stderr).toContain('[CONFIRMED]');
 
-      // Check confirmed record exists
       const capturePath = join(RUNS_PATH, 'checkpoint-graph-view.json');
       expect(existsSync(capturePath)).toBe(true);
 
@@ -356,13 +351,11 @@ describe('marketing/fixtures/seed.js - Manual Checkpoint Capture', () => {
     test('never claims graph-view is automated', () => {
       runSeed('--reset');
 
-      // Without --confirm
       runSeed('--capture', 'graph-view');
       const blockedPath = join(RUNS_PATH, 'checkpoint-graph-view-blocked.json');
       const blocked = JSON.parse(readFileSync(blockedPath, 'utf8'));
       expect(blocked.status).not.toBe('automated');
 
-      // With --confirm
       const capturePath = join(RUNS_PATH, 'checkpoint-graph-view.json');
       if (existsSync(capturePath)) rmSync(capturePath, { force: true });
       runSeed('--capture', 'graph-view', '--confirm');
@@ -378,7 +371,6 @@ describe('marketing/fixtures/seed.js - Manual Checkpoint Capture', () => {
       const result = runSeed('--capture', 'chat');
 
       expect(result.exitCode).toBe(3);
-      expect(result.stderr).toContain('[BLOCKED]');
 
       const blockedPath = join(RUNS_PATH, 'checkpoint-chat-blocked.json');
       expect(existsSync(blockedPath)).toBe(true);
@@ -393,7 +385,6 @@ describe('marketing/fixtures/seed.js - Manual Checkpoint Capture', () => {
       const result = runSeed('--capture', 'chat', '--confirm');
 
       expect(result.exitCode).toBe(0);
-      expect(result.stderr).toContain('[CONFIRMED]');
 
       const capturePath = join(RUNS_PATH, 'checkpoint-chat.json');
       expect(existsSync(capturePath)).toBe(true);

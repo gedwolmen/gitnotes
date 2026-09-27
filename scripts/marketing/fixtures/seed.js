@@ -540,18 +540,22 @@ function gitAddCommit(repoPath, commit) {
 
   execSync('git add .', { cwd: repoPath, stdio: 'pipe' });
 
-  // Use the DECLARED timestamp from commit metadata, not new Date()
-  const authorDate = commit.timestamp;
+  const commitDate = commit.timestamp;
   const env = {
     GIT_AUTHOR_NAME: commit.authorName,
     GIT_AUTHOR_EMAIL: commit.authorEmail,
     GIT_COMMITTER_NAME: commit.authorName,
     GIT_COMMITTER_EMAIL: commit.authorEmail,
+    GIT_AUTHOR_DATE: commitDate,
+    GIT_COMMITTER_DATE: commitDate,
   };
 
   try {
-    const cmd = 'git commit -m "' + commit.message + '" --date="' + authorDate + '" --allow-empty';
-    execSync(cmd, { cwd: repoPath, stdio: 'pipe', env: Object.assign({}, process.env, env) });
+    execSync('git commit -m "' + commit.message + '" --allow-empty', {
+      cwd: repoPath,
+      stdio: 'pipe',
+      env: Object.assign({}, process.env, env),
+    });
   } catch {
     // Ignore empty commit errors
   }
