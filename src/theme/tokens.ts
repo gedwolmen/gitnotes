@@ -131,6 +131,38 @@ export type SpacingKey = keyof typeof SPACING;
 export const TYPE = { xs: 12, sm: 14, md: 16, lg: 18, xl: 22, '2xl': 28 } as const;
 export type TypeSize = keyof typeof TYPE;
 
+// Line heights paired with TYPE sizes — 1.4–1.5× for body, tighter for headings.
+// Ratios derived from iOS HIG type scaling (SF Pro equivalent).
+export const LINE_HEIGHT: Record<TypeSize, number> = {
+  xs: 18,   // 1.5× — captions, timestamps
+  sm: 21,   // 1.5× — secondary text, labels
+  md: 24,   // 1.5× — body copy
+  lg: 25,   // ~1.38× — subheadings, card titles
+  xl: 30,   // ~1.36× — section headings
+  '2xl': 36, // ~1.29× — display text
+} as const;
+export type LineHeight = (typeof LINE_HEIGHT)[TypeSize];
+
+// Semantic text roles — each role specifies a canonical size and line-height.
+// Components should use these roles rather than raw TYPE[size] lookups.
+export type TextRole = 'display' | 'heading' | 'subheading' | 'body' | 'label' | 'caption';
+export const TEXT_ROLE_SIZE: Record<TextRole, TypeSize> = {
+  display: '2xl',
+  heading: 'xl',
+  subheading: 'lg',
+  body: 'md',
+  label: 'sm',
+  caption: 'xs',
+} as const;
+export const TEXT_ROLE_LINE_HEIGHT: Record<TextRole, LineHeight> = {
+  display: LINE_HEIGHT['2xl'],
+  heading: LINE_HEIGHT.xl,
+  subheading: LINE_HEIGHT.lg,
+  body: LINE_HEIGHT.md,
+  label: LINE_HEIGHT.sm,
+  caption: LINE_HEIGHT.xs,
+} as const;
+
 export function resolveColors(style: ThemeStyle, isDark: boolean): Palette {
   if (style === 'flat') return isDark ? FLAT_DARK : FLAT_LIGHT;
   return isDark ? NEUMORPHIC_DARK : NEUMORPHIC_LIGHT;

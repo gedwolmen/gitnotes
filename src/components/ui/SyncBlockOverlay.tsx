@@ -4,6 +4,7 @@ import { BlurView } from 'expo-blur';
 import { useTranslation } from 'react-i18next';
 
 import { useTheme, useTokens } from '../../contexts/ThemeContext';
+import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { useGitOperationStore, GIT_OP_ALL_REPOS } from '../../stores/gitOperationStore';
 import { GitSyncGate } from '../../services/git/GitSyncGate';
 import { cancelInflightGitHttp } from '../../services/git/gitHttp';
@@ -38,26 +39,28 @@ export function SyncBlockOverlay() {
   const { t } = useTranslation();
   const { isDark } = useTheme();
   const { colors, spacing, type } = useTokens();
+  const reducedMotion = useReducedMotion();
   const opacity = useRef(new Animated.Value(0)).current;
   const prevVisibleRef = useRef(false);
   const [cancelArmed, setCancelArmed] = useState(false);
   const [cancelling, setCancelling] = useState(false);
 
-  // Always show "Syncing" as the main label. When push markers are active
-  // (background push queued), add a subtitle so the user understands why
-  // they see "Syncing" even when they didn't initiate a push (#1066).
   const hasPushMarkers = GitSyncGate.isPushActive();
   const label = t('sync.overlay.syncing');
   const subtitle = hasPushMarkers ? t('sync.overlay.includingPush') : undefined;
 
   useEffect(() => {
+    if (reducedMotion) {
+      opacity.setValue(visible ? 1 : 0);
+      return;
+    }
     Animated.timing(opacity, {
       toValue: visible ? 1 : 0,
       duration: 180,
       easing: Easing.out(Easing.quad),
       useNativeDriver: true,
     }).start();
-  }, [visible, opacity]);
+  }, [visible, opacity, reducedMotion]);
 
   // Arm the cancel button only after the block has persisted — short syncs
   // are normal and shouldn't invite cancelling.
