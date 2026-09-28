@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
-import { HomeTile } from '../../../src/components/home/HomeTile';
+import { HOME_TILE_HEIGHT, HomeTile } from '../../../src/components/home/HomeTile';
 
 jest.mock('../../../src/contexts/ThemeContext', () => {
   const React = require('react');
@@ -149,6 +149,10 @@ describe('HomeTile', () => {
     expect(getByTestId('secondary-tile')).toBeTruthy();
   });
 
+  it('keeps secondary dashboard cards at the full card height', () => {
+    expect(HOME_TILE_HEIGHT.secondary).toBe(130);
+  });
+
   it('renders accent variant', () => {
     const { getByTestId } = renderWithTheme(
       <HomeTile {...defaultProps} variant="accent" testID="accent-tile" />,
@@ -193,10 +197,18 @@ describe('HomeTile', () => {
   });
 
   it('accepts contentPosition space-between', () => {
-    const { getByTestId } = renderWithTheme(
+    const rendered = renderWithTheme(
       <HomeTile {...defaultProps} contentPosition="space-between" testID="space-between-tile" />,
     );
-    expect(getByTestId('space-between-tile')).toBeTruthy();
+    const badge = rendered.getByTestId('space-between-tile.badge');
+    const content = rendered.getByTestId('space-between-tile.content');
+    const badgeStyle = badge.props.style.reduce(
+      (merged: Record<string, unknown>, style: Record<string, unknown>) => ({ ...merged, ...style }),
+      {},
+    );
+
+    expect(badgeStyle.position).toBeUndefined();
+    expect(content.props.style.marginTop).toBe(8);
   });
 
   it('renders with disabled prop set', () => {
