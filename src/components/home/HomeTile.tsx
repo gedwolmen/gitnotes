@@ -1,4 +1,4 @@
-import React, { ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { View, Text, StyleSheet, Pressable, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -147,7 +147,7 @@ export function HomeTile({
         testID={testID ? `${testID}.badge` : undefined}
         style={[
           styles.badge,
-          contentPosition === 'flex-end' ? styles.badgeAbsolute : undefined,
+          variant !== 'secondary' || contentPosition === 'flex-end' ? styles.badgeAbsolute : undefined,
           {
             width: finalBadgeSize,
             height: finalBadgeSize,

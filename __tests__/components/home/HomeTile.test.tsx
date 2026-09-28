@@ -198,7 +198,12 @@ describe('HomeTile', () => {
 
   it('accepts contentPosition space-between', () => {
     const rendered = renderWithTheme(
-      <HomeTile {...defaultProps} contentPosition="space-between" testID="space-between-tile" />,
+      <HomeTile
+        {...defaultProps}
+        variant="secondary"
+        contentPosition="space-between"
+        testID="space-between-tile"
+      />,
     );
     const badge = rendered.getByTestId('space-between-tile.badge');
     const content = rendered.getByTestId('space-between-tile.content');
@@ -209,6 +214,24 @@ describe('HomeTile', () => {
 
     expect(badgeStyle.position).toBeUndefined();
     expect(content.props.style.marginTop).toBe(8);
+  });
+
+  it('keeps the accent badge out of the description flow', () => {
+    const rendered = renderWithTheme(
+      <HomeTile
+        {...defaultProps}
+        variant="accent"
+        contentPosition="space-between"
+        testID="accent-space-between-tile"
+      />,
+    );
+    const badge = rendered.getByTestId('accent-space-between-tile.badge');
+    const badgeStyle = badge.props.style.reduce(
+      (merged: Record<string, unknown>, style: Record<string, unknown>) => ({ ...merged, ...style }),
+      {},
+    );
+
+    expect(badgeStyle.position).toBe('absolute');
   });
 
   it('renders with disabled prop set', () => {
