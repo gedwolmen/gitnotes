@@ -130,7 +130,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
 
-const SAFE_DEFAULT_TOKENS: Tokens = {
+export const SAFE_DEFAULT_TOKENS: Tokens = {
   colors: {
     bg: '#f2f2f7',
     surface: '#ffffff',
@@ -155,7 +155,7 @@ const SAFE_DEFAULT_TOKENS: Tokens = {
   type: { xs: 12, sm: 14, md: 16, lg: 18, xl: 22, '2xl': 28 },
 };
 
-const SAFE_DEFAULT_THEME: ThemeContextType = {
+export const SAFE_DEFAULT_THEME: ThemeContextType = {
   theme: 'system',
   isDark: false,
   style: 'flat',

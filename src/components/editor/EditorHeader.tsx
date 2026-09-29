@@ -1,7 +1,7 @@
 import React from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
-import { useTheme } from '../../contexts/ThemeContext';
+import { useTheme, useTokens } from '../../contexts/ThemeContext';
 import { Button } from '../ui';
 
 interface EditorHeaderProps {
@@ -13,6 +13,7 @@ interface EditorHeaderProps {
 
 export function EditorHeader({ noteId, isSaving, onCancel, onSave }: EditorHeaderProps) {
   const { colors } = useTheme();
+  const { spacing, type } = useTokens();
   const saveTrailingIcon = isSaving ? (
     <ActivityIndicator
       testID="note-editor.button.save-spinner"
@@ -24,20 +25,36 @@ export function EditorHeader({ noteId, isSaving, onCancel, onSave }: EditorHeade
   return (
     <View style={[styles.header, { borderBottomColor: colors.border, backgroundColor: colors.surface }]}>
       <View testID="editor-header.button.cancel" style={styles.headerLeft}>
-        <Button variant="ghost" label="Cancel" testID="note-editor.button.cancel" accessibilityLabel="Cancel" onPress={onCancel} disabled={isSaving} textStyle={styles.headerButtonText} />
+        <Button
+          variant="ghost"
+          label="Cancel"
+          testID="note-editor.button.cancel"
+          accessibilityLabel="Cancel editing and discard changes"
+          onPress={onCancel}
+          disabled={isSaving}
+          textStyle={{ fontSize: type.md }}
+        />
       </View>
-      <Text style={[styles.headerTitle, { color: colors.text }]}>{noteId ? 'Edit Note' : 'New Note'}</Text>
+      <Text
+        accessibilityRole="header"
+        style={[styles.headerTitle, { color: colors.text, fontSize: type.lg }]}
+      >
+        {noteId ? 'Edit Note' : 'New Note'}
+      </Text>
       <View testID="editor-header.button.save" style={styles.headerRight}>
         <Button
           variant="ghost"
           label="Save"
           testID="note-editor.button.save"
-          accessibilityLabel="Save"
+          accessibilityLabel="Save note"
           onPress={onSave}
           disabled={isSaving}
           trailingIcon={saveTrailingIcon}
-          style={isSaving ? styles.saveButtonBusy : undefined}
-          textStyle={[styles.headerButtonText, styles.saveButtonText, isSaving && styles.disabledButton]}
+          style={isSaving ? [styles.saveButtonBusy, { backgroundColor: colors.surfaceSecondary, paddingHorizontal: spacing[1] }] : undefined}
+          textStyle={[
+            { fontSize: type.md, fontWeight: '600' },
+            isSaving && styles.disabledButton,
+          ]}
         />
       </View>
     </View>
@@ -59,11 +76,7 @@ const styles = StyleSheet.create({
     minWidth: 0,
     flexShrink: 1,
   },
-  headerButtonText: {
-    fontSize: 16,
-  },
   headerTitle: {
-    fontSize: 16,
     fontWeight: '600',
     flex: 1,
     textAlign: 'center',
@@ -73,15 +86,10 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     alignItems: 'flex-end',
   },
-  saveButtonText: {
-    fontWeight: '600',
-  },
   disabledButton: {
     opacity: 0.5,
   },
   saveButtonBusy: {
-    backgroundColor: 'rgba(120, 120, 120, 0.12)',
     borderRadius: 6,
-    paddingHorizontal: 4,
   },
 });

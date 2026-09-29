@@ -95,7 +95,7 @@ export function ScreenHeader(props: ScreenHeaderProps) {
         className="absolute top-0 left-0 right-0 z-10"
         style={{
           paddingTop: insets.top,
-          backgroundColor: isDark ? 'rgba(30,30,30,0.85)' : 'rgba(255,255,255,0.85)',
+          backgroundColor: colors.surface,
         }}
       >
         {headerContent}

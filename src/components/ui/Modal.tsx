@@ -23,6 +23,7 @@ export interface ModalProps {
   children?: ReactNode;
   fullWidth?: boolean;
   bottomSheet?: boolean;
+  accessibilityLabel?: string;
 }
 
 export function Modal(props: ModalProps) {
@@ -34,6 +35,7 @@ export function Modal(props: ModalProps) {
     children,
     fullWidth = false,
     bottomSheet = false,
+    accessibilityLabel,
   } = props;
   const { isDark } = useTheme();
   const { spacing, colors } = useTokens();
@@ -133,25 +135,29 @@ export function Modal(props: ModalProps) {
                 justifyContent: 'flex-end',
               }}
             >
-              <Surface
-                elevation="floating"
-                radius="lg"
-                onStartShouldSetResponder={() => true}
-                style={[surfaceStyle, contentStyle]}
-              >
-                {children}
-              </Surface>
-            </KeyboardAvoidingView>
-          ) : (
             <Surface
               elevation="floating"
               radius="lg"
               onStartShouldSetResponder={() => true}
               style={[surfaceStyle, contentStyle]}
+              accessible
+              accessibilityLabel={accessibilityLabel}
             >
               {children}
             </Surface>
-          )}
+          </KeyboardAvoidingView>
+        ) : (
+          <Surface
+            elevation="floating"
+            radius="lg"
+            onStartShouldSetResponder={() => true}
+            style={[surfaceStyle, contentStyle]}
+            accessible
+            accessibilityLabel={accessibilityLabel}
+          >
+            {children}
+          </Surface>
+        )}
         </View>
       </Pressable>
     </RNModal>

@@ -354,11 +354,11 @@ describe('AppFloatingGitButton — conflict navigation deduplication', () => {
       outcomes: [],
       totalActed: 0,
       failures: [
-        { repoId: 'repo-1', repoPath: '/test/repo-1', repoName: 'Repo 1', ok: false, actedCount: 0, error: 'conflict' },
-        { repoId: 'repo-1', repoPath: '/test/repo-1', repoName: 'Repo 1', ok: false, actedCount: 0, error: 'conflict' },
-        { repoId: 'repo-2', repoPath: '/test/repo-2', repoName: 'Repo 2', ok: false, actedCount: 0, error: 'conflict' },
-        { repoId: 'repo-2', repoPath: '/test/repo-2', repoName: 'Repo 2', ok: false, actedCount: 0, error: 'conflict' },
-        { repoId: 'repo-1', repoPath: '/test/repo-1', repoName: 'Repo 1', ok: false, actedCount: 0, error: 'conflict' },
+        { repoId: 'repo-1', repoPath: '/test/repo-1', repoName: 'Repo 1', ok: false, actedCount: 0, error: 'conflict', failureKind: 'rejected' },
+        { repoId: 'repo-1', repoPath: '/test/repo-1', repoName: 'Repo 1', ok: false, actedCount: 0, error: 'conflict', failureKind: 'rejected' },
+        { repoId: 'repo-2', repoPath: '/test/repo-2', repoName: 'Repo 2', ok: false, actedCount: 0, error: 'conflict', failureKind: 'rejected' },
+        { repoId: 'repo-2', repoPath: '/test/repo-2', repoName: 'Repo 2', ok: false, actedCount: 0, error: 'conflict', failureKind: 'rejected' },
+        { repoId: 'repo-1', repoPath: '/test/repo-1', repoName: 'Repo 1', ok: false, actedCount: 0, error: 'conflict', failureKind: 'rejected' },
       ],
       ok: false,
     });
