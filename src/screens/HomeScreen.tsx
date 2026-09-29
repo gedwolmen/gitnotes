@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Pressable, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -389,13 +389,8 @@ export default function HomeScreen() {
               <Text className="text-base font-bold" style={{ color: '#FFFFFF', letterSpacing: -0.2 }}>{t('thoughtDump.title')}</Text>
             </View>
           }
-          subtitleNode={
-            <Text className="text-xs font-medium" style={{ color: 'rgba(255,255,255,0.85)' }} numberOfLines={3}>
-              {t('home.bento.thoughtDumpSub')}
-            </Text>
-          }
+          subtitle={t('home.bento.thoughtDumpSub')}
           height={130}
-          contentPosition="space-between"
           onPress={() => {
             HapticService.medium();
             if (!isPro) {

@@ -234,6 +234,22 @@ describe('HomeTile', () => {
     expect(badgeStyle.position).toBe('absolute');
   });
 
+  it('allows descriptions to wrap without a line cap', () => {
+    const rendered = renderWithTheme(
+      <HomeTile
+        {...defaultProps}
+        subtitle="A long description that should remain available to the card layout"
+        subtitleLines={undefined}
+        testID="unbounded-subtitle-tile"
+      />,
+    );
+    const subtitle = rendered.getByText(
+      'A long description that should remain available to the card layout',
+    );
+
+    expect(subtitle.props.numberOfLines).toBeUndefined();
+  });
+
   it('renders with disabled prop set', () => {
     const onPress = jest.fn();
     const { getByTestId } = renderWithTheme(

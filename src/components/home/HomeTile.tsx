@@ -90,7 +90,7 @@ export function HomeTile({
   children,
   contentPosition = 'flex-end',
   titleStyle,
-  subtitleLines = 1,
+  subtitleLines,
 }: HomeTileProps) {
   const { colors } = useTheme();
   const tileHeight = height ?? HOME_TILE_HEIGHT[variant];
