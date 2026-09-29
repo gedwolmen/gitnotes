@@ -390,7 +390,6 @@ export default function HomeScreen() {
             </View>
           }
           subtitle={t('home.bento.thoughtDumpSub')}
-          height={130}
           onPress={() => {
             HapticService.medium();
             if (!isPro) {

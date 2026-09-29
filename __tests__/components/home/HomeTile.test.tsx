@@ -107,7 +107,7 @@ const renderWithTheme = (ui: React.ReactElement) => {
 
 describe('HomeTile', () => {
   it('gives accent cards enough height for the badge and copy', () => {
-    expect(HOME_TILE_HEIGHT.accent).toBe(160);
+    expect(HOME_TILE_HEIGHT.accent).toBe(180);
   });
 
   const defaultProps = {
