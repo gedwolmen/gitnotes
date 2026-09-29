@@ -9,7 +9,7 @@ export type HomeTileVariant = 'primary' | 'secondary' | 'accent';
 export const HOME_TILE_HEIGHT: Record<HomeTileVariant, number> = {
   primary: 130,
   secondary: 130,
-  accent: 180,
+  accent: 160,
 };
 
 /** Tile border-radius per variant */
