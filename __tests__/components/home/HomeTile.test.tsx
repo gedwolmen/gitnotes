@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
-import { HomeTile } from '../../../src/components/home/HomeTile';
+import { HOME_TILE_HEIGHT, HomeTile } from '../../../src/components/home/HomeTile';
 
 jest.mock('../../../src/contexts/ThemeContext', () => {
   const React = require('react');
@@ -106,6 +106,10 @@ const renderWithTheme = (ui: React.ReactElement) => {
 };
 
 describe('HomeTile', () => {
+  it('gives accent cards enough height for the badge and copy', () => {
+    expect(HOME_TILE_HEIGHT.accent).toBe(160);
+  });
+
   const defaultProps = {
     variant: 'primary' as const,
     icon: 'document-text' as const,
@@ -147,6 +151,10 @@ describe('HomeTile', () => {
       <HomeTile {...defaultProps} variant="secondary" testID="secondary-tile" />,
     );
     expect(getByTestId('secondary-tile')).toBeTruthy();
+  });
+
+  it('keeps secondary dashboard cards at the full card height', () => {
+    expect(HOME_TILE_HEIGHT.secondary).toBe(130);
   });
 
   it('renders accent variant', () => {
@@ -193,10 +201,57 @@ describe('HomeTile', () => {
   });
 
   it('accepts contentPosition space-between', () => {
-    const { getByTestId } = renderWithTheme(
-      <HomeTile {...defaultProps} contentPosition="space-between" testID="space-between-tile" />,
+    const rendered = renderWithTheme(
+      <HomeTile
+        {...defaultProps}
+        variant="secondary"
+        contentPosition="space-between"
+        testID="space-between-tile"
+      />,
     );
-    expect(getByTestId('space-between-tile')).toBeTruthy();
+    const badge = rendered.getByTestId('space-between-tile.badge');
+    const content = rendered.getByTestId('space-between-tile.content');
+    const badgeStyle = badge.props.style.reduce(
+      (merged: Record<string, unknown>, style: Record<string, unknown>) => ({ ...merged, ...style }),
+      {},
+    );
+
+    expect(badgeStyle.position).toBeUndefined();
+    expect(content.props.style.marginTop).toBe(8);
+  });
+
+  it('keeps the accent badge out of the description flow', () => {
+    const rendered = renderWithTheme(
+      <HomeTile
+        {...defaultProps}
+        variant="accent"
+        contentPosition="space-between"
+        testID="accent-space-between-tile"
+      />,
+    );
+    const badge = rendered.getByTestId('accent-space-between-tile.badge');
+    const badgeStyle = badge.props.style.reduce(
+      (merged: Record<string, unknown>, style: Record<string, unknown>) => ({ ...merged, ...style }),
+      {},
+    );
+
+    expect(badgeStyle.position).toBe('absolute');
+  });
+
+  it('allows descriptions to wrap without a line cap', () => {
+    const rendered = renderWithTheme(
+      <HomeTile
+        {...defaultProps}
+        subtitle="A long description that should remain available to the card layout"
+        subtitleLines={undefined}
+        testID="unbounded-subtitle-tile"
+      />,
+    );
+    const subtitle = rendered.getByText(
+      'A long description that should remain available to the card layout',
+    );
+
+    expect(subtitle.props.numberOfLines).toBeUndefined();
   });
 
   it('renders with disabled prop set', () => {

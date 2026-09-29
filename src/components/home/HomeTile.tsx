@@ -1,4 +1,4 @@
-import React, { ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { View, Text, StyleSheet, Pressable, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -8,8 +8,8 @@ export type HomeTileVariant = 'primary' | 'secondary' | 'accent';
 /** Tile height per variant and layout context */
 export const HOME_TILE_HEIGHT: Record<HomeTileVariant, number> = {
   primary: 130,
-  secondary: 56,
-  accent: 130,
+  secondary: 130,
+  accent: 160,
 };
 
 /** Tile border-radius per variant */
@@ -65,7 +65,7 @@ interface HomeTileProps {
  *
  * Replaces the repeated inline tile recipes in HomeScreen:
  * - primary variant: create-note, journal tiles (primary bg, white text)
- * - secondary variant: calendar strip (surface bg, bordered, 56px tall)
+ * - secondary variant: template and canvas cards (surface bg, bordered, 130px tall)
  * - accent variant: thought-dump tile (accent bg, white text)
  *
  * Press behavior (opacity 0.92 + scale 0.985) is consistent across all variants.
@@ -90,7 +90,7 @@ export function HomeTile({
   children,
   contentPosition = 'flex-end',
   titleStyle,
-  subtitleLines = 1,
+  subtitleLines,
 }: HomeTileProps) {
   const { colors } = useTheme();
   const tileHeight = height ?? HOME_TILE_HEIGHT[variant];
@@ -144,8 +144,10 @@ export function HomeTile({
 
       {/* Icon badge */}
       <View
+        testID={testID ? `${testID}.badge` : undefined}
         style={[
           styles.badge,
+          variant !== 'secondary' || contentPosition === 'flex-end' ? styles.badgeAbsolute : undefined,
           {
             width: finalBadgeSize,
             height: finalBadgeSize,
@@ -158,7 +160,10 @@ export function HomeTile({
       </View>
 
       {/* Content area */}
-      <View style={contentPosition === 'space-between' ? styles.contentSpaceBetween : styles.content}>
+      <View
+        testID={testID ? `${testID}.content` : undefined}
+        style={contentPosition === 'space-between' ? styles.contentSpaceBetween : styles.content}
+      >
         {titleNode ?? (
           <Text
             style={[styles.title, titleStyle, { color: titleColor }]}
@@ -192,11 +197,13 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   badge: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badgeAbsolute: {
     position: 'absolute',
     top: 16,
     left: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   decoration: {
     position: 'absolute',
@@ -209,6 +216,7 @@ const styles = StyleSheet.create({
   contentSpaceBetween: {
     flex: 1,
     justifyContent: 'space-between',
+    marginTop: 8,
     gap: 4,
   },
   title: {
