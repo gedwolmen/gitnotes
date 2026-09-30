@@ -82,16 +82,14 @@ export async function pushAll(
       try {
         const localPath = GitFsService.workingTreeUri({ repoPath: repo.path });
         const status = await GitEngine.status(repo.id, localPath).catch(() => null);
-        if (!status || status.ahead <= 0) {
-          return { repoId: repo.id, repoPath: repo.path, repoName: repo.name, ok: true, actedCount: 0 };
-        }
         const preflight = await GitSyncGate.capturePreflight(repo.id, localPath);
         const headOid = preflight?.headOid ?? '';
-        GitSyncGate.markPushActive(repo.id, status.currentBranch ?? undefined, headOid);
+        const branch = status?.currentBranch ?? preflight?.activeBranch;
+        GitSyncGate.markPushActive(repo.id, branch ?? undefined, headOid);
         const registryOpId = gitOperationRegistry.begin({
           kind: 'push',
           repo: repo.id,
-          branch: status.currentBranch,
+          branch: branch ?? undefined,
           entityIds: [],
           attempts: 0,
           status: 'running',
@@ -103,20 +101,23 @@ export async function pushAll(
             const conflictError = new Error(`Push conflicts: ${(result.conflicts ?? []).map((c) => c.path).join(', ')}`);
             return { repoId: repo.id, repoPath: repo.path, repoName: repo.name, ok: false, actedCount: 0, error: conflictError.message, failureKind: 'rejected' };
           }
-          const postflightResult = await GitSyncGate.verifyPostflight(preflight!, registryOpId);
+          const postflightResult = preflight
+            ? await GitSyncGate.verifyPostflight(preflight, registryOpId)
+            : { ok: true as const };
           if (!postflightResult.ok) {
             const reasonError = new Error(`Branch state changed during push (${postflightResult.reason})`);
             const failure = classifyPushError(reasonError);
             return { repoId: repo.id, repoPath: repo.path, repoName: repo.name, ok: false, actedCount: 0, error: failure.message, failureKind: failure.kind };
           }
           gitOperationRegistry.succeed(registryOpId);
-          return { repoId: repo.id, repoPath: repo.path, repoName: repo.name, ok: result.pushed > 0, actedCount: result.pushed, error: result.pushed > 0 ? undefined : result.message };
+          const succeeded = result.pushed > 0;
+          return { repoId: repo.id, repoPath: repo.path, repoName: repo.name, ok: succeeded, actedCount: result.pushed, error: succeeded ? undefined : result.message };
         } catch (err) {
           gitOperationRegistry.fail(registryOpId, err instanceof Error ? err.message : String(err));
           const failure = classifyPushError(err);
           return { repoId: repo.id, repoPath: repo.path, repoName: repo.name, ok: false, actedCount: 0, error: failure.message, failureKind: failure.kind };
         } finally {
-          GitSyncGate.clearPushActive(repo.id, status.currentBranch ?? undefined);
+          GitSyncGate.clearPushActive(repo.id, branch ?? undefined);
           if (preflight) GitSyncGate.clearPreflight(repo.id);
         }
       } catch (err) {
