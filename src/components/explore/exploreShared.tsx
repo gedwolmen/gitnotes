@@ -10,7 +10,7 @@ export interface RepoLike {
   name: string;
   localPath: string;
   branch?: string;
-  provider?: GitHostProvider | string;
+  provider?: GitHostProvider;
   hostId?: string;
   full_name?: string;
   lastSyncedAt?: number | null;

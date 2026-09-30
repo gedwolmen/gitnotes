@@ -126,13 +126,13 @@ export function RepoInfoSection({ repo, status, active, onChanged, chromeTopInse
   const removeNow = useCallback(async () => {
     setBusy('remove');
     try {
-      await removeRepo(repo.id);
+      await removeRepo(repo.path, repo.provider);
       navigation.goBack();
     } catch (caught) {
       Alert.alert('Could not remove repository', caught instanceof Error ? caught.message : String(caught));
       setBusy(null);
     }
-  }, [removeRepo, repo.id, navigation]);
+  }, [removeRepo, repo.path, repo.provider, navigation]);
 
   const confirmRemove = useCallback(() => {
     Alert.alert(
