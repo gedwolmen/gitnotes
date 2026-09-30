@@ -91,13 +91,23 @@ async function runImport(
     const repos = await StorageService.getSavedRepositories();
     const repo = repos.find((entry) => entry.path === repoPath);
     const branch = await resolveBranch(repoPath, repo?.branch);
-    const token = (await AuthService.getToken()) ?? undefined;
+    const activeToken = (await AuthService.getToken()) ?? undefined;
 
     if (!(await GitFsService.isCloned({ repoPath }))) {
       let remoteUrlOverride: string | undefined;
       const hostConnection =
         (repo?.hostId ? await AccountStorage.getHostConnection(repo.hostId) : null) ??
         (await AccountStorage.getActiveHostConnection());
+      const token = hostConnection
+        ? ((await AccountStorage.getHostToken(hostConnection.id)) ?? undefined)
+        : activeToken;
+      if (token && repo?.id) {
+        await setCredential(repo.id, {
+          kind: 'token',
+          username: hostConnection?.provider === 'github' ? 'x-access-token' : hostConnection?.hostLogin ?? 'git',
+          token,
+        });
+      }
       if (hostConnection) {
         const useSsh = await AccountStorage.getHostUseSsh(hostConnection.id);
         if (useSsh && repo?.id) {

@@ -436,6 +436,20 @@ export class AuthService {
       await AccountStorage.setActiveHostId(host.id);
     }
 
+    if (input.provider === 'gitea') {
+      await giteaHostService.storeHostCredentials(
+        host.id,
+        input.token,
+        instanceBaseUrl ?? giteaHostService.getBaseUrl(),
+      );
+    } else if (input.provider === 'forgejo') {
+      await forgejoHostService.storeHostCredentials(
+        host.id,
+        input.token,
+        instanceBaseUrl ?? forgejoHostService.getBaseUrl(),
+      );
+    }
+
     return { ok: true, account, host: toHostSummary(host) };
   }
 
