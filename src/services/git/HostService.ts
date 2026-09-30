@@ -1,3 +1,4 @@
+import { Linking } from 'react-native';
 import { getGitHostService } from './gitHostFactory';
 
 export type PullRequestState = 'open' | 'closed' | 'merged';
@@ -102,5 +103,10 @@ export const HostService = {
       return errorResult(error);
     }
   },
-  openUrl: (_url: string) => { /* noop */ },
+  openUrl: (url: string) => {
+    if (!/^https?:\/\//i.test(url)) return;
+    void Linking.openURL(url).catch(() => {
+      /* noop */
+    });
+  },
 };
