@@ -59,7 +59,7 @@ representative at an online or offline event.
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
 reported to the community leaders responsible for enforcement at:
-[open an issue](https://github.com/gedwolmen/gitnotes/issues/new).
+[open an issue](https://github.com/skepjandi/gitnotes/issues/new).
 
 All complaints will be reviewed and investigated promptly and fairly.
 

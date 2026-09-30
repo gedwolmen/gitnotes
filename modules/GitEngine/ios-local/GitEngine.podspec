@@ -2,7 +2,7 @@ Pod::Spec.new do |s|
   s.name         = 'GitEngine'
   s.version      = '0.1.0'
   s.summary      = 'Expo native module for GitEngine Rust bindings'
-  s.homepage    = 'https://github.com/gedwolmen/gitnotes'
+  s.homepage    = 'https://github.com/skepjandi/gitnotes'
   s.license      = { :type => 'MIT' }
   s.author       = { 'GitNotes' => 'dev@gitnotes.app' }
   s.source       = { :path => '.' }
