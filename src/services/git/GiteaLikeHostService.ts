@@ -1,12 +1,13 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { AccountStorage } from '../AccountStorage';
 import type {
   GitHostBranch,
   GitHostContent,
   GitHostIssue,
   GitHostItemState,
   GitHostPullRequest,
+  GitHostRepository,
   GitHostRepositoryResult,
-  GitHostRepositoryUnavailable,
   GitHostService,
   GitHostShaResult,
   GitHostTreeEntry,
@@ -26,7 +27,10 @@ export interface GiteaLikeRepo {
   id: number;
   name: string;
   full_name: string;
+  description?: string | null;
+  private: boolean;
   default_branch?: string;
+  size?: number;
   owner?: { login?: string };
 }
 
@@ -93,6 +97,8 @@ export class GiteaLikeHostService implements GitHostService, GitHostWriteService
   private token: string | null = null;
   private user: GiteaLikeUser | null = null;
   private baseUrl: string;
+  private readonly hostTokenMap = new Map<string, string>();
+  private readonly hostBaseUrlMap = new Map<string, string>();
 
   constructor(provider: 'gitea' | 'forgejo', baseUrl: string) {
     this.provider = provider;
@@ -115,6 +121,13 @@ export class GiteaLikeHostService implements GitHostService, GitHostWriteService
     return this.user;
   }
 
+  async storeHostCredentials(hostId: string, token: string, baseUrl: string): Promise<void> {
+    this.hostTokenMap.set(hostId, token);
+    this.hostBaseUrlMap.set(hostId, baseUrl);
+    await AsyncStorage.setItem(this.hostTokenKey(hostId), token);
+    await AsyncStorage.setItem(this.hostBaseUrlKey(hostId), baseUrl);
+  }
+
   private userKey(): string {
     return `@gitnotes:${this.provider}_user`;
   }
@@ -123,6 +136,12 @@ export class GiteaLikeHostService implements GitHostService, GitHostWriteService
   }
   private baseKey(): string {
     return `@gitnotes:${this.provider}_base_url`;
+  }
+  private hostTokenKey(hostId: string): string {
+    return `@gitnotes:${this.provider}:${hostId}_token`;
+  }
+  private hostBaseUrlKey(hostId: string): string {
+    return `@gitnotes:${this.provider}:${hostId}_base_url`;
   }
 
   async initialize(): Promise<void> {
@@ -170,13 +189,14 @@ export class GiteaLikeHostService implements GitHostService, GitHostWriteService
     await AsyncStorage.removeItem(this.baseKey());
   }
 
-  private async authedFetch<T>(url: string): Promise<T | null> {
-    if (!this.token) return null;
+  private async authedFetch<T>(url: string, tokenOverride?: string | null): Promise<T | null> {
+    const effectiveToken = tokenOverride !== undefined ? tokenOverride : this.token;
+    if (!effectiveToken) return null;
     try {
       const res = await fetch(url, {
         headers: {
           Accept: 'application/json',
-          Authorization: `token ${this.token}`,
+          Authorization: `token ${effectiveToken}`,
         },
       });
       if (!res.ok) {
@@ -195,7 +215,7 @@ export class GiteaLikeHostService implements GitHostService, GitHostWriteService
   private async authedFetchRaw(
     url: string,
     init: RequestInit = {},
-  ): Promise<{ status: number; body: any } | null> {
+  ): Promise<{ status: number; body: unknown } | null> {
     if (!this.token) return null;
     try {
       const res = await fetch(url, {
@@ -367,15 +387,49 @@ export class GiteaLikeHostService implements GitHostService, GitHostWriteService
       }));
   }
 
-  async listRepositories(): Promise<GitHostRepositoryResult[]> {
-    const reason =
-      'Repository listing is not supported for Gitea and Forgejo. You can add a repository manually.';
-    const unavailable: GitHostRepositoryUnavailable = {
-      kind: 'unavailable',
-      provider: this.provider,
-      reason,
-    };
-    return [unavailable];
+  async listRepositories(hostId?: string): Promise<GitHostRepositoryResult[]> {
+    let token = this.token;
+    let baseUrl = this.baseUrl;
+    if (hostId) {
+      // Use AccountStorage as the source of truth for per-host credentials.
+      // This matches how the token is stored by upsertHostConnection and
+      // avoids depending on storeHostCredentials (which is never called in
+      // the production flow) or mismatched AsyncStorage key patterns.
+      const [hostToken, hostConnection] = await Promise.all([
+        AccountStorage.getHostToken(hostId),
+        AccountStorage.getHostConnection(hostId),
+      ]);
+      if (hostToken) token = hostToken;
+      if (hostConnection?.instanceBaseUrl) baseUrl = hostConnection.instanceBaseUrl;
+    }
+    try {
+      const repos = await this.authedFetch<GiteaLikeRepo[]>(`${baseUrl}/user/repos`, token);
+      if (!repos) {
+        return [
+          {
+            kind: 'unavailable',
+            provider: this.provider,
+            reason: 'Network error',
+          },
+        ];
+      }
+      return repos.map(
+        (r): GitHostRepository => ({
+          provider: this.provider,
+          owner: r.owner?.login ?? '',
+          repo: r.name,
+          fullName: r.full_name,
+          name: r.name,
+          description: r.description ?? null,
+          isPrivate: r.private,
+          sizeKb: r.size ? Math.round(r.size / 1024) : undefined,
+          defaultBranch: r.default_branch,
+        }),
+      );
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      return [{ kind: 'unavailable', provider: this.provider, reason }];
+    }
   }
 
   // ── Write operations (GitHostWriteService) ──────────────────────
@@ -391,8 +445,8 @@ export class GiteaLikeHostService implements GitHostService, GitHostWriteService
     const result = await this.authedFetchRaw(url);
     if (!result) return { kind: 'error', message: 'Network error' };
     if (result.status === 404) return { kind: 'not-found' };
-    if (result.status >= 200 && result.status < 300 && result.body?.sha) {
-      return { kind: 'found', sha: result.body.sha };
+    if (result.status >= 200 && result.status < 300 && (result.body as { sha?: string })?.sha) {
+      return { kind: 'found', sha: (result.body as { sha: string }).sha };
     }
     return { kind: 'error', message: `Unexpected status: ${result.status}` };
   }
@@ -435,7 +489,9 @@ export class GiteaLikeHostService implements GitHostService, GitHostWriteService
       });
 
       if (result && result.status >= 200 && result.status < 300) {
-        if (result.body?.content?.sha) return result.body.content.sha;
+        if ((result.body as { content?: { sha?: string } })?.content?.sha) {
+          return (result.body as { content: { sha: string } }).content.sha;
+        }
         throw new Error(`${this.provider} updateFile succeeded but no sha in response`);
       }
 
