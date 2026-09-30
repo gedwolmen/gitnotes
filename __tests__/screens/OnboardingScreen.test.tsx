@@ -13,6 +13,7 @@
  * - Error message displayed on invalid token
  */
 import React from 'react';
+import { Alert } from 'react-native';
 import { render, fireEvent, waitFor, act } from '@testing-library/react-native';
 import * as Clipboard from 'expo-clipboard';
 import type { HostConnectionSummary } from '@/services/AuthService';
@@ -473,6 +474,67 @@ describe('OnboardingScreen', () => {
       await waitFor(() => {
         expect(queryByText('Invalid token')).toBeTruthy();
       });
+    });
+
+    it('rejects a non-http instance URL before connecting', async () => {
+      const { getByTestId, queryByText } = render(
+        <OnboardingScreen onComplete={mockOnComplete} onSkip={mockOnSkip} />
+      );
+      for (let i = 0; i < 5; i++) {
+        await act(async () => {
+          fireEvent.press(getByTestId('onboarding.button.next'));
+        });
+      }
+
+      await act(async () => {
+        fireEvent.press(getByTestId('onboarding.provider.dropdown'));
+        fireEvent.press(getByTestId('onboarding.provider.gitlab'));
+      });
+
+      fireEvent.changeText(getByTestId('onboarding.input.instance-url'), 'ftp://gitlab.example.com');
+      fireEvent.changeText(getByTestId('onboarding.input.token'), 'glpat_test_token');
+
+      await act(async () => {
+        fireEvent.press(getByTestId('onboarding.button.next'));
+      });
+
+      expect(mockConnectHost).not.toHaveBeenCalled();
+      expect(queryByText('connectHost.error.invalidUrl')).toBeTruthy();
+    });
+
+    it('warns before connecting over http', async () => {
+      const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation((_title, _message, buttons) => {
+        buttons?.[1]?.onPress?.();
+      });
+      const { getByTestId } = render(
+        <OnboardingScreen onComplete={mockOnComplete} onSkip={mockOnSkip} />
+      );
+      for (let i = 0; i < 5; i++) {
+        await act(async () => {
+          fireEvent.press(getByTestId('onboarding.button.next'));
+        });
+      }
+
+      await act(async () => {
+        fireEvent.press(getByTestId('onboarding.provider.dropdown'));
+        fireEvent.press(getByTestId('onboarding.provider.gitlab'));
+      });
+
+      fireEvent.changeText(getByTestId('onboarding.input.instance-url'), 'http://gitlab.example.com');
+      fireEvent.changeText(getByTestId('onboarding.input.token'), 'glpat_test_token');
+      mockConnectHost.mockResolvedValueOnce({ ok: true, host: makeHost('gitlab') });
+
+      await act(async () => {
+        fireEvent.press(getByTestId('onboarding.button.next'));
+      });
+
+      expect(alertSpy).toHaveBeenCalled();
+      expect(mockConnectHost).toHaveBeenCalledWith({
+        provider: 'gitlab',
+        token: 'glpat_test_token',
+        instanceBaseUrl: 'http://gitlab.example.com',
+      });
+      alertSpy.mockRestore();
     });
 
     it('skips token step when token is empty', async () => {

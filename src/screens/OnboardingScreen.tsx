@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import {
   View,
   Text,
+  Alert,
   ActivityIndicator,
   Linking,
   KeyboardAvoidingView,
@@ -91,12 +92,39 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
       setCurrentStep(currentStep + 1);
     } else if (currentStep === TOKEN_STEP) {
       if (token.trim()) {
+        const normalizedInstanceUrl = instanceUrl.trim();
+        if (selectedProvider !== 'github' && normalizedInstanceUrl) {
+          let parsedInstanceUrl: URL;
+          try {
+            parsedInstanceUrl = new URL(normalizedInstanceUrl);
+          } catch {
+            setTokenError(t('connectHost.error.invalidUrl'));
+            return;
+          }
+          if (parsedInstanceUrl.protocol !== 'https:' && parsedInstanceUrl.protocol !== 'http:') {
+            setTokenError(t('connectHost.error.invalidUrl'));
+            return;
+          }
+          if (parsedInstanceUrl.protocol === 'http:') {
+            const shouldContinue = await new Promise<boolean>((resolve) => {
+              Alert.alert(
+                t('provider.insecureUrlTitle'),
+                t('provider.insecureUrlBody'),
+                [
+                  { text: t('common.cancel'), style: 'cancel', onPress: () => resolve(false) },
+                  { text: t('common.continue'), onPress: () => resolve(true) },
+                ],
+              );
+            });
+            if (!shouldContinue) return;
+          }
+        }
         setIsVerifying(true);
         setTokenError(null);
         const result = await connectHost({
           provider: selectedProvider,
           token: token.trim(),
-          instanceBaseUrl: selectedProvider === 'github' ? null : (instanceUrl.trim() || null),
+          instanceBaseUrl: selectedProvider === 'github' ? null : (normalizedInstanceUrl || null),
         });
         if (result.ok) {
           await refreshAccounts();
@@ -112,7 +140,7 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
     } else if (currentStep === AI_STEP) {
       await finish();
     }
-  }, [currentStep, token, selectedProvider, instanceUrl, connectHost, refreshAccounts, finish, AI_STEP, TOKEN_STEP]);
+  }, [currentStep, token, selectedProvider, instanceUrl, connectHost, refreshAccounts, finish, AI_STEP, TOKEN_STEP, t]);
 
   const handleSkip = useCallback(async () => {
     await OnboardingService.completeOnboarding();
