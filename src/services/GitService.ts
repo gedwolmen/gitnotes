@@ -8,7 +8,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StorageService } from './StorageService';
 import { AuthService } from './AuthService';
 import { parseRepoPath } from '../utils/gitPathParser';
-import { fetchGitHubDefaultBranch, fetchGitLabDefaultBranch } from './git/branchResolver';
+import { fetchGitHubDefaultBranch, fetchGitLabDefaultBranch, fetchGiteaLikeDefaultBranch } from './git/branchResolver';
 import type { GitHostProvider } from './git/GitHost';
 import { getGitHostService } from './git/gitHostFactory';
 import { getActiveGitHost } from './git/activeHost';
@@ -62,6 +62,8 @@ export class GitService {
         branch = (await fetchGitLabDefaultBranch(path, token)) ?? undefined;
       } else if (provider === 'github') {
         branch = (await fetchGitHubDefaultBranch(path, token)) ?? undefined;
+      } else if (provider === 'gitea' || provider === 'forgejo') {
+        branch = (await fetchGiteaLikeDefaultBranch(path)) ?? undefined;
       } else {
         branch = (await fetchGitHubDefaultBranch(path, token)) ?? undefined;
       }
