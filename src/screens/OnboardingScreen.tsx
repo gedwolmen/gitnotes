@@ -359,7 +359,7 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
               <Text
                 testID="onboarding.button.report-issue"
                 style={{ color: colors.accent, fontWeight: '600' }}
-                onPress={() => Linking.openURL('https://github.com/gedwolmen/gitnotes/issues')}
+                onPress={() => Linking.openURL('https://github.com/skepjandi/gitnotes/issues')}
               >
                 Report it on GitHub Issues
               </Text>

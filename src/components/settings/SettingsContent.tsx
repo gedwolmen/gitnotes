@@ -1164,7 +1164,7 @@ export function SettingsContent(props: SettingsContentProps) {
         </GroupRow>
         <GroupRow
           testID="settings.row.report-issue"
-          onPress={() => Linking.openURL('https://github.com/gedwolmen/gitnotes/issues')}
+          onPress={() => Linking.openURL('https://github.com/skepjandi/gitnotes/issues')}
           trailing={<Ionicons name="open-outline" size={18} color={colors.accent} />}
         >
           <Text style={[styles.settingLabel, { color: colors.primary }]}>{t('settings.reportIssue')}</Text>

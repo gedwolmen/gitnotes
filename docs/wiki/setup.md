@@ -13,7 +13,7 @@
 ## Clone
 
 ```bash
-git clone https://github.com/gedwolmen/gitnotes.git
+git clone https://github.com/skepjandi/gitnotes.git
 cd gitnotes
 yarn install
 ```

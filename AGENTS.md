@@ -121,9 +121,9 @@ GitNotēs uses **clone mode** exclusively: local git commits with write-through 
 There are two documentation surfaces, and they serve different purposes:
 
 - **`CHANGELOG.md`** (repo root) — **single-PR fixes and narrow bug-fix entries**. Grouped by date descending, one section per entry: title, area (conventional-commit prefix), 2-4 line summary, PR reference. Default location for any new fix.
-- **GitHub Wiki** ([gedwolmen/gitnotes/wiki](https://github.com/gedwolmen/gitnotes/wiki)) — **the public-facing main wiki**. Architecture, services, contributor guides, feature deep-dives, post-mortems, and multi-PR campaigns. A new wiki page is appropriate only when the change crosses architectural boundaries (new service, new major feature, cross-cutting refactor) or teaches something contributors need to understand the system.
+- **GitHub Wiki** ([skepjandi/gitnotes/wiki](https://github.com/skepjandi/gitnotes/wiki)) — **the public-facing main wiki**. Architecture, services, contributor guides, feature deep-dives, post-mortems, and multi-PR campaigns. A new wiki page is appropriate only when the change crosses architectural boundaries (new service, new major feature, cross-cutting refactor) or teaches something contributors need to understand the system.
 
-Editing the wiki: write the page in `docs/wiki/<name>.md` (this repo, source-controlled), add it to `docs/wiki/index.md`, and open a PR. The CI sync workflow (`.github/workflows/sync-wiki.yml`) mirrors `docs/wiki/` → GitHub Wiki on every merge to `main`. Manual edits on `github.com/gedwolmen/gitnotes/wiki` will be overwritten on the next sync.
+Editing the wiki: write the page in `docs/wiki/<name>.md` (this repo, source-controlled), add it to `docs/wiki/index.md`, and open a PR. The CI sync workflow (`.github/workflows/sync-wiki.yml`) mirrors `docs/wiki/` → GitHub Wiki on every merge to `main`. Manual edits on `github.com/skepjandi/gitnotes/wiki` will be overwritten on the next sync.
 
 Wiki documentation is part of the definition of done for **architecture-level changes only**. For all other understanding (how a service works, what a store does, how screens are wired), use the wiki — it is the canonical reference. Do not rely on memory or partial context.
 

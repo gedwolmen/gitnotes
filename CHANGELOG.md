@@ -4,9 +4,9 @@ All notable fixes and feature changes to GitNotēs are documented here.
 
 > **Format**: loosely based on [Keep a Changelog](https://keepachangelog.com/), grouped by date descending. Each entry references the originating PR (when available) and names the area from the conventional-commit prefix.
 >
-> **Wiki**: the [GitHub Wiki](https://github.com/gedwolmen/gitnotes/wiki) is the public-facing main wiki — architecture, services, contributor guides, and feature deep-dives. Source-controlled editing surface is `docs/wiki/` in this repo; CI (`.github/workflows/sync-wiki.yml`) mirrors it to the GitHub Wiki on every merge to `main`. New single-PR fixes should be added here, not as new wiki pages.
+> **Wiki**: the [GitHub Wiki](https://github.com/skepjandi/gitnotes/wiki) is the public-facing main wiki — architecture, services, contributor guides, and feature deep-dives. Source-controlled editing surface is `docs/wiki/` in this repo; CI (`.github/workflows/sync-wiki.yml`) mirrors it to the GitHub Wiki on every merge to `main`. New single-PR fixes should be added here, not as new wiki pages.
 >
-> **History**: prior fixes (pre-2026-08) lived in single-PR wiki pages. Those pages were retired in [#1047](https://github.com/gedwolmen/gitnotes/pull/1047); their full diagnostic content is preserved in git history via `git log -p -- docs/wiki/<file>.md`.
+> **History**: prior fixes (pre-2026-08) lived in single-PR wiki pages. Those pages were retired in [#1047](https://github.com/skepjandi/gitnotes/pull/1047); their full diagnostic content is preserved in git history via `git log -p -- docs/wiki/<file>.md`.
 
 ## 2026-09-30
 
@@ -82,7 +82,7 @@ All notable fixes and feature changes to GitNotēs are documented here.
 
 **Fix:** `verify_server_cert()` in `libgit2-sys 0.18.8` now unconditionally returns 0 (success) when `SSL_get_verify_result != X509_V_OK`, bypassing the verify result check entirely on Android. Conscrypt handles certificate validation at the Java layer — the native OpenSSL layer should never surface cert errors when `SSL_VERIFY_NONE` was the intent.
 
-See PR [#1644](https://github.com/gedwolmen/gitnotes/pull/1644).
+See PR [#1644](https://github.com/skepjandi/gitnotes/pull/1644).
 
 ### fix(notes): prevent duplicate note file when editing title
 
@@ -90,7 +90,7 @@ See PR [#1644](https://github.com/gedwolmen/gitnotes/pull/1644).
 
 **Fix:** In `useNoteEditorDocument.handleSave()`, the `syncPath` for `upsertNote` was using a stale `existingFilePath` captured at editor hydration time. After a title change, `noteStore.updateNote()` correctly committed a `git mv` rename, but `handleSave` then wrote to the old path, creating a duplicate file. The fix uses the `filePath` from the returned updated note instead of the stale captured value.
 
-See PR [#1635](https://github.com/gedwolmen/gitnotes/pull/1635).
+See PR [#1635](https://github.com/skepjandi/gitnotes/pull/1635).
 
 ### fix(android): apply SSL cert patches via corrected registry source path
 
@@ -125,7 +125,7 @@ Builds on PRs #1622–#1627. See PRs #1625, #1627.
 
 **Fix:** Rebuild the live stroke path from the gesture-updated point snapshots instead of mutating a shared Skia `PathBuilder` across worklet executions.
 
-**PR:** [#1580](https://github.com/gedwolmen/gitnotes/pull/1580)
+**PR:** [#1580](https://github.com/skepjandi/gitnotes/pull/1580)
 
 ### fix(canvas): remove worklet path mutation warnings and inset launch spinner
 
@@ -133,7 +133,7 @@ Builds on PRs #1622–#1627. See PRs #1625, #1627.
 
 **Fix:** Migrated canvas worklet and PNG export path construction to `Skia.PathBuilder`, updated the Skia mock, and applied safe-area insets to the loading surface with regression coverage.
 
-**PR:** [#1578](https://github.com/gedwolmen/gitnotes/pull/1578)
+**PR:** [#1578](https://github.com/skepjandi/gitnotes/pull/1578)
 
 ### fix(skia): eliminate deprecated Skia path API deprecation warnings in runner
 
@@ -157,7 +157,7 @@ Builds on PRs #1622–#1627. See PRs #1625, #1627.
 
 **Fix:** Capture the event reference and its `nativeEvent.layout` values into refs before any derived-value reads, ensuring consistent dimensions across layout cycles.
 
-**PR:** [#1573](https://github.com/gedwolmen/gitnotes/pull/1573)
+**PR:** [#1573](https://github.com/skepjandi/gitnotes/pull/1573)
 
 ### fix(explore): guard onLayout event.nativeEvent against null
 
@@ -165,7 +165,7 @@ Builds on PRs #1622–#1627. See PRs #1625, #1627.
 
 **Fix:** Add a null guard on `nativeEvent` before reading `layout` in all affected `onLayout` handlers.
 
-**PR:** [#1572](https://github.com/gedwolmen/gitnotes/pull/1572)
+**PR:** [#1572](https://github.com/skepjandi/gitnotes/pull/1572)
 
 ### fix(explore): reserve section tab header space
 
@@ -173,7 +173,7 @@ Builds on PRs #1622–#1627. See PRs #1625, #1627.
 
 **Fix:** Apply the measured header inset to section tab content so all sub-tab lists render below the header with correct padding.
 
-**PR:** [#1571](https://github.com/gedwolmen/gitnotes/pull/1571)
+**PR:** [#1571](https://github.com/skepjandi/gitnotes/pull/1571)
 
 ## 2026-09-12
 
@@ -197,7 +197,7 @@ Builds on PRs #1622–#1627. See PRs #1625, #1627.
 
 **Fix:** Read the current window dimensions during render instead of adding `useWindowDimensions()` to these components, preserving responsive sizing without changing their hook count.
 
-**PR:** [#1568](https://github.com/gedwolmen/gitnotes/pull/1568)
+**PR:** [#1568](https://github.com/skepjandi/gitnotes/pull/1568)
 
 ### fix(ios): generate valid Swift flags in CocoaPods Podfile
 
@@ -205,7 +205,7 @@ Builds on PRs #1622–#1627. See PRs #1625, #1627.
 
 **Fix:** Preserve Ruby interpolation when generating `OTHER_SWIFT_FLAGS` and remove the temporary Podfile sanitizer workaround.
 
-**PR:** [#1563](https://github.com/gedwolmen/gitnotes/pull/1563)
+**PR:** [#1563](https://github.com/skepjandi/gitnotes/pull/1563)
 
 ### fix(android): allow system-default orientation
 
@@ -213,7 +213,7 @@ Builds on PRs #1622–#1627. See PRs #1625, #1627.
 
 **Fix:** Changed `app.json` `orientation` from `"portrait"` to `"default"` (system-default). Expo's prebuild regenerates `android:screenOrientation="unspecified"` in the manifest, reverting to the OS orientation policy.
 
-**PR:** [#1567](https://github.com/gedwolmen/gitnotes/pull/1567)
+**PR:** [#1567](https://github.com/skepjandi/gitnotes/pull/1567)
 
 ### fix(ui): recompute layout dimensions on resize
 
@@ -221,7 +221,7 @@ Builds on PRs #1622–#1627. See PRs #1625, #1627.
 
 **Fix:** Replaced all `Dimensions.get('window')` with `useWindowDimensions()` hook in both components. `NoteImage` now computes image width reactively from the current viewport. `GraphViewScreen.centerGraph()` depends on `screenWidth` via `useWindowDimensions()` so graph centering recalculates on orientation change. `getNodeDimensions` (a function, not a dimension read) is unaffected.
 
-**PR:** [#1567](https://github.com/gedwolmen/gitnotes/pull/1567)
+**PR:** [#1567](https://github.com/skepjandi/gitnotes/pull/1567)
 
 ### test(android): cover responsive and build configuration fixes
 
@@ -229,7 +229,7 @@ Builds on PRs #1622–#1627. See PRs #1625, #1627.
 
 **Fix:** Added `__tests__/plugins/androidBuildConfig.test.ts` validating R8 minification config, JNA rule, orientation setting, and no deprecated keys. Added `__tests__/utils/responsiveDimensions.test.ts` validating that `NoteImage` and `GraphViewScreen` use `useWindowDimensions()` hook and that `GraphViewScreen.centerGraph()` lists `screenWidth` in its dependency array.
 
-**PR:** [#1567](https://github.com/gedwolmen/gitnotes/pull/1567)
+**PR:** [#1567](https://github.com/skepjandi/gitnotes/pull/1567)
 
 ### fix(android): migrate app-owned edge-to-edge handling
 
@@ -242,7 +242,7 @@ Builds on PRs #1622–#1627. See PRs #1625, #1627.
 - `react-native@0.85.3` `ReactModalHostView.kt` — `@Suppress("DEPRECATION")` on native status-bar API; version-locked to RN 0.85.
 - `react-native-screens@4.26.2` — `statusBarTranslucent` in library type definitions only; no app code affected.
 
-**PR:** [#1567](https://github.com/gedwolmen/gitnotes/pull/1567)
+**PR:** [#1567](https://github.com/skepjandi/gitnotes/pull/1567)
 
 ### fix(android): enable R8 minification and resource shrinking for release builds
 
@@ -250,7 +250,7 @@ Builds on PRs #1622–#1627. See PRs #1625, #1627.
 
 **Fix:** Install `expo-build-properties@56.0.27` and configure `enableMinifyInReleaseBuilds` and `enableShrinkResourcesInReleaseBuilds` via the Expo config plugin; add a targeted `-dontwarn java.awt.Component` rule for a JNA desktop-only reference so R8 completes without fatal missing-class errors.
 
-**PR:** [#1567](https://github.com/gedwolmen/gitnotes/pull/1567)
+**PR:** [#1567](https://github.com/skepjandi/gitnotes/pull/1567)
 
 ### fix(sync): preserve repository host during clone recovery
 
@@ -258,7 +258,7 @@ Builds on PRs #1622–#1627. See PRs #1625, #1627.
 
 **Fix:** Resolve the repository's stored host connection first and preserve its provider and instance URL through add-time clones, lazy pulls, and recovery re-clones.
 
-**PR:** [#1555](https://github.com/gedwolmen/gitnotes/pull/1555)
+**PR:** [#1555](https://github.com/skepjandi/gitnotes/pull/1555)
 
 ### fix(auth): clarify provider token failures
 
@@ -332,7 +332,7 @@ Builds on PRs #1622–#1627. See PRs #1625, #1627.
 
 **Fix:** Reload branch-backed providers, pause non-active queue items, and return open note, canvas, and file editors to their list screens after checkout.
 
-**PR:** [#1524](https://github.com/gedwolmen/gitnotes/pull/1524)
+**PR:** [#1524](https://github.com/skepjandi/gitnotes/pull/1524)
 
 ### fix(android): align recent commits pagination parameters
 
@@ -340,7 +340,7 @@ Builds on PRs #1622–#1627. See PRs #1625, #1627.
 
 **Fix:** Forward both `skip` and `limit` so Android matches the shared native contract.
 
-**PR:** [#1511](https://github.com/gedwolmen/gitnotes/pull/1511)
+**PR:** [#1511](https://github.com/skepjandi/gitnotes/pull/1511)
 
 ### fix(ios): keep GitEngine module maps out of Sources
 
@@ -348,7 +348,7 @@ Builds on PRs #1622–#1627. See PRs #1625, #1627.
 
 **fix(ios):** Declare only the generated Swift and C header as sources, then pass the module map explicitly through the GitEngine pod target settings.
 
-**PR:** [#1510](https://github.com/gedwolmen/gitnotes/pull/1510)
+**PR:** [#1510](https://github.com/skepjandi/gitnotes/pull/1510)
 
 ## 2026-09-09
 

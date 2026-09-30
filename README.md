@@ -16,7 +16,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/gedwolmen/gitnotes/actions/workflows/ci.yml"><img src="https://github.com/gedwolmen/gitnotes/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/skepjandi/gitnotes/actions/workflows/ci.yml"><img src="https://github.com/skepjandi/gitnotes/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MPL--2.0-blue.svg" alt="MPL-2.0"></a>
   <a href="https://docs.expo.dev/versions/latest/"><img src="https://img.shields.io/badge/Expo-SDK%2056-000.svg" alt="Expo SDK 56"></a>
   <img src="https://img.shields.io/badge/platform-iOS%20%7C%20Android-lightgrey.svg" alt="iOS | Android">
@@ -46,7 +46,7 @@
 - Notes, todos, journals, and Excalidraw-style canvases — all backed by Git
 - Folders, tags, colors, pins, wiki-links, backlinks, custom templates
 - Multi-provider sync (GitHub, GitLab, Gitea-like) via local git clone
-- Optional Pro tier with Neumorphic "Fancy UI", advanced AI, multi-host paywall, and trial/lifetime via StoreKit 2 (RevenueCat) — see the [wiki: Paywall & Pro Tier](https://github.com/gedwolmen/gitnotes/wiki/paywall)
+- Optional Pro tier with Neumorphic "Fancy UI", advanced AI, multi-host paywall, and trial/lifetime via StoreKit 2 (RevenueCat) — see the [wiki: Paywall & Pro Tier](https://github.com/skepjandi/gitnotes/wiki/paywall)
 - Optional AI chat layer (Anthropic, OpenAI-compatible providers, Apple Intelligence, on-device Llama)
 - Biometric lock, multilingual UI (EN, ES, FR, DE, JA, KO), light / dark / system themes
 
@@ -58,9 +58,9 @@ Expo SDK 56 · React Native 0.85 · TypeScript 6 · React Navigation v7 · TanSt
 
 Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, code style, and commit guidelines.
 
-For a full project knowledge base see [the GitHub Wiki](https://github.com/gedwolmen/gitnotes/wiki)
+For a full project knowledge base see [the GitHub Wiki](https://github.com/skepjandi/gitnotes/wiki)
 
-For bugs or feature requests, [open an issue](https://github.com/gedwolmen/gitnotes/issues/new/choose).
+For bugs or feature requests, [open an issue](https://github.com/skepjandi/gitnotes/issues/new/choose).
 
 ## License
 
