@@ -10,6 +10,14 @@ All notable fixes and feature changes to GitNotēs are documented here.
 
 ## 2026-09-30
 
+### feat(onboarding): multi-provider token entry (GitHub, GitLab, Gitea, Forgejo)
+
+**What:** OnboardingScreen previously accepted only a GitHub token via the deprecated `AuthService.setToken` / `GitHubService.setToken` methods. Users of GitLab, Gitea, or Forgejo had no path to connect during onboarding.
+
+**Fix:** Replaced the GitHub-only token screen with a provider picker (GitHub, GitLab, Gitea, Forgejo) that calls `AccountsContext.connectHost`. Non-GitHub providers reveal an editable Instance URL field. The token-settings shortcut link is shown only for GitHub and GitLab (which have known hosted token-creation URLs); Gitea and Forgejo hide it since self-hosted instances vary. Translations added to all six locale files.
+
+**Scope:** OnboardingScreen token step only; provider services and Settings connection flow unchanged.
+
 ### fix(explore): open issue and pull request links
 
 **What:** Tapping an issue or pull request in the Git tab did not open its remote page.
