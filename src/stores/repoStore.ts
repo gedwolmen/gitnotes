@@ -4,6 +4,7 @@ import { StorageService } from '../services/StorageService';
 import { TemplateRepoPreferenceService } from '../services/TemplateRepoPreferenceService';
 import { LastUsedRepoService } from '../services/LastUsedRepoService';
 import { GitFsService } from '../services/git/GitFsService';
+import { AccountStorage } from '../services/AccountStorage';
 import { useAIStore } from './aiStore';
 import { useNoteStore } from './noteStore';
 import { useCanvasStore } from './canvasStore';
@@ -16,6 +17,7 @@ import {
 } from '../services/git/repoAccessPreflight';
 import { reposAffectedByRemovedHosts, type RemovedHostRef } from '../services/git/repoRemovalCascade';
 import { initializeForRepo, removeForRepo } from '../services/git/activeBranchStore';
+import { setCredential } from '../services/git/engine/GitEngine';
 
 interface RepoState {
   repositories: GitRepository[];
@@ -33,6 +35,7 @@ interface RepoActions {
     nameOrOptions?: string | AddRepositoryOptions,
     provider?: GitHostProvider,
     options?: AddRepositoryOptions,
+    hostId?: string,
   ) => Promise<GitRepository>;
   removeRepository: (path: string, provider?: GitHostProvider) => Promise<void>;
   removeRepositoriesForHosts: (
@@ -57,13 +60,60 @@ export const useRepoStore = create<RepoState & RepoActions>()((set, get) => ({
     }
   },
 
-  addRepository: async (path, nameOrOptions, provider, options) => {
+  addRepository: async (path, nameOrOptions, provider, options, hostId) => {
     const name = typeof nameOrOptions === 'string' ? nameOrOptions : undefined;
     const resolvedOptions = typeof nameOrOptions === 'object' ? nameOrOptions : options;
-    const resolvedProvider = provider ?? 'github';
     const activeHost = await getActiveGitHost();
-    if (resolvedProvider === 'github') {
-      if (activeHost?.provider === 'github') {
+    const resolvedProvider = provider ?? activeHost?.provider ?? 'github';
+
+    let hostToken: string | null = null;
+    let hostInstanceBaseUrl: string | null = null;
+    let hostLogin: string | null = null;
+
+    if (hostId) {
+      const hostConnection = await AccountStorage.getHostConnection(hostId);
+      if (!hostConnection) {
+        throw new Error(
+          `No connected ${GIT_HOST_LABELS[resolvedProvider] ?? 'host'} account. Add a ${GIT_HOST_LABELS[resolvedProvider] ?? 'host'} connection first.`,
+        );
+      }
+      hostToken = await AccountStorage.getHostToken(hostId);
+      hostInstanceBaseUrl = hostConnection.instanceBaseUrl;
+      hostLogin = hostConnection.hostLogin;
+      // Use the host's actual provider for the preflight decision — not the
+      // passed-in resolvedProvider.  This prevents a Forgejo hostId from ever
+      // triggering GitHub preflight even when GitHub is the active host.
+      if (hostConnection.provider === 'github' && hostToken) {
+        const access = await checkGitHubRepoAccess(path, hostToken);
+        switch (access.kind) {
+          case 'ok':
+            break;
+          case 'write_unverified':
+            if (!resolvedOptions?.allowUnverifiedWrite) {
+              throw new RepoAccessPreflightError(access, true);
+            }
+            break;
+          case 'no_access':
+            throw new RepoAccessPreflightError(access);
+          case 'transient':
+            throw new RepoAccessPreflightError(access, true);
+          default: {
+            const exhaustiveCheck: never = access;
+            return exhaustiveCheck;
+          }
+        }
+      }
+      if (!hostToken) {
+        throw new Error(
+          `No auth token for ${GIT_HOST_LABELS[resolvedProvider] ?? 'host'}. Re-connect your ${GIT_HOST_LABELS[resolvedProvider] ?? 'host'} account.`,
+        );
+      }
+    } else if (activeHost) {
+      hostToken = activeHost.token;
+      hostInstanceBaseUrl = activeHost.instanceBaseUrl;
+      const activeHostConnection = await AccountStorage.getHostConnection(activeHost.hostId);
+      hostLogin = activeHostConnection?.hostLogin ?? null;
+      if (resolvedProvider === 'github') {
         const access = await checkGitHubRepoAccess(path, activeHost.token);
         switch (access.kind) {
           case 'ok':
@@ -83,28 +133,27 @@ export const useRepoStore = create<RepoState & RepoActions>()((set, get) => ({
           }
         }
       }
-    }
-    const repo = await GitService.addRepository(path, name, resolvedProvider, activeHost?.hostId);
-
-    if (!activeHost) {
+    } else {
       throw new Error(
         `No connected ${GIT_HOST_LABELS[resolvedProvider] ?? 'host'} account. Add a ${GIT_HOST_LABELS[resolvedProvider] ?? 'host'} connection first.`,
       );
     }
-    if (!activeHost.token) {
-      throw new Error(
-        `No auth token for ${GIT_HOST_LABELS[resolvedProvider] ?? 'host'}. Re-connect your ${GIT_HOST_LABELS[resolvedProvider] ?? 'host'} account.`,
-      );
-    }
+
+    const repo = await GitService.addRepository(path, name, resolvedProvider, hostId ?? activeHost?.hostId);
 
     try {
+      await setCredential(repo.id, {
+        kind: 'token',
+        username: resolvedProvider === 'github' ? 'x-access-token' : hostLogin ?? 'git',
+        token: hostToken,
+      });
       await GitFsService.cloneExclusive({
         repoPath: repo.path,
         branch: repo.branch ?? 'main',
-        token: activeHost.token,
+        token: hostToken,
         repoId: repo?.id,
         provider: repo.provider,
-        instanceBaseUrl: activeHost.instanceBaseUrl,
+        instanceBaseUrl: hostInstanceBaseUrl,
       });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -137,7 +186,7 @@ export const useRepoStore = create<RepoState & RepoActions>()((set, get) => ({
       await LastUsedRepoService.clear();
     }
 
-    GitFsService.removeRepo({ repoPath: path }).catch(() => undefined);
+    await GitFsService.removeRepo({ repoPath: path }).catch(() => undefined);
 
     const { chatRepoOwner, chatRepoName } = useAIStore.getState();
     if (chatRepoOwner && chatRepoName && `${chatRepoOwner}/${chatRepoName}` === path) {
