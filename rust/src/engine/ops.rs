@@ -1022,7 +1022,8 @@ fn fill_ahead_behind(repo: &Repository, status: &mut RepoStatus) -> Result<()> {
     let Some(remote_name) = first_remote(repo)? else {
         return Ok(());
     };
-    let tracking = format!("refs/remotes/{}/{}", remote_name, branch);
+    let upstream_branch = configured_merge_branch(repo, &branch).unwrap_or(branch);
+    let tracking = format!("refs/remotes/{}/{}", remote_name, upstream_branch);
     let local_oid = repo
         .head()
         .ok()
@@ -1036,6 +1037,12 @@ fn fill_ahead_behind(repo: &Repository, status: &mut RepoStatus) -> Result<()> {
     status.ahead = ahead as u32;
     status.behind = behind as u32;
     Ok(())
+}
+
+pub(crate) fn configured_merge_branch(repo: &Repository, branch: &str) -> Option<String> {
+    let merge_key = format!("branch.{}.merge", branch);
+    let merge_ref = repo.config().ok()?.get_string(&merge_key).ok()?;
+    merge_ref.strip_prefix("refs/heads/").map(str::to_string)
 }
 
 fn ahead_behind(
@@ -1430,6 +1437,49 @@ mod tests {
         let remotes = list_remotes(&dir).unwrap();
         assert_eq!(remotes.len(), 1);
         assert_eq!(remotes[0].url.as_deref(), Some("file:///tmp/two.git"));
+        fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn resolves_configured_upstream_branch() {
+        let dir = scratch_repo("upstream-branch");
+        let repo = open_repo(&dir).unwrap();
+        repo.config()
+            .unwrap()
+            .set_str("branch.main.merge", "refs/heads/master")
+            .unwrap();
+
+        assert_eq!(
+            configured_merge_branch(&repo, "main"),
+            Some("master".to_string())
+        );
+        fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn status_counts_commits_against_configured_upstream_branch() {
+        let dir = scratch_repo("upstream-status");
+        {
+            let repo = open_repo(&dir).unwrap();
+            repo.set_head("refs/heads/main").unwrap();
+            repo.config()
+                .unwrap()
+                .set_str("branch.main.merge", "refs/heads/master")
+                .unwrap();
+        }
+        add_remote(&dir, "origin", "file:///tmp/origin.git").unwrap();
+        commit_file(&dir, "README", "one\n", "first");
+        let upstream = head_oid(&dir);
+        {
+            let repo = open_repo(&dir).unwrap();
+            repo.reference("refs/remotes/origin/master", upstream, true, "test")
+                .unwrap();
+        }
+        commit_file(&dir, "README", "one\ntwo\n", "second");
+
+        let status = repo_status("test", &dir).unwrap();
+        assert_eq!(status.ahead, 1);
+        assert_eq!(status.behind, 0);
         fs::remove_dir_all(&dir).ok();
     }
 
