@@ -9,6 +9,7 @@ import type { GitRepository } from '../../services/GitService';
 import { GIT_HOST_LABELS, type GitHostRepository, type GitHostRepositoryResult, type GitHostRepositoryUnavailable } from '../../services/git/GitHost';
 import type { TemplateRepoPreference } from '../../services/TemplateRepoPreferenceService';
 import { CloneProgressContent, type CloneProgress } from './CloneProgressModal';
+import type { AccountSummary } from '../../services/AuthService';
 
 type ThemeColors = {
   background: string;
@@ -132,6 +133,9 @@ type SettingsModalsProps = {
   onCloseRepoPicker: () => void;
   onSetRepoSearchQuery: (value: string) => void;
   onSetManualRepoInput: (value: string) => void;
+  accountSummaries: AccountSummary[];
+  manualRepoHostId: string | null;
+  onManualRepoHostIdChange: (hostId: string | null) => void;
   onAddManualRepo: () => void;
   onSelectRepo: (repo: GitHostRepository) => void;
   onCloseTemplatesRepoPicker: () => void;
@@ -294,6 +298,9 @@ export function SettingsModals(props: SettingsModalsProps) {
     onCloseRepoPicker,
     onSetRepoSearchQuery,
     onSetManualRepoInput,
+    accountSummaries,
+    manualRepoHostId,
+    onManualRepoHostIdChange,
     onAddManualRepo,
     onSelectRepo,
     onCloseTemplatesRepoPicker,
@@ -325,7 +332,63 @@ export function SettingsModals(props: SettingsModalsProps) {
           automaticallyAdjustKeyboardInsets
           contentContainerStyle={{ flexGrow: 1, paddingBottom: 16 + insets.bottom }}
         >
-          <View className="flex-row items-center px-4 py-4 gap-2 border-b" style={{ borderColor: colors.border }}>
+          <View className="px-4 pt-4 gap-2">
+            <Text className="text-xs uppercase tracking-wide" style={{ color: colors.textSecondary }}>
+              {t('addRepo.hostLabel', 'Host')}
+            </Text>
+            {accountSummaries.length === 0 ? (
+              <Text className="text-sm py-2" style={{ color: colors.textSecondary }}>
+                {t('addRepo.noHostsConnected', 'No hosts connected. Add an account first.')}
+              </Text>
+            ) : (
+              accountSummaries.map((summary) => {
+                return (
+                  <View key={summary.account.id} className="gap-1">
+                    {summary.hosts.map((host) => {
+                      const isSelected = manualRepoHostId === host.id;
+                      const hostLabel = host.instanceBaseUrl
+                        ? `${GIT_HOST_LABELS[host.provider]} · ${new URL(host.instanceBaseUrl).hostname} (${host.hostLogin})`
+                        : `${GIT_HOST_LABELS[host.provider]} · ${host.hostLogin}`;
+                      return (
+                        <TouchableOpacity
+                          key={host.id}
+                          testID={`settings-modals.manual-host-${host.id}`}
+                          onPress={() => onManualRepoHostIdChange(isSelected ? null : host.id)}
+                          className="flex-row items-center py-2.5 px-3 rounded-lg gap-2"
+                          style={{
+                            borderWidth: 1,
+                            borderColor: isSelected ? colors.primary : colors.border,
+                            backgroundColor: isSelected ? colors.primary + '12' : colors.surface,
+                          }}
+                        >
+                          <Ionicons
+                            name={host.provider === 'github' ? 'logo-github' : 'git-branch'}
+                            size={16}
+                            color={isSelected ? colors.primary : colors.textSecondary}
+                          />
+                          <Text
+                            className="flex-1"
+                            style={{
+                              fontSize: 13,
+                              fontWeight: '500',
+                              color: isSelected ? colors.primary : colors.text,
+                            }}
+                            numberOfLines={1}
+                          >
+                            {hostLabel}
+                          </Text>
+                          {isSelected ? (
+                            <Ionicons name="checkmark-circle" size={16} color={colors.primary} />
+                          ) : null}
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                );
+              })
+            )}
+          </View>
+          <View className="flex-row items-center px-4 py-3 gap-2 border-b" style={{ borderColor: colors.border }}>
             <Input
               testID="settings-modals.input.manual-repo"
               containerStyle={{ flex: 1, borderWidth: 1, borderColor: colors.border }}
@@ -336,13 +399,13 @@ export function SettingsModals(props: SettingsModalsProps) {
               autoCapitalize="none"
               autoCorrect={false}
               returnKeyType="done"
-              onSubmitEditing={onAddManualRepo}
+              onSubmitEditing={manualRepoHostId ? onAddManualRepo : undefined}
             />
             <Button
               testID="settings-modals.button.add-manual-repo"
               label={t('common.add')}
               onPress={onAddManualRepo}
-              disabled={!manualRepoInput.trim() || isAddingRepoPath !== null}
+              disabled={!manualRepoInput.trim() || isAddingRepoPath !== null || !manualRepoHostId}
               variant="primary"
               style={{ paddingHorizontal: 16 }}
               textStyle={{ color: '#fff' }}

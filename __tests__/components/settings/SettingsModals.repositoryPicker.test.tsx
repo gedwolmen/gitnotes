@@ -149,6 +149,9 @@ const defaultProps = {
   onCloseRepoPicker: jest.fn(),
   onSetRepoSearchQuery: jest.fn(),
   onSetManualRepoInput: jest.fn(),
+  accountSummaries: [] as Array<{ account: { id: string; login: string; name: string; avatarUrl: string | null }; hosts: Array<{ id: string; provider: 'github' | 'gitlab' | 'gitea' | 'forgejo'; hostLogin: string; hostUserId: number; name: string; email: string | null; avatarUrl: string | null; instanceBaseUrl: string | null; addedAt: number }>; activeHostId: string | null }>,
+  manualRepoHostId: null as string | null,
+  onManualRepoHostIdChange: jest.fn(),
   onAddManualRepo: jest.fn(),
   onSelectRepo: jest.fn(),
   onCloseTemplatesRepoPicker: jest.fn(),
@@ -197,15 +200,15 @@ describe('RepoPickerList (via SettingsModals)', () => {
   });
 
   it('unavailable repos render with provider badge and reason', () => {
-    const { getByText } = render(
+    const { getAllByText, getByText } = render(
       <SettingsModals
         {...defaultProps}
         discoverableRepos={[unavailableGitea]}
       />,
     );
 
-    // Provider label for gitea is 'Gitea'
-    expect(getByText('Gitea')).toBeTruthy();
+    // Provider label for gitea is shown once (in the unavailable repo row)
+    expect(getAllByText('Gitea')).toHaveLength(1);
     expect(
       getByText('Repository listing is not supported for Gitea and Forgejo. You can add a repository manually.'),
     ).toBeTruthy();
