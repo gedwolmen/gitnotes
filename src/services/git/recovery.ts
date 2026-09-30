@@ -140,12 +140,13 @@ async function cloneWithRepositoryContext(opts: {
 async function ensureOnBranch(
   repoPath: string,
   branch: string,
+  repoId?: string,
 ): Promise<void> {
   const fsPath = repoDirFs(repoPath);
   const fs = makeRepoFs();
   await repairHeadRef(fs, fsPath, branch);
 
-  const repoStatus = await GitEngine.status(repoPath, fsPath).catch(() => null);
+  const repoStatus = await GitEngine.status(repoId ?? repoPath, fsPath).catch(() => null);
   if (repoStatus?.currentBranch === branch) return;
 
   try {
@@ -155,7 +156,7 @@ async function ensureOnBranch(
     // local branch ref is missing - fetch then retry checkout below.
   }
 
-  await GitEngine.fetch(fsPath, 'origin', undefined);
+  await GitEngine.fetch(fsPath, 'origin', repoId);
   await GitEngine.checkoutBranch(fsPath, branch, 'origin');
 }
 
@@ -163,7 +164,7 @@ async function ensureOnBranch(
  * Convert a shallow clone to a full clone by fetching the full history.
  * No-op when the clone is not shallow.
  */
-async function ensureCloneNotShallow(repoPath: string): Promise<void> {
+async function ensureCloneNotShallow(repoPath: string, repoId?: string): Promise<void> {
   const fsPath = repoDirFs(repoPath);
   const fs = makeRepoFs();
   const shallowPath = `${fsPath}/.git/shallow`;
@@ -172,7 +173,7 @@ async function ensureCloneNotShallow(repoPath: string): Promise<void> {
   } catch {
     return;
   }
-  await GitEngine.fetch(fsPath, 'origin', undefined);
+  await GitEngine.fetch(fsPath, 'origin', repoId);
   await fs.promises.unlink(shallowPath).catch(() => undefined);
 }
 
@@ -228,9 +229,9 @@ export async function pushWithRecovery(
   if (!info) return { success: false, error: `Invalid repo path: ${repoPath}` };
 
   try {
-    await ensureOnBranch(repoPath, branch);
-    await ensureCloneNotShallow(repoPath);
-    const result = await GitEngine.pushWithIntegrate(repoDirFs(repoPath), 'origin', undefined);
+    await ensureOnBranch(repoPath, branch, repoId);
+    await ensureCloneNotShallow(repoPath, repoId);
+    const result = await GitEngine.pushWithIntegrate(repoDirFs(repoPath), 'origin', repoId);
     if (!result.ok) {
       throw new Error(result.error ?? 'Push failed');
     }
@@ -247,7 +248,7 @@ export async function pushWithRecovery(
       await GitFsService.removeRepo({ repoPath });
       await cloneWithRepositoryContext({ repoPath, branch, token, repoId });
       try {
-        const result = await GitEngine.pushWithIntegrate(repoDirFs(repoPath), 'origin', undefined);
+        const result = await GitEngine.pushWithIntegrate(repoDirFs(repoPath), 'origin', repoId);
         if (!result.ok) {
           throw new Error(result.error ?? 'Push after clone recovery failed');
         }
@@ -262,7 +263,7 @@ export async function pushWithRecovery(
 
     // Non-fast-forward: pull with fast-forward and retry once
     if (isPushRejected(raw)) {
-      const ffResult = await GitFsService.pullWithFastForward({ repoPath, branch, token });
+      const ffResult = await GitFsService.pullWithFastForward({ repoPath, branch, token, repoId });
       if (!ffResult.ok) {
         const ffError = ffResult.error ?? '';
 
@@ -275,7 +276,7 @@ export async function pushWithRecovery(
           await GitFsService.removeRepo({ repoPath });
           await cloneWithRepositoryContext({ repoPath, branch, token, repoId });
           try {
-            const result = await GitEngine.pushWithIntegrate(repoDirFs(repoPath), 'origin', undefined);
+            const result = await GitEngine.pushWithIntegrate(repoDirFs(repoPath), 'origin', repoId);
             if (!result.ok) {
               throw new Error(result.error ?? 'Push after clone recovery failed');
             }
@@ -295,7 +296,7 @@ export async function pushWithRecovery(
 
       // Retry push after successful pull
       try {
-        const result = await GitEngine.pushWithIntegrate(repoDirFs(repoPath), 'origin', undefined);
+        const result = await GitEngine.pushWithIntegrate(repoDirFs(repoPath), 'origin', repoId);
         if (!result.ok) {
           throw new Error(result.error ?? 'Push retry failed');
         }
@@ -321,6 +322,7 @@ export interface PushWithForceOptions {
   repoPath: string;
   branch: string;
   token?: string;
+  repoId?: string;
   onProgress?: (progress: { phase: string; loaded: number; total: number }) => void;
 }
 
@@ -336,14 +338,14 @@ export interface PushWithForceResult {
 export async function pushWithForce(
   opts: PushWithForceOptions,
 ): Promise<PushWithForceResult> {
-  const { repoPath, branch } = opts;
+  const { repoPath, branch, repoId } = opts;
   const info = parseRepoPath(repoPath);
   if (!info) return { success: false, error: `Invalid repo path: ${repoPath}` };
 
   try {
-    await ensureOnBranch(repoPath, branch);
-    await ensureCloneNotShallow(repoPath);
-    const result = await GitEngine.pushForce(repoDirFs(repoPath), 'origin', undefined);
+    await ensureOnBranch(repoPath, branch, repoId);
+    await ensureCloneNotShallow(repoPath, repoId);
+    const result = await GitEngine.pushForce(repoDirFs(repoPath), 'origin', repoId);
     if (!result.ok) {
       throw new Error(result.error ?? 'Force push failed');
     }
