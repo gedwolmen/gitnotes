@@ -159,7 +159,7 @@ export interface GitHostService {
   ): Promise<GitHostIssue[]>;
 
   /** Lists all repositories accessible to the authenticated user. */
-  listRepositories(): Promise<GitHostRepositoryResult[]>;
+  listRepositories(hostId?: string): Promise<GitHostRepositoryResult[]>;
 
 }
 
@@ -174,6 +174,7 @@ export interface GitHostRepository {
   isPrivate: boolean;
   defaultBranch?: string;
   sizeKb?: number;
+  hostId?: string;
 }
 
 /** Indicates a repository is unavailable (not found, permission denied, etc.). */
