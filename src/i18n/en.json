@@ -481,6 +481,7 @@
     "addAnyway": "Add anyway",
     "transientAccessErrorBody": "GitHub repository access could not be verified right now. Would you like to retry?",
     "repositoryAccessTitle": "Repository Access",
+    "selectHostManually": "Please select a host manually when multiple hosts are connected.",
     "syncFailedBody": "Failed to sync repository files.",
     "clonePhasePreparing": "Preparing",
     "clonePhaseRetrying": "Retrying with smaller clone...",

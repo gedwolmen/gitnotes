@@ -14,6 +14,8 @@
 import { requireNativeModule, type EventSubscription } from 'expo-modules-core';
 import { Platform } from 'react-native';
 import { AuthService } from '../../AuthService';
+import { AccountStorage } from '../../AccountStorage';
+import { StorageService } from '../../StorageService';
 
 // Shape of the native module surface. Named (not `typeof GitEngineModule`) so the
 // generic below is the full interface, not the flow-narrowed `null` initializer type.
@@ -264,15 +266,37 @@ async function ensureCredentialForOp(repoId: string | null | undefined): Promise
 
   const stored = await CredentialStore.get(repoId);
   if (stored) {
-    await GitEngineModule!.setCredential(repoId, toNativeCredential(stored)).catch(() => undefined);
+    await GitEngineModule!.setCredential(repoId, toNativeCredential(stored));
     return;
+  }
+
+  const repo = (await StorageService.getSavedRepositories()).find((entry) => entry.id === repoId);
+  if (repo?.hostId) {
+    const [hostConnection, token] = await Promise.all([
+      AccountStorage.getHostConnection(repo.hostId),
+      AccountStorage.getHostToken(repo.hostId),
+    ]);
+    if (hostConnection && token) {
+      await GitEngineModule!.setCredential(
+        repoId,
+        toNativeCredential({
+          kind: 'token',
+          username: hostConnection.provider === 'github' ? 'x-access-token' : hostConnection.hostLogin,
+          token,
+        }),
+      );
+      return;
+    }
   }
 
   const token = await AuthService.getToken();
   if (token) {
     const credential = { kind: 'token' as const, username: 'x-access-token', token };
-    await GitEngineModule!.setCredential(repoId, toNativeCredential(credential)).catch(() => undefined);
+    await GitEngineModule!.setCredential(repoId, toNativeCredential(credential));
+    return;
   }
+
+  throw new Error(`No credentials found for repo ${repoId}`);
 }
 
 /** Subscribe to engine progress events (clone/fetch/push/transfer). */
@@ -483,7 +507,7 @@ export async function pull(
     () => GitEngineModule!.pull(repoPath, remoteName, repoId ?? null),
     { kind: 'Unknown', message: 'unavailable', conflicts: [] },
   );
-  const ok = native.kind === 'FastForward' || native.kind === 'UpToDate' || native.kind === 'Merged';
+  const ok = native.kind === 'FastForward' || native.kind === 'UpToDate' || native.kind === 'Merged' || native.kind === 'Unborn';
   return ok ? { ok: true } : { ok: false, error: native.message || 'pull failed' };
 }
 

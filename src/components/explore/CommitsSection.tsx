@@ -18,6 +18,14 @@ import { useTokens } from '@/contexts/ThemeContext';
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 const PAGE_SIZE = 50;
+const FORGEJO_PERMISSION_ERROR = /\b403\b|forbidden|permission denied|not authorized|write access|remote rejected/i;
+
+function formatPushFailure(message: string, provider: string | undefined, repoPath: string): string {
+  if (provider === 'forgejo' && FORGEJO_PERMISSION_ERROR.test(message)) {
+    return `Grant the Forgejo account/token write permission for ${repoPath}.`;
+  }
+  return message || 'Push failed — check credentials';
+}
 
 export function CommitsSection({ repo, active, chromeTopInset = 0, refreshStatus, branchInvalidationKey = 0 }: SectionProps) {
   const navigation = useNavigation<NavigationProp>();
@@ -79,7 +87,7 @@ export function CommitsSection({ repo, active, chromeTopInset = 0, refreshStatus
     if (loading || pushing) return;
     setPushing(true);
     try {
-      const result = await GitEngine.pushWithIntegrate(repo.localPath, 'origin', repo.branch ?? 'main');
+      const result = await GitEngine.pushWithIntegrate(repo.localPath, 'origin', repo.id);
       if (result.kind === 'Conflicts') {
         const paths = result.conflicts.map((c: { path: string }) => c.path).join(', ');
         Alert.alert(
@@ -107,25 +115,32 @@ export function CommitsSection({ repo, active, chromeTopInset = 0, refreshStatus
         await loadInitial();
         await refreshStatus?.();
       } else {
+        const message = formatPushFailure(result.message, repo.provider, repo.path);
         toast.show({
           placement: 'top',
           duration: 4200,
           render: ({ id }: { id: string }) => (
             <Toast action="error" nativeID={`commits-push-toast-${id}`}>
               <ToastTitle>Push failed</ToastTitle>
-              <ToastDescription>{result.message}</ToastDescription>
+              <ToastDescription>{message}</ToastDescription>
             </Toast>
           ),
         });
       }
     } catch (caught) {
+      const message = formatPushFailure(
+        caught instanceof Error ? caught.message : String(caught),
+        repo.provider,
+        repo.path,
+      );
+      Alert.alert('Push failed', message);
       toast.show({
         placement: 'top',
         duration: 4200,
         render: ({ id }: { id: string }) => (
           <Toast action="error" nativeID={`commits-push-toast-${id}`}>
             <ToastTitle>Push failed</ToastTitle>
-            <ToastDescription>{caught instanceof Error ? caught.message : String(caught)}</ToastDescription>
+            <ToastDescription>{message}</ToastDescription>
           </Toast>
         ),
       });

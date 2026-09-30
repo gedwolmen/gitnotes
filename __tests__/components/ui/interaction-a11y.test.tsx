@@ -259,7 +259,6 @@ jest.mock('expo-blur', () => {
 // ---------------------------------------------------------------------------
 // Imports
 // ---------------------------------------------------------------------------
-import React from 'react';
 import { Text, View } from 'react-native';
 import { render, fireEvent, act } from '@testing-library/react-native';
 import { Button } from '../../../src/components/ui/Button';
@@ -604,6 +603,21 @@ describe('Modal accessibility contracts', () => {
       </Modal>
     );
     expect(getByText('Sheet content')).toBeTruthy();
+  });
+
+  it('does not claim the responder before nested scrollable content', () => {
+    const { getByLabelText } = render(
+      <Modal
+        visible
+        onRequestClose={jest.fn()}
+        bottomSheet
+        accessibilityLabel="Scrollable sheet"
+      >
+        <Text>Scrollable content</Text>
+      </Modal>,
+    );
+
+    expect(getByLabelText('Scrollable sheet').props.onStartShouldSetResponder).toBeUndefined();
   });
 
   it('renders center-modal variant with content', () => {

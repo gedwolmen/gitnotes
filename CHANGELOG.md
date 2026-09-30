@@ -8,6 +8,30 @@ All notable fixes and feature changes to GitNotēs are documented here.
 >
 > **History**: prior fixes (pre-2026-08) lived in single-PR wiki pages. Those pages were retired in [#1047](https://github.com/gedwolmen/gitnotes/pull/1047); their full diagnostic content is preserved in git history via `git log -p -- docs/wiki/<file>.md`.
 
+## 2026-09-30
+
+### fix(explore): open issue and pull request links
+
+**What:** Tapping an issue or pull request in the Git tab did not open its remote page.
+
+**Fix:** Wire the shared host URL action to React Native's system browser link handler.
+
+### fix(settings): restore repository picker scrolling
+
+**What:** The Add Repository bottom sheet could not be dragged through a long repository list after many repositories had been cloned.
+
+**Fix:** Keep the backdrop separate from the modal surface so nested scroll views receive touch gestures normally.
+
+## 2026-09-29
+
+### fix(git): derive Forgejo/Gitea clone URL from API base
+
+**What:** Self-hosted Forgejo and Gitea instances could not be connected in GitNotēs because the clone URL was constructed by appending `.git` directly to the `/api/v1` REST endpoint (e.g., `http://host/api/v1/owner/repo.git`) instead of the Git web-root URL (`http://host/owner/repo.git`).
+
+**Fix:** Strip the `/api/v1` suffix from Gitea/Forgejo API base URLs before appending the repository path when computing Git remote URLs. Repository listing, default-branch resolution, and host identity are also wired through for Forgejo connections.
+
+**Scope:** HTTP(S) clone URLs for Gitea/Forgejo-compatible hosts only; GitHub/GitLab behavior unchanged.
+
 ## 2026-09-21
 
 ### fix(clone): keep screen awake during repository clones

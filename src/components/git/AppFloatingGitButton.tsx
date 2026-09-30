@@ -185,7 +185,9 @@ export default function AppFloatingGitButton() {
                   <ToastDescription>
                     {isAuthOrPermission
                       ? 'Check your credentials in Settings.'
-                      : nonConflictFailures.map((f) => f.repoName).join(', ')}
+                      : nonConflictFailures
+                          .map((f) => (f.error ? `${f.repoName}: ${f.error}` : f.repoName))
+                          .join(', ')}
                   </ToastDescription>
                 </Toast>
               ),

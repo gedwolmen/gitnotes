@@ -306,7 +306,7 @@ export function SettingsContent(props: SettingsContentProps) {
       contentContainerStyle={{
         paddingHorizontal: 16,
         paddingTop: headerHeight + 16,
-        paddingBottom: tabBarHeight + 16,
+        paddingBottom: Math.max(tabBarHeight + 16, 80),
         gap: 20,
       }}
     >

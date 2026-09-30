@@ -1,7 +1,8 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GitHubHostService } from '../../../src/services/git/GitHubHostService';
 import { GitLabService } from '../../../src/services/git/GitLabService';
 import { GiteaLikeHostService } from '../../../src/services/git/GiteaLikeHostService';
-import { GIT_HOST_API_BASES } from '../../../src/services/git/GitHost';
+import type { HostConnection } from '../../../src/services/AccountStorage';
 
 // Fixtures
 
@@ -57,6 +58,13 @@ jest.mock('@/services/GitHubService', () => {
     },
   };
 }, { virtual: true });
+
+jest.mock('../../../src/services/AccountStorage', () => ({
+  AccountStorage: {
+    getHostToken: jest.fn(),
+    getHostConnection: jest.fn(),
+  },
+}));
 
 describe('GitHostService.listRepositories()', () => {
   beforeEach(() => {
@@ -162,28 +170,397 @@ describe('GitHostService.listRepositories()', () => {
   });
 
   describe('GiteaLikeHostService', () => {
-    it('always returns unavailable', async () => {
-      const giteaService = new GiteaLikeHostService('gitea', GIT_HOST_API_BASES.gitea);
+    const mockGetItem = AsyncStorage.getItem as jest.Mock;
+    const mockSetItem = AsyncStorage.setItem as jest.Mock;
+
+    beforeEach(() => {
+      mockGetItem.mockReset();
+      mockSetItem.mockReset();
+      mockGetItem.mockResolvedValue(null);
+      mockSetItem.mockResolvedValue(undefined);
+    });
+
+    it('maps Gitea repos correctly', async () => {
+      const giteaService = new GiteaLikeHostService('gitea', 'https://gitea.com/api/v1');
+      await giteaService.setToken('test-pat');
+
+      const mockRepos = [
+        {
+          id: 1,
+          name: 'my-repo',
+          full_name: 'testuser/my-repo',
+          description: 'A test repo',
+          private: true,
+          default_branch: 'main',
+          size: 2048,
+          owner: { login: 'testuser' },
+        },
+        {
+          id: 2,
+          name: 'public-repo',
+          full_name: 'testuser/public-repo',
+          description: null,
+          private: false,
+          owner: { login: 'testuser' },
+        },
+      ];
+
+      const fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue(
+        new Response(JSON.stringify(mockRepos), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }),
+      );
+
+      const result = await giteaService.listRepositories();
+
+      expect(fetchSpy).toHaveBeenCalledWith(
+        'https://gitea.com/api/v1/user/repos',
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            Authorization: 'token test-pat',
+          }),
+        }),
+      );
+
+      expect(result).toHaveLength(2);
+      expect(result[0]).toMatchObject({
+        provider: 'gitea',
+        owner: 'testuser',
+        repo: 'my-repo',
+        fullName: 'testuser/my-repo',
+        name: 'my-repo',
+        description: 'A test repo',
+        isPrivate: true,
+        sizeKb: 2,
+        defaultBranch: 'main',
+      });
+      expect(result[1]).toMatchObject({
+        provider: 'gitea',
+        owner: 'testuser',
+        repo: 'public-repo',
+        fullName: 'testuser/public-repo',
+        name: 'public-repo',
+        description: null,
+        isPrivate: false,
+      });
+    });
+
+    it('uses custom base URL from setToken', async () => {
+      const giteaService = new GiteaLikeHostService('forgejo', 'https://codeberg.org/api/v1');
+      await giteaService.setToken('forgejo-pat', 'https://my-forgejo.example.com/api/v1');
+
+      const fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue(
+        new Response(JSON.stringify([]), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }),
+      );
+
+      await giteaService.listRepositories();
+
+      expect(fetchSpy).toHaveBeenCalledWith(
+        'https://my-forgejo.example.com/api/v1/user/repos',
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            Authorization: 'token forgejo-pat',
+          }),
+        }),
+      );
+    });
+
+    it('returns unavailable with reason on 401 without leaking PAT', async () => {
+      const giteaService = new GiteaLikeHostService('gitea', 'https://gitea.com/api/v1');
+      await giteaService.setToken('super-secret-pat-12345');
+
+      jest.spyOn(global, 'fetch').mockResolvedValue(
+        new Response(JSON.stringify({ message: 'Unauthorized' }), {
+          status: 401,
+          headers: { 'content-type': 'application/json' },
+        }),
+      );
+
       const result = await giteaService.listRepositories();
 
       expect(result).toHaveLength(1);
       expect(result[0]).toMatchObject({
         kind: 'unavailable',
         provider: 'gitea',
-        reason: 'Repository listing is not supported for Gitea and Forgejo. You can add a repository manually.',
+        reason: 'Network error',
       });
+      // Sanity: PAT does not appear in any error output
+      expect(JSON.stringify(result)).not.toContain('super-secret-pat');
+      expect(JSON.stringify(result)).not.toContain('pat-12345');
     });
 
-    it('forgejo returns unavailable with forgejo provider', async () => {
-      const forgejoService = new GiteaLikeHostService('forgejo', GIT_HOST_API_BASES.forgejo);
-      const result = await forgejoService.listRepositories();
+    it('returns unavailable with reason on 403 without leaking PAT', async () => {
+      const giteaService = new GiteaLikeHostService('forgejo', 'https://my-forgejo.com/api/v1');
+      await giteaService.setToken('my-private-token-xyz');
+
+      jest.spyOn(global, 'fetch').mockResolvedValue(
+        new Response(JSON.stringify({ message: 'Forbidden' }), {
+          status: 403,
+          headers: { 'content-type': 'application/json' },
+        }),
+      );
+
+      const result = await giteaService.listRepositories();
 
       expect(result).toHaveLength(1);
       expect(result[0]).toMatchObject({
         kind: 'unavailable',
         provider: 'forgejo',
-        reason: 'Repository listing is not supported for Gitea and Forgejo. You can add a repository manually.',
+        reason: 'Network error',
       });
+      expect(JSON.stringify(result)).not.toContain('my-private-token');
+    });
+
+    it('returns unavailable on network failure without leaking PAT', async () => {
+      const giteaService = new GiteaLikeHostService('gitea', 'https://gitea.com/api/v1');
+      await giteaService.setToken('network-test-token');
+
+      jest.spyOn(global, 'fetch').mockRejectedValue(new Error('Network request failed'));
+
+      const result = await giteaService.listRepositories();
+
+      expect(result).toHaveLength(1);
+      expect(result[0]).toMatchObject({
+        kind: 'unavailable',
+        provider: 'gitea',
+        reason: 'Network error',
+      });
+      expect(JSON.stringify(result)).not.toContain('network-test-token');
+    });
+
+    it('returns unavailable when unauthenticated (no token)', async () => {
+      const giteaService = new GiteaLikeHostService('gitea', 'https://gitea.com/api/v1');
+      // No setToken called - service has no token
+
+      const result = await giteaService.listRepositories();
+
+      expect(result).toHaveLength(1);
+      expect(result[0]).toMatchObject({
+        kind: 'unavailable',
+        provider: 'gitea',
+        reason: 'Network error',
+      });
+    });
+
+    it('maps Forgejo repos correctly', async () => {
+      const forgejoService = new GiteaLikeHostService('forgejo', 'https://codeberg.org/api/v1');
+      await forgejoService.setToken('forgejo-pat');
+
+      const mockRepos = [
+        {
+          id: 99,
+          name: 'forgejo-project',
+          full_name: 'forgejo-maintainer/forgejo-project',
+          description: 'A Forgejo repo',
+          private: false,
+          default_branch: 'develop',
+          size: 5120,
+          owner: { login: 'forgejo-maintainer' },
+        },
+      ];
+
+      jest.spyOn(global, 'fetch').mockResolvedValue(
+        new Response(JSON.stringify(mockRepos), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }),
+      );
+
+      const result = await forgejoService.listRepositories();
+
+      expect(result).toHaveLength(1);
+      expect(result[0]).toMatchObject({
+        provider: 'forgejo',
+        owner: 'forgejo-maintainer',
+        repo: 'forgejo-project',
+        fullName: 'forgejo-maintainer/forgejo-project',
+        name: 'forgejo-project',
+        description: 'A Forgejo repo',
+        isPrivate: false,
+        sizeKb: 5,
+        defaultBranch: 'develop',
+      });
+    });
+
+    it('listRepositories(hostId) uses AccountStorage token and baseUrl', async () => {
+      const { AccountStorage: MockAccountStorage } = jest.requireMock('../../../src/services/AccountStorage');
+      MockAccountStorage.getHostToken.mockResolvedValue('host-specific-pat');
+      MockAccountStorage.getHostConnection.mockResolvedValue({
+        id: 'acc1:forgejo:my-forgejo.example.com',
+        accountId: 'acc1',
+        provider: 'forgejo',
+        instanceBaseUrl: 'https://my-forgejo.example.com/api/v1',
+        hostLogin: 'forgejouser',
+        hostUserId: 1,
+        name: 'Forgejo User',
+        email: null,
+        avatarUrl: null,
+        addedAt: Date.now(),
+      });
+
+      const giteaLikeService = new GiteaLikeHostService('forgejo', 'https://codeberg.org/api/v1');
+      // Singleton has a different default token set
+      await giteaLikeService.setToken('singleton-token');
+
+      const mockRepos = [
+        {
+          id: 1,
+          name: 'custom-host-repo',
+          full_name: 'forgejouser/custom-host-repo',
+          description: null,
+          private: false,
+          owner: { login: 'forgejouser' },
+        },
+      ];
+
+      const fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue(
+        new Response(JSON.stringify(mockRepos), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }),
+      );
+
+      const result = await giteaLikeService.listRepositories('acc1:forgejo:my-forgejo.example.com');
+
+      // Verify AccountStorage was called with the hostId
+      expect(MockAccountStorage.getHostToken).toHaveBeenCalledWith('acc1:forgejo:my-forgejo.example.com');
+      expect(MockAccountStorage.getHostConnection).toHaveBeenCalledWith('acc1:forgejo:my-forgejo.example.com');
+
+      // Verify the correct host-specific base URL and token were used (not singleton's)
+      expect(fetchSpy).toHaveBeenCalledWith(
+        'https://my-forgejo.example.com/api/v1/user/repos',
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            Authorization: 'token host-specific-pat',
+          }),
+        }),
+      );
+
+      expect(result).toHaveLength(1);
+      expect(result[0]).toMatchObject({
+        provider: 'forgejo',
+        owner: 'forgejouser',
+        repo: 'custom-host-repo',
+        fullName: 'forgejouser/custom-host-repo',
+      });
+    });
+
+    it('two Forgejo hosts with different bases use correct credentials each', async () => {
+      const { AccountStorage: MockAccountStorage } = jest.requireMock('../../../src/services/AccountStorage');
+
+      // Host A
+      MockAccountStorage.getHostToken
+        .mockResolvedValueOnce('pat-host-a')
+        .mockResolvedValueOnce('pat-host-b');
+      MockAccountStorage.getHostConnection
+        .mockResolvedValueOnce({ instanceBaseUrl: 'https://forgejo-a.example.com/api/v1' } as unknown as HostConnection)
+        .mockResolvedValueOnce({ instanceBaseUrl: 'https://forgejo-b.example.com/api/v1' } as unknown as HostConnection);
+
+      const giteaLikeService = new GiteaLikeHostService('forgejo', 'https://codeberg.org/api/v1');
+      await giteaLikeService.setToken('singleton-token');
+
+      const mockReposA = [{ id: 1, name: 'repo-a', full_name: 'user/repo-a', private: false, owner: { login: 'user' } }];
+      const mockReposB = [{ id: 2, name: 'repo-b', full_name: 'user/repo-b', private: false, owner: { login: 'user' } }];
+
+      jest.spyOn(global, 'fetch').mockImplementation(async (url: string) => {
+        if (url.toString().includes('forgejo-a')) {
+          return new Response(JSON.stringify(mockReposA), { status: 200, headers: { 'content-type': 'application/json' } });
+        }
+        return new Response(JSON.stringify(mockReposB), { status: 200, headers: { 'content-type': 'application/json' } });
+      });
+
+      const [resultA, resultB] = await Promise.all([
+        giteaLikeService.listRepositories('host-a-id'),
+        giteaLikeService.listRepositories('host-b-id'),
+      ]);
+
+      expect(resultA).toHaveLength(1);
+      expect(resultA[0]).toMatchObject({ repo: 'repo-a' });
+      expect(resultB).toHaveLength(1);
+      expect(resultB[0]).toMatchObject({ repo: 'repo-b' });
+    });
+
+    it('falls back to singleton token when AccountStorage.getHostToken returns null for hostId', async () => {
+      const { AccountStorage: MockAccountStorage } = jest.requireMock('../../../src/services/AccountStorage');
+      MockAccountStorage.getHostToken.mockResolvedValue(null);
+      MockAccountStorage.getHostConnection.mockResolvedValue(null);
+
+      const giteaLikeService = new GiteaLikeHostService('forgejo', 'https://codeberg.org/api/v1');
+      await giteaLikeService.setToken('singleton-pat');
+
+      const mockRepos = [
+        { id: 1, name: 'singleton-repo', full_name: 'user/singleton-repo', private: false, owner: { login: 'user' } },
+      ];
+
+      const fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue(
+        new Response(JSON.stringify(mockRepos), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }),
+      );
+
+      const result = await giteaLikeService.listRepositories('nonexistent-host-id');
+
+      // When hostId token is null, falls back to singleton token → repos returned
+      expect(fetchSpy).toHaveBeenCalledWith(
+        'https://codeberg.org/api/v1/user/repos',
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            Authorization: 'token singleton-pat',
+          }),
+        }),
+      );
+      expect(result).toHaveLength(1);
+      expect(result[0]).toMatchObject({ repo: 'singleton-repo' });
+    });
+
+    it('401 on hostId request returns unavailable without leaking PAT', async () => {
+      const { AccountStorage: MockAccountStorage } = jest.requireMock('../../../src/services/AccountStorage');
+      MockAccountStorage.getHostToken.mockResolvedValue('super-secret-host-pat-99999');
+      MockAccountStorage.getHostConnection.mockResolvedValue({
+        instanceBaseUrl: 'https://my-forgejo.example.com/api/v1',
+      } as unknown as HostConnection);
+
+      const giteaLikeService = new GiteaLikeHostService('forgejo', 'https://codeberg.org/api/v1');
+      await giteaLikeService.setToken('different-token');
+
+      jest.spyOn(global, 'fetch').mockResolvedValue(
+        new Response(JSON.stringify({ message: 'Unauthorized' }), {
+          status: 401,
+          headers: { 'content-type': 'application/json' },
+        }),
+      );
+
+      const result = await giteaLikeService.listRepositories('host1:forgejo:my-forgejo.example.com');
+
+      expect(result).toHaveLength(1);
+      expect(result[0]).toMatchObject({ kind: 'unavailable', provider: 'forgejo' });
+      // PAT must not appear in any output
+      expect(JSON.stringify(result)).not.toContain('super-secret-host-pat');
+      expect(JSON.stringify(result)).not.toContain('99999');
+    });
+
+    it('network failure on hostId request returns unavailable without leaking PAT', async () => {
+      const { AccountStorage: MockAccountStorage } = jest.requireMock('../../../src/services/AccountStorage');
+      MockAccountStorage.getHostToken.mockResolvedValue('network-pat-token');
+      MockAccountStorage.getHostConnection.mockResolvedValue({
+        instanceBaseUrl: 'https://offline-forgejo.example.com/api/v1',
+      } as unknown as HostConnection);
+
+      const giteaLikeService = new GiteaLikeHostService('forgejo', 'https://codeberg.org/api/v1');
+      await giteaLikeService.setToken('singleton-token');
+
+      jest.spyOn(global, 'fetch').mockRejectedValue(new Error('Network request failed'));
+
+      const result = await giteaLikeService.listRepositories('host1:forgejo:offline.example.com');
+
+      expect(result).toHaveLength(1);
+      expect(result[0]).toMatchObject({ kind: 'unavailable', provider: 'forgejo' });
+      expect(JSON.stringify(result)).not.toContain('network-pat-token');
     });
   });
 });

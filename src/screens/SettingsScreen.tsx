@@ -138,6 +138,7 @@ export default function SettingsScreen() {
   const [discoverableRepos, setDiscoverableRepos] = useState<GitHostRepositoryResult[]>([]);
   const [isLoadingDiscoverableRepos, setIsLoadingDiscoverableRepos] = useState(false);
   const [manualRepoInput, setManualRepoInput] = useState('');
+  const [manualRepoHostId, setManualRepoHostId] = useState<string | null>(null);
   const [isAddingRepoPath, setIsAddingRepoPath] = useState<string | null>(null);
   const [repoSearchQuery, setRepoSearchQuery] = useState('');
   const [showTokenModal, setShowTokenModal] = useState(false);
@@ -567,9 +568,12 @@ export default function SettingsScreen() {
 
   const openRepoPicker = useCallback(async () => {
     setRepoSearchQuery('');
+    setManualRepoInput('');
     setDiscoverableRepos([]);
     setShowRepoPickerModal(true);
     setIsLoadingDiscoverableRepos(true);
+    const allHosts = accountSummaries.flatMap((s) => s.hosts);
+    setManualRepoHostId(allHosts.length === 1 ? allHosts[0].id : null);
     try {
       const allRepos: GitHostRepositoryResult[] = [];
       const hostsWithTokens = await Promise.all(
@@ -585,8 +589,12 @@ export default function SettingsScreen() {
         validHosts.map(async ({ host }) => {
           try {
             const service = getGitHostService(host.provider);
-            const repos = await service.listRepositories();
-            allRepos.push(...repos);
+            const repos = await service.listRepositories(host.id);
+            const tagged = repos.map((r) => {
+              if ('kind' in r && r.kind === 'unavailable') return r;
+              return { ...r, hostId: host.id };
+            });
+            allRepos.push(...tagged);
           } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
             allRepos.push({ kind: 'unavailable', provider: host.provider, reason: message });
@@ -616,9 +624,9 @@ export default function SettingsScreen() {
       setIsAddingRepoPath(repo.fullName);
       try {
         if (allowUnverifiedWrite) {
-          await addRepo(repo.fullName, repo.name, repo.provider, { allowUnverifiedWrite: true });
+          await addRepo(repo.fullName, repo.name, repo.provider, { allowUnverifiedWrite: true }, repo.hostId);
         } else {
-          await addRepo(repo.fullName, repo.name, repo.provider);
+          await addRepo(repo.fullName, repo.name, repo.provider, undefined, repo.hostId);
         }
         HapticService.success();
         await importRepoAfterAdd(repo.fullName, repo.name, repo.sizeKb);
@@ -650,7 +658,7 @@ export default function SettingsScreen() {
     await attemptAdd(false);
   }, [addRepo, importRepoAfterAdd, repositories, t, isPro, openPaywall, isAddingRepoPath, pendingConfirmationRef]);
 
-  const handleAddManualRepo = useCallback(async () => {
+  const handleAddManualRepo = useCallback(async (hostId: string | null) => {
     if (isAddingRepoPath !== null || pendingConfirmationRef.current) return;
     const value = manualRepoInput.trim();
     if (!value) return;
@@ -658,15 +666,31 @@ export default function SettingsScreen() {
       promptProUpgrade(t, openPaywall);
       return;
     }
+
+    if (hostId === null) {
+      Alert.alert(t('settings.repositoryAccessTitle'), t('settings.selectHostManually'));
+      return;
+    }
+    const resolvedHostId = hostId;
+
     const attemptAdd = async (allowUnverifiedWrite: boolean): Promise<void> => {
       setIsAddingRepoPath(value);
       try {
+        // Look up the selected host to derive its provider.
+        const hostSummary = accountSummaries
+          .flatMap((s) => s.hosts)
+          .find((h) => h.id === resolvedHostId);
+        if (!hostSummary) {
+          throw new Error('Selected host not found. Please reconnect your account.');
+        }
+        const provider = hostSummary.provider;
         if (allowUnverifiedWrite) {
-          await addRepo(value, { allowUnverifiedWrite: true });
+          await addRepo(value, undefined, provider, { allowUnverifiedWrite: true }, resolvedHostId);
         } else {
-          await addRepo(value);
+          await addRepo(value, undefined, provider, undefined, resolvedHostId);
         }
         setManualRepoInput('');
+        setManualRepoHostId(null);
         HapticService.success();
         await importRepoAfterAdd(value, value);
       } catch (error) {
@@ -695,7 +719,7 @@ export default function SettingsScreen() {
       }
     };
     await attemptAdd(false);
-  }, [addRepo, importRepoAfterAdd, manualRepoInput, t, repositories, isPro, openPaywall, isAddingRepoPath, pendingConfirmationRef]);
+  }, [addRepo, importRepoAfterAdd, manualRepoInput, t, repositories, isPro, openPaywall, isAddingRepoPath, pendingConfirmationRef, accountSummaries]);
 
   const handleRemoveRepo = useCallback((repo: GitRepository) => {
     HapticService.warning();
@@ -706,7 +730,7 @@ export default function SettingsScreen() {
         style: 'destructive',
         onPress: async () => {
           try {
-            await removeRepo(repo.path);
+            await removeRepo(repo.path, repo.provider);
             HapticService.success();
           } catch (err) {
             HapticService.error();
@@ -1154,10 +1178,13 @@ export default function SettingsScreen() {
         tokenError={tokenError}
         isVerifying={isVerifying}
         tokenModalMode={tokenModalMode}
-        onCloseRepoPicker={() => { setShowRepoPickerModal(false); setRepoSearchQuery(''); }}
+        onCloseRepoPicker={() => { setShowRepoPickerModal(false); setRepoSearchQuery(''); setManualRepoHostId(null); setManualRepoInput(''); }}
         onSetRepoSearchQuery={setRepoSearchQuery}
         onSetManualRepoInput={setManualRepoInput}
-        onAddManualRepo={() => void handleAddManualRepo()}
+        accountSummaries={accountSummaries}
+        manualRepoHostId={manualRepoHostId}
+        onManualRepoHostIdChange={setManualRepoHostId}
+        onAddManualRepo={() => { void handleAddManualRepo(manualRepoHostId); }}
         onSelectRepo={(repo) => void handleSelectRepo(repo)}
         onCloseTemplatesRepoPicker={() => setShowTemplatesRepoPicker(false)}
         onPickTemplatesRepo={(repo) => void handlePickTemplatesRepo(repo)}

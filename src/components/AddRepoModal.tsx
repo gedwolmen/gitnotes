@@ -5,7 +5,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import { Modal } from './ui';
 import { useRepoStore } from '../stores/repoStore';
-import type { GitHostProvider } from '../services/git/GitHost';
 import { GIT_HOST_LABELS } from '../services/git/GitHost';
 import { useAccounts } from '../contexts/AccountsContext';
 import { RepoAccessPreflightError } from '../services/git/repoAccessPreflight';
@@ -23,75 +22,68 @@ type ThemeColors = {
 interface AddRepoModalProps {
   visible: boolean;
   onClose: () => void;
-  onAdded?: (path: string, provider: GitHostProvider) => void;
+  onAdded?: (path: string, hostId: string) => void;
   colors: ThemeColors;
 }
 
-const ALL_PROVIDERS: GitHostProvider[] = ['github', 'gitlab', 'gitea', 'forgejo'];
-
-function pathExampleFor(provider: GitHostProvider): string {
+function pathExampleFor(provider: string): string {
   return provider === 'gitlab' ? 'namespace/project' : 'owner/repo';
 }
 
-/**
- * Minimal add-repository dialog that lets the user pick a host and enter
- * a `namespace/project` path. The host choice determines which REST
- * API we'll use for provider operations; the underlying git protocol is
- * host agnostic.
- */
 export function AddRepoModal({ visible, onClose, onAdded, colors }: AddRepoModalProps) {
   const { t } = useTranslation();
   const { tokens } = useTheme();
   const { spacing, type } = tokens;
   const addRepository = useRepoStore((s) => s.addRepository);
-  const { accountSummaries, activeHostId } = useAccounts();
+  const { accountSummaries } = useAccounts();
 
-  const availableProviders = useMemo<GitHostProvider[]>(() => {
-    const providers = new Set<GitHostProvider>();
-    for (const summary of accountSummaries) {
-      for (const host of summary.hosts) providers.add(host.provider);
-    }
-    // Empty-state default: show every provider so the picker still serves as
-    // an entry point to add a connection.
-    if (providers.size === 0) return ALL_PROVIDERS;
-    return Array.from(providers);
+  const allHosts = useMemo(() => {
+    return accountSummaries.flatMap((summary) =>
+      summary.hosts.map((host) => ({
+        ...host,
+        accountLogin: summary.account.login,
+      })),
+    );
   }, [accountSummaries]);
 
-  const initialProvider: GitHostProvider = useMemo(() => {
-    const active = accountSummaries
-      .flatMap((s) => s.hosts.map((h) => ({ host: h, account: s.account })))
-      .find((entry) => entry.host.id === activeHostId);
-    return active?.host.provider ?? availableProviders[0] ?? 'github';
-  }, [accountSummaries, activeHostId, availableProviders]);
-
-  const [provider, setProvider] = useState<GitHostProvider>(initialProvider);
+  const [selectedHostId, setSelectedHostId] = useState<string | null>(null);
   const [path, setPath] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Sync the picker with the active host when the modal re-opens or the
-  // connection state changes underneath.
   React.useEffect(() => {
     if (visible) {
-      setProvider(initialProvider);
+      if (allHosts.length === 1) {
+        setSelectedHostId(allHosts[0].id);
+      } else {
+        setSelectedHostId(null);
+      }
       setPath('');
     }
-     
-  }, [visible, initialProvider]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible]);
 
-  const hasTokenForProvider = useMemo(() => {
-    return accountSummaries.some((summary) =>
-      summary.hosts.some((host) => host.provider === provider),
-    );
-  }, [accountSummaries, provider]);
+  const selectedHost = useMemo(
+    () => allHosts.find((h) => h.id === selectedHostId) ?? null,
+    [allHosts, selectedHostId],
+  );
 
   const isValid = useMemo(() => /^\S+\/\S+$/.test(path.trim()), [path]);
 
+  const canSubmit = useMemo(
+    () => isValid && selectedHostId !== null && !isSubmitting,
+    [isValid, selectedHostId, isSubmitting],
+  );
+
   const handleAdd = useCallback(async () => {
+    if (!selectedHost) {
+      Alert.alert(t('settings.repositoryAccessTitle'), t('settings.selectHostManually'));
+      return;
+    }
     const trimmed = path.trim();
     if (!isValid) {
       Alert.alert(
         t('addRepo.invalidTitle'),
-        t('addRepo.invalidBody', { example: pathExampleFor(provider) }),
+        t('addRepo.invalidBody', { example: pathExampleFor(selectedHost.provider) }),
       );
       return;
     }
@@ -99,18 +91,11 @@ export function AddRepoModal({ visible, onClose, onAdded, colors }: AddRepoModal
       setIsSubmitting(true);
       try {
         const repo = allowUnverifiedWrite
-          ? await addRepository(trimmed, undefined, provider, { allowUnverifiedWrite: true })
-          : await addRepository(trimmed, undefined, provider);
-        onAdded?.(repo.path, provider);
+          ? await addRepository(trimmed, undefined, selectedHost.provider, { allowUnverifiedWrite: true }, selectedHost.id)
+          : await addRepository(trimmed, undefined, selectedHost.provider, undefined, selectedHost.id);
+        onAdded?.(repo.path, selectedHost.id);
         setPath('');
         onClose();
-        if (!hasTokenForProvider) {
-          Alert.alert(
-            t('addRepo.noHostTitle') ?? 'No host connected',
-            (t('addRepo.noHostBody', { provider: GIT_HOST_LABELS[provider] }) ??
-              `Connect a ${GIT_HOST_LABELS[provider]} account before syncing ${GIT_HOST_LABELS[provider]} repositories.`) as string,
-          );
-        }
       } catch (error) {
         if (error instanceof RepoAccessPreflightError && error.canRetry && !allowUnverifiedWrite) {
           Alert.alert(
@@ -132,7 +117,7 @@ export function AddRepoModal({ visible, onClose, onAdded, colors }: AddRepoModal
       }
     };
     await attemptAdd(false);
-  }, [addRepository, path, isValid, provider, onAdded, onClose, t, hasTokenForProvider]);
+  }, [addRepository, path, isValid, selectedHost, onAdded, onClose, t]);
 
   return (
     <Modal
@@ -150,48 +135,73 @@ export function AddRepoModal({ visible, onClose, onAdded, colors }: AddRepoModal
         </TouchableOpacity>
       </View>
 
-      <Text style={{ color: colors.textSecondary, fontSize: type.sm, marginBottom: spacing[2] }}>
-        {t('addRepo.providerLabel')}
-      </Text>
-      <View style={{ flexDirection: 'row', gap: spacing[2], marginBottom: spacing[3] }}>
-        {availableProviders.map((p) => {
-          const isSelected = provider === p;
-          return (
-            <TouchableOpacity
-              key={p}
-              onPress={() => setProvider(p)}
-              testID={`add-repo-provider-${p}`}
-              style={{
-                flex: 1,
-                paddingVertical: spacing[3],
-                borderRadius: 12,
-                alignItems: 'center',
-                borderWidth: 1,
-                borderColor: isSelected ? colors.primary : colors.border,
-                backgroundColor: isSelected ? colors.primary + '12' : colors.surface,
-              }}
-            >
-              <Text
-                style={{
-                  color: isSelected ? colors.primary : colors.text,
-                  fontSize: type.sm,
-                  fontWeight: '600',
-                }}
-              >
-                {GIT_HOST_LABELS[p]}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
+      {allHosts.length === 0 ? (
+        <View style={{ paddingVertical: spacing[4] }}>
+          <Text style={{ color: colors.textSecondary, fontSize: type.sm, textAlign: 'center' }}>
+            {t('addRepo.noHostsConnected', 'No hosts connected. Add an account first.')}
+          </Text>
+        </View>
+      ) : (
+        <>
+          <Text style={{ color: colors.textSecondary, fontSize: type.sm, marginBottom: spacing[2] }}>
+            {t('addRepo.hostLabel', 'Host')}
+          </Text>
+          <View style={{ marginBottom: spacing[3], gap: spacing[1] }}>
+            {allHosts.map((host) => {
+              const isSelected = selectedHostId === host.id;
+              const hostLabel = host.instanceBaseUrl
+                ? `${GIT_HOST_LABELS[host.provider]} · ${new URL(host.instanceBaseUrl).hostname} (${host.hostLogin})`
+                : `${GIT_HOST_LABELS[host.provider]} · ${host.hostLogin}`;
+              return (
+                <TouchableOpacity
+                  key={host.id}
+                  onPress={() => setSelectedHostId(isSelected ? null : host.id)}
+                  testID={`add-repo-host-${host.id}`}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    paddingVertical: spacing[2],
+                    paddingHorizontal: spacing[3],
+                    borderRadius: 12,
+                    gap: spacing[2],
+                    borderWidth: 1,
+                    borderColor: isSelected ? colors.primary : colors.border,
+                    backgroundColor: isSelected ? colors.primary + '12' : colors.surface,
+                  }}
+                >
+                  <Ionicons
+                    name={host.provider === 'github' ? 'logo-github' : 'git-branch'}
+                    size={16}
+                    color={isSelected ? colors.primary : colors.textSecondary}
+                  />
+                  <Text
+                    style={{
+                      flex: 1,
+                      fontSize: type.sm,
+                      fontWeight: '500',
+                      color: isSelected ? colors.primary : colors.text,
+                    }}
+                    numberOfLines={1}
+                  >
+                    {hostLabel}
+                  </Text>
+                  {isSelected ? (
+                    <Ionicons name="checkmark-circle" size={16} color={colors.primary} />
+                  ) : null}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </>
+      )}
 
       <Text style={{ color: colors.textSecondary, fontSize: type.sm, marginBottom: spacing[2] }}>
-        {t('addRepo.pathLabel', { example: pathExampleFor(provider) })}
+        {t('addRepo.pathLabel', { example: selectedHost ? pathExampleFor(selectedHost.provider) : 'owner/repo' })}
       </Text>
       <TextInput
         value={path}
         onChangeText={setPath}
-        placeholder={pathExampleFor(provider)}
+        placeholder={selectedHost ? pathExampleFor(selectedHost.provider) : 'owner/repo'}
         placeholderTextColor={colors.textSecondary}
         autoCapitalize="none"
         autoCorrect={false}
@@ -226,22 +236,22 @@ export function AddRepoModal({ visible, onClose, onAdded, colors }: AddRepoModal
         </TouchableOpacity>
         <TouchableOpacity
           onPress={handleAdd}
-          disabled={!isValid || isSubmitting}
+          disabled={!canSubmit}
           testID="add-repo-submit"
           style={{
             flex: 1,
             paddingVertical: spacing[3],
             borderRadius: 12,
             alignItems: 'center',
-            backgroundColor: isValid && !isSubmitting ? colors.primary : colors.surface,
+            backgroundColor: canSubmit ? colors.primary : colors.surface,
             borderWidth: 1,
-            borderColor: isValid && !isSubmitting ? colors.primary : colors.border,
-            opacity: isValid && !isSubmitting ? 1 : 0.6,
+            borderColor: canSubmit ? colors.primary : colors.border,
+            opacity: canSubmit ? 1 : 0.6,
           }}
         >
           <Text
             style={{
-              color: isValid && !isSubmitting ? '#fff' : colors.textSecondary,
+              color: canSubmit ? '#fff' : colors.textSecondary,
               fontSize: type.sm,
               fontWeight: '600',
             }}

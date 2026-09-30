@@ -9,6 +9,7 @@ jest.mock('@/services/AccountStorage', () => ({
   AccountStorage: {
     getActiveHostConnection: jest.fn(),
     getHostConnection: jest.fn(),
+    getHostToken: jest.fn(),
     getHostUseSsh: jest.fn(),
   },
 }));
@@ -89,6 +90,7 @@ describe('importRepoAtAdd clone context', () => {
       avatarUrl: null,
       addedAt: 1,
     });
+    jest.mocked(AccountStorage.getHostToken).mockResolvedValue('gitlab-host-token');
     jest.mocked(AccountStorage.getHostUseSsh).mockResolvedValue(false);
     jest.mocked(GitFsService.isCloned).mockResolvedValue(false);
     jest.mocked(GitFsService.cloneExclusive).mockResolvedValue(undefined);

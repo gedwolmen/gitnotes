@@ -11,8 +11,9 @@ interface RepoContextType {
     nameOrOptions?: string | AddRepositoryOptions,
     provider?: GitHostProvider,
     options?: AddRepositoryOptions,
+    hostId?: string,
   ) => Promise<GitRepository>;
-  removeRepository: (path: string) => Promise<void>;
+  removeRepository: (path: string, provider?: GitHostProvider) => Promise<void>;
   refreshRepos: () => Promise<void>;
 }
 

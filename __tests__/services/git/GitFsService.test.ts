@@ -1,4 +1,4 @@
-import { GitFsService } from '@/services/git/GitFsService';
+import { GitFsService, remoteUrlForHost } from '@/services/git/GitFsService';
 import * as GitEngine from '@/services/git/engine/GitEngine';
 import * as KeepAwake from 'expo-keep-awake';
 
@@ -8,6 +8,7 @@ jest.mock('expo-file-system/legacy', () => ({
 
 jest.mock('@/services/git/engine/GitEngine', () => ({
   clone: jest.fn(),
+  repoInfo: jest.fn(),
   fetch: jest.fn(),
   pull: jest.fn(),
 }));
@@ -30,6 +31,7 @@ describe('GitFsService.clone screen-awake lifecycle', () => {
     jest.clearAllMocks();
     jest.mocked(KeepAwake.activateKeepAwakeAsync).mockResolvedValue(undefined);
     jest.mocked(KeepAwake.deactivateKeepAwake).mockResolvedValue(undefined);
+    (GitEngine.repoInfo as jest.Mock).mockResolvedValue({ currentBranch: 'main' });
   });
 
   it('keeps the screen awake until a clone completes', async () => {
@@ -94,6 +96,15 @@ describe('GitFsService.pullWithFastForward', () => {
   });
 });
 
+describe('GitFsService.getCurrentBranch', () => {
+  it('reads the native repository HEAD branch', async () => {
+    (GitEngine.repoInfo as jest.Mock).mockResolvedValue({ currentBranch: 'master' });
+
+    await expect(GitFsService.getCurrentBranch({ repoPath: 'owner/repo' })).resolves.toBe('master');
+    expect(GitEngine.repoInfo).toHaveBeenCalledWith('file:///documents/GitNotes/owner/repo');
+  });
+});
+
 describe('GitFsService.fetch', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -111,5 +122,79 @@ describe('GitFsService.fetch', () => {
     });
 
     expect(fetch).toHaveBeenCalledWith('file:///documents/GitNotes/owner/repo', 'origin', 'repo-id');
+  });
+});
+
+describe('remoteUrlForHost', () => {
+  describe('Gitea/Forgejo direct-root HTTPS (API base with /api/v1 suffix)', () => {
+    it('strips /api/v1 suffix from instanceBaseUrl for direct-root clone URL', () => {
+      const url = remoteUrlForHost('owner', 'repo', {
+        useSsh: false,
+        provider: 'gitea',
+        instanceBaseUrl: 'http://localhost:3000/api/v1',
+      });
+      expect(url).toBe('http://localhost:3000/owner/repo.git');
+      expect(url).not.toContain('/api/v1/');
+    });
+
+    it('handles instanceBaseUrl with trailing slash after /api/v1', () => {
+      const url = remoteUrlForHost('owner', 'repo', {
+        useSsh: false,
+        provider: 'gitea',
+        instanceBaseUrl: 'http://localhost:3000/api/v1/',
+      });
+      expect(url).toBe('http://localhost:3000/owner/repo.git');
+      expect(url).not.toContain('/api/v1/');
+    });
+
+    it('handles https Gitea/Forgejo instance with /api/v1 base', () => {
+      const url = remoteUrlForHost('myowner', 'myrepo', {
+        useSsh: false,
+        provider: 'gitea',
+        instanceBaseUrl: 'https://gitea.example.com/api/v1',
+      });
+      expect(url).toBe('https://gitea.example.com/myowner/myrepo.git');
+      expect(url).not.toContain('/api/v1/');
+    });
+  });
+
+  describe('GitHub HTTPS (unchanged behavior — no /api/v1 handling)', () => {
+    it('returns standard GitHub HTTPS URL', () => {
+      const url = remoteUrlForHost('owner', 'repo', {
+        useSsh: false,
+        provider: 'github',
+        instanceBaseUrl: null,
+      });
+      expect(url).toBe('https://github.com/owner/repo.git');
+    });
+
+    it('returns standard GitLab HTTPS URL', () => {
+      const url = remoteUrlForHost('owner', 'repo', {
+        useSsh: false,
+        provider: 'gitlab',
+        instanceBaseUrl: null,
+      });
+      expect(url).toBe('https://gitlab.com/owner/repo.git');
+    });
+  });
+
+  describe('SSH URLs (unchanged — out of scope for this fix)', () => {
+    it('returns GitHub SSH URL', () => {
+      const url = remoteUrlForHost('owner', 'repo', {
+        useSsh: true,
+        provider: 'github',
+        instanceBaseUrl: null,
+      });
+      expect(url).toBe('git@github.com:owner/repo.git');
+    });
+
+    it('returns GitLab SSH URL', () => {
+      const url = remoteUrlForHost('owner', 'repo', {
+        useSsh: true,
+        provider: 'gitlab',
+        instanceBaseUrl: null,
+      });
+      expect(url).toBe('git@gitlab.com:owner/repo.git');
+    });
   });
 });

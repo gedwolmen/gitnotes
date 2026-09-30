@@ -21,7 +21,7 @@ use crate::api::types::{
 use crate::engine::credentials::{callbacks_from, capture_push_rejections};
 use crate::engine::error::{EngineError, Result};
 use crate::engine::lock::run_with_lock;
-use crate::engine::ops::open_repo;
+use crate::engine::ops::{configured_merge_branch, open_repo};
 use crate::engine::timeout::{configure_network_timeouts, StallDetector, STALL_TIMEOUT_SECS};
 
 /// Clone `url` into `dest`, streaming transfer/sideband/checkout progress.
@@ -133,11 +133,25 @@ pub fn pull_repo(
         let tracking_ref = match repo.find_reference(&tracking) {
             Ok(reference) => reference,
             Err(e) if e.code() == git2::ErrorCode::NotFound => {
-                return Ok(PullResult {
-                    kind: PullKind::NoUpstream,
-                    message: format!("no upstream tracking ref {}", tracking),
-                    conflicts: Vec::new(),
-                });
+                let Some(upstream_branch) = configured_merge_branch(&repo, &branch) else {
+                    return Ok(PullResult {
+                        kind: PullKind::NoUpstream,
+                        message: format!("no upstream tracking ref {}", tracking),
+                        conflicts: Vec::new(),
+                    });
+                };
+                let fallback_tracking = format!("refs/remotes/{}/{}", remote_name, upstream_branch);
+                match repo.find_reference(&fallback_tracking) {
+                    Ok(reference) => reference,
+                    Err(fallback_error) if fallback_error.code() == git2::ErrorCode::NotFound => {
+                        return Ok(PullResult {
+                            kind: PullKind::NoUpstream,
+                            message: format!("no upstream tracking ref {}", tracking),
+                            conflicts: Vec::new(),
+                        });
+                    }
+                    Err(fallback_error) => return Err(EngineError::Git(fallback_error)),
+                }
             }
             Err(e) => return Err(EngineError::Git(e)),
         };
@@ -297,13 +311,16 @@ fn push_repo_unlocked(
     }
     let branch = head.shorthand()?;
     let refname = format!("refs/heads/{}", branch);
+    let remote_branch = configured_merge_branch(repo, branch).unwrap_or_else(|| branch.to_string());
     // Force-push is engine-internal API parity only (never set by any UI
     // path in the app); implemented as a `+` refspec, the libgit2-native
     // way of forcing a push without a lease.
     let push_spec = if force {
-        format!("+{}", refname)
-    } else {
+        format!("+{}:refs/heads/{}", refname, remote_branch)
+    } else if remote_branch == branch {
         refname.clone()
+    } else {
+        format!("{}:refs/heads/{}", refname, remote_branch)
     };
 
     let mut callbacks = progress_callbacks(source, on_progress);
@@ -319,7 +336,7 @@ fn push_repo_unlocked(
             Ok(PushResult {
                 pushed: true,
                 non_fast_forward: false,
-                message: format!("pushed {} to {}", refname, remote_name),
+                message: format!("pushed {} to {}/{}", refname, remote_name, remote_branch),
             })
         }
         Err(e) if e.code() == git2::ErrorCode::NotFastForward => Ok(PushResult {
@@ -481,7 +498,9 @@ pub fn push_with_integrate(
             ));
         }
         let branch = head.shorthand()?.to_string();
-        let tracking = format!("refs/remotes/{}/{}", remote_name, branch);
+        let upstream_branch =
+            configured_merge_branch(&repo, &branch).unwrap_or_else(|| branch.clone());
+        let tracking = format!("refs/remotes/{}/{}", remote_name, upstream_branch);
         let tracking_ref = match repo.find_reference(&tracking) {
             Ok(reference) => reference,
             Err(e) if e.code() == git2::ErrorCode::NotFound => {

@@ -1,4 +1,4 @@
-import React, { ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import {
   KeyboardAvoidingView,
   Modal as RNModal,
@@ -39,12 +39,11 @@ export function Modal(props: ModalProps) {
   } = props;
   const { isDark } = useTheme();
   const { spacing, colors } = useTokens();
-  const { height: viewportHeight, width: viewportWidth } = useWindowDimensions();
+  const { height: viewportHeight } = useWindowDimensions();
   const { top: topInset } = useSafeAreaInsets();
 
   const pad = spacing[5];
   const slotHeight = Math.max(0, viewportHeight - pad * 2 - topInset);
-  const slotWidth = Math.max(0, viewportWidth - pad * 2);
   const bottomSheetSlotHeight = Math.max(0, slotHeight - topInset);
 
   const bgColor = colors.elevated;
@@ -85,41 +84,26 @@ export function Modal(props: ModalProps) {
         accessibilityElementsHidden
         importantForAccessibility="no-hide-descendants"
       />
-      <Pressable
-        accessible={false}
-        importantForAccessibility="no"
-        onPress={dismissOnBackdrop ? onRequestClose : undefined}
-        style={[
-          StyleSheet.absoluteFill,
-          bottomSheet
-            ? {
-                backgroundColor: 'rgba(0,0,0,0.18)',
-                justifyContent: 'flex-end',
-                alignItems: 'stretch',
-              }
-            : {
-                backgroundColor: 'rgba(0,0,0,0.18)',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: pad,
-              },
-        ]}
+      <View
+        style={StyleSheet.absoluteFill}
       >
+        <Pressable
+          accessible={false}
+          importantForAccessibility="no"
+          onPress={dismissOnBackdrop ? onRequestClose : undefined}
+          style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.18)' }]}
+        />
         <View
           pointerEvents="box-none"
           style={
             bottomSheet
-              ? {
-                  width: '100%',
-                  height: bottomSheetSlotHeight,
-                  justifyContent: 'flex-end',
-                }
+              ? { flex: 1, width: '100%', justifyContent: 'flex-end' }
               : {
-                  width: fullWidth ? slotWidth : undefined,
-                  maxWidth: fullWidth ? undefined : 480,
-                  height: slotHeight,
-                  alignItems: 'stretch',
+                  flex: 1,
+                  width: '100%',
+                  alignItems: 'center',
                   justifyContent: 'center',
+                  padding: pad,
                 }
           }
         >
@@ -135,31 +119,29 @@ export function Modal(props: ModalProps) {
                 justifyContent: 'flex-end',
               }}
             >
+              <Surface
+                elevation="floating"
+                radius="lg"
+                style={[surfaceStyle, contentStyle]}
+                accessible
+                accessibilityLabel={accessibilityLabel}
+              >
+                {children}
+              </Surface>
+            </KeyboardAvoidingView>
+          ) : (
             <Surface
               elevation="floating"
               radius="lg"
-              onStartShouldSetResponder={() => true}
               style={[surfaceStyle, contentStyle]}
               accessible
               accessibilityLabel={accessibilityLabel}
             >
               {children}
             </Surface>
-          </KeyboardAvoidingView>
-        ) : (
-          <Surface
-            elevation="floating"
-            radius="lg"
-            onStartShouldSetResponder={() => true}
-            style={[surfaceStyle, contentStyle]}
-            accessible
-            accessibilityLabel={accessibilityLabel}
-          >
-            {children}
-          </Surface>
-        )}
+          )}
         </View>
-      </Pressable>
+      </View>
     </RNModal>
   );
 }

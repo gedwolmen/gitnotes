@@ -15,11 +15,18 @@ interface CacheEntry {
 }
 const sessionCache = new Map<string, CacheEntry>();
 
-async function resolveActiveProvider(): Promise<'github' | 'gitlab' | null> {
+async function resolveActiveProvider(): Promise<'github' | 'gitlab' | 'gitea' | 'forgejo' | null> {
   try {
     const host = await getActiveGitHost();
     if (!host) return null;
-    if (host.provider === 'github' || host.provider === 'gitlab') return host.provider;
+    if (
+      host.provider === 'github'
+      || host.provider === 'gitlab'
+      || host.provider === 'gitea'
+      || host.provider === 'forgejo'
+    ) {
+      return host.provider;
+    }
     return null;
   } catch {
     return null;
@@ -29,7 +36,7 @@ async function resolveActiveProvider(): Promise<'github' | 'gitlab' | null> {
 /**
  * Resolve the branch for a repo operation. Order:
  *   1. Local clone HEAD (clone-mode repos) — verified against actual HEAD
- *   2. GitHub API `default_branch`
+ *   2. GitHub API `default_branch` / GitLab / Gitea/Forgejo host-specific API
  *   3. Hard fallback: 'main'
  *
  * @param repoPath - The repository path
@@ -57,7 +64,9 @@ export async function resolveBranch(
   const remote =
     provider === 'gitlab'
       ? await fetchGitLabDefaultBranch(repoPath)
-      : await fetchGitHubDefaultBranch(repoPath);
+      : provider === 'gitea' || provider === 'forgejo'
+        ? await fetchGiteaLikeDefaultBranch(repoPath)
+        : await fetchGitHubDefaultBranch(repoPath);
   if (remote) {
     sessionCache.set(cacheKey, { repoId, repoPath, branch: remote });
     return remote;
@@ -95,6 +104,28 @@ export function __resetBranchCacheForTests(): void {
 }
 
 export { sessionCache };
+
+/**
+ * Resolve the default branch for a Gitea or Forgejo repository.
+ * Uses the active host's getDefaultBranch() method which carries the
+ * correct custom API base URL (from the user's self-hosted instance).
+ *
+ * Falls back to null if no active host is available or the call fails;
+ * callers are expected to fall back to 'main' in that case.
+ */
+export async function fetchGiteaLikeDefaultBranch(
+  repoPath: string,
+): Promise<string | null> {
+  try {
+    const host = await getActiveGitHost();
+    if (!host) return null;
+    const info = parseRepoPath(repoPath);
+    if (!info) return null;
+    return await host.host.getDefaultBranch(info.owner, info.repo);
+  } catch {
+    return null;
+  }
+}
 
 const FETCH_TIMEOUT_MS = 30_000;
 

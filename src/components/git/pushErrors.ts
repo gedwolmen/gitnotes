@@ -61,6 +61,8 @@ export function classifyPushError(error: unknown): PushFailure {
   let kind: PushErrorKind;
   if (/non-fast-forward|fetch first|fast-forward|not fast.forward/i.test(lower)) {
     kind = 'rejected';
+  } else if (/(?:remote )?(?:ref|reference|branch).*(?:not found|does not exist)/i.test(lower)) {
+    kind = 'rejected';
   } else if (/permission|denied|access|forbidden|\b403\b|prohibited/i.test(lower)) {
     kind = 'permission';
   } else if (

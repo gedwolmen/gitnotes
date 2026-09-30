@@ -269,6 +269,10 @@ export interface RemoteUrlOptions {
   instanceBaseUrl: string | null;
 }
 
+function stripApiV1Suffix(url: string): string {
+  return url.replace(/\/api\/v1\/?$/, '');
+}
+
 /**
  * Constructs the git remote URL for a repository.
  * SCP-style SSH URLs: git@github.com:owner/repo.git
@@ -291,7 +295,7 @@ export function remoteUrlForHost(
   }
   if (provider === 'github') return `https://github.com/${owner}/${repo}.git`;
   if (provider === 'gitlab') return `https://gitlab.com/${owner}/${repo}.git`;
-  if (instanceBaseUrl) return `${instanceBaseUrl.replace(/\/$/, '')}/${owner}/${repo}.git`;
+  if (instanceBaseUrl) return `${stripApiV1Suffix(instanceBaseUrl).replace(/\/$/, '')}/${owner}/${repo}.git`;
   return `https://github.com/${owner}/${repo}.git`;
 }
 
@@ -374,12 +378,13 @@ export class GitFsService {
     let lastError: unknown;
     for (let attempt = 0; attempt <= MAX_CLONE_RETRIES; attempt++) {
       try {
+        const remoteUrl = opts.remoteUrlOverride ?? remoteUrlForHost(info.owner, info.repo, {
+          useSsh: false,
+          provider: opts.provider ?? 'github',
+          instanceBaseUrl: opts.instanceBaseUrl ?? null,
+        });
         await nativeClone(
-          opts.remoteUrlOverride ?? remoteUrlForHost(info.owner, info.repo, {
-            useSsh: false,
-            provider: opts.provider ?? 'github',
-            instanceBaseUrl: opts.instanceBaseUrl ?? null,
-          }),
+          remoteUrl,
           `${fsRoot}${info.owner}/${info.repo}`,
           opts.repoId ?? null,
         );
@@ -695,10 +700,9 @@ export class GitFsService {
   static async getCurrentBranch(opts: RepoLocator): Promise<string | null> {
     const info = parseRepoPath(opts.repoPath);
     if (!info) return null;
-    const dir = repoDirVirtual(info.owner, info.repo);
     try {
-      const branch = await git.currentBranch({ fs: makeRepoFs(), dir, fullname: false });
-      return branch ?? null;
+      const repoInfo = await GitEngine.repoInfo(GitFsService.workingTreeUri(opts));
+      return repoInfo.currentBranch ?? null;
     } catch {
       return null;
     }
