@@ -371,15 +371,13 @@ export function SettingsContent(props: SettingsContentProps) {
         </GroupRow>
         <GroupRow
           testID="settings.option.style.neo-brutalist"
-          onPress={isPro ? () => { HapticService.selection(); setStyle('neo-brutalist'); } : () => promptProUpgrade(t, onOpenPaywall)}
+          onPress={() => { HapticService.selection(); setStyle('neo-brutalist'); }}
           accessibilityRole="button"
           accessibilityLabel={t('settings.style.neoBrutalist')}
           trailing={
             <View className="flex-row items-center gap-2">
               {uiStyle === 'neo-brutalist' ? (
                 <Ionicons name="checkmark" size={18} color={colors.accent} />
-              ) : !isPro ? (
-                <Ionicons name="lock-closed" size={16} color={colors.textSecondary} />
               ) : null}
             </View>
           }

@@ -261,7 +261,7 @@ The canonical route param types are in `src/navigation/types.ts`:
 |--------|-----------|--------|
 | Basic | `flat` | Free |
 | Neumorphic | `neumorphic` | Pro only (locked with paywall) |
-| Neo-Brutalist | `neo-brutalist` | Pro only (locked with paywall) |
+| Neo-Brutalist | `neo-brutalist` | Free (no paywall) |
 
 When a non-Pro user taps a Pro-locked style, `promptProUpgrade()` is called which opens the paywall. A lock icon is shown next to each Pro option when `isPro === false`. The selected style is persisted to `@gitnotes:style` via `ThemeContext.setStyle()`.
 

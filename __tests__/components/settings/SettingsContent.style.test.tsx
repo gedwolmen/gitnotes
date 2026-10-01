@@ -1,14 +1,18 @@
 /**
- * Tests for the Pro-gated three-way UI style selector in SettingsContent.
+ * Tests for the three-way UI style selector in SettingsContent.
+ *
+ * Entitlement model:
+ *   Basic (flat)     — free for all users
+ *   Neo-Brutalist    — free for all users (no paywall)
+ *   Neumorphic        — Pro only (paywall for free users)
  *
  * Structure:
- *   BASELINE — characterization tests for the EXISTING binary toggle
- *   (these verify the old contract and pass with the current implementation)
+ *   Rendering — verifies all three options render and are accessible
+ *   Accessibility — verifies role=button and lock icons
+ *   Paywall flow — verifies neumorphic triggers paywall for free users
+ *   Dark mode — verifies dark mode toggle is unaffected
  *
- *   NEW BEHAVIOR — failing-first tests for the three-way selector
- *   (these fail now and will pass once the three-way selector is implemented)
- *
- * Test IDs introduced:
+ * Test IDs:
  *   settings.option.style.basic       → flat style option
  *   settings.option.style.neumorphic → neumorphic style option
  *   settings.option.style.neo-brutalist → neo-brutalist style option
@@ -332,12 +336,7 @@ function makeProps(overrides: Partial<TestSettingsContentProps> = {}): TestSetti
   };
 }
 
-// BASELINE: the old binary toggle (settings.toggle.neu / settings.row.updated-ui) was replaced
-// by the three-way style selector. The new behavior tests below cover the current implementation.
-
 // ---------------------------------------------------------------------------
-// NEW BEHAVIOR — failing-first tests for the three-way style selector
-// These FAIL now and will PASS once the three-way selector is implemented.
 // ---------------------------------------------------------------------------
 describe('SettingsContent style selector [NEW — three-way selector]', () => {
   beforeEach(() => { mockAlertCalls = []; });
@@ -372,13 +371,17 @@ describe('SettingsContent style selector [NEW — three-way selector]', () => {
       expect(getByTestId('settings.option.style.basic')).toBeTruthy();
     });
 
-    it('neo-brutalist option is NOT directly pressable for free users (paywall)', async () => {
-      const props = makeProps({ isPro: false });
+    it('neo-brutalist option is free for all users — calls setStyle directly', async () => {
+      const setStyle = jest.fn();
+      const props = makeProps({ isPro: false, uiStyle: 'flat', setStyle });
       const { getByTestId } = render(<SettingsContent {...props} />);
+
       await act(async () => {
         fireEvent.press(getByTestId('settings.option.style.neo-brutalist'));
       });
-      expect(mockAlertCalls.length).toBe(1);
+      // Neo-Brutalist is now free — no paywall, directly sets the style
+      expect(setStyle).toHaveBeenCalledWith('neo-brutalist');
+      expect(mockAlertCalls.length).toBe(0);
     });
 
     it('neumorphic option is NOT directly pressable for free users (paywall)', async () => {
@@ -472,16 +475,17 @@ describe('SettingsContent style selector [NEW — three-way selector]', () => {
       expect(upgradeButton).toBeDefined();
     });
 
-    it('pressing neo-brutalist option shows Alert (promptProUpgrade) for free users', async () => {
-      const props = makeProps({ isPro: false });
+    it('pressing neo-brutalist option does NOT show Alert for free users (now free)', async () => {
+      const setStyle = jest.fn();
+      const props = makeProps({ isPro: false, uiStyle: 'flat', setStyle });
       const { getByTestId } = render(<SettingsContent {...props} />);
 
       await act(async () => {
         fireEvent.press(getByTestId('settings.option.style.neo-brutalist'));
       });
-      expect(mockAlertCalls.length).toBe(1);
-      const upgradeButton = mockAlertCalls[0].buttons[1] as { onPress: () => void };
-      expect(upgradeButton).toBeDefined();
+      // Neo-Brutalist is free — no paywall, no alert
+      expect(mockAlertCalls.length).toBe(0);
+      expect(setStyle).toHaveBeenCalledWith('neo-brutalist');
     });
 
     it('onOpenPaywall is NOT called directly by premium option press (uses promptProUpgrade)', async () => {
