@@ -1,5 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Linking, View } from 'react-native';
+import { Alert, Linking, Text, TouchableOpacity, View } from 'react-native';
+import { Image } from 'expo-image';
+import { Ionicons } from '@expo/vector-icons';
+import { Modal } from '../components/ui';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
@@ -41,7 +44,7 @@ import { ModelSelector } from '../components/ai/ModelSelector';
 import { ProviderConfigModal } from '../components/ai/ProviderConfigModal';
 import { ChatRepoPickerModal } from '../components/ai/ChatRepoPickerModal';
 import { ConnectHostModal } from '../components/ConnectHostModal';
-import { ScreenHeader, useScreenHeaderHeight, useTabBarHeight } from '../components/ui';
+import { Group, GroupRow, ScreenHeader, useScreenHeaderHeight, useTabBarHeight } from '../components/ui';
 import { SettingsContent } from '../components/settings/SettingsContent';
 import { SettingsModals } from '../components/settings/SettingsModals';
 import { SSHKeyModal } from '../components/settings/SettingsModals';
@@ -64,6 +67,7 @@ import {
   confirmUnverifiedWrite,
   showTransientAccessConfirmation,
 } from './addRepoConfirmation';
+import { AppIconService, type AppIconName } from '../services/AppIconService';
 
 // Mirrors GitFsService's MAX_CLONE_RETRIES so a failing repo can't loop the outer flow.
 const MAX_OUTER_CLONE_RETRIES = 1;
@@ -174,6 +178,10 @@ export default function SettingsScreen() {
   const [sshKeyData, setSshKeyData] = useState<{ publicKey: string; privateKey: string } | null>(null);
   const [sshGenerating, setSshGenerating] = useState(false);
   const [hostUseSsh, setHostUseSsh] = useState<Record<string, boolean>>({});
+  const [appIcon, setAppIcon] = useState<AppIconName | null>(null);
+  const [appIconSupported, setAppIconSupported] = useState(false);
+  const [showAppIconPicker, setShowAppIconPicker] = useState(false);
+  const [appIconLoading, setAppIconLoading] = useState(false);
   const pendingConfirmationRef = useRef(false);
 
   const loadHostUseSsh = useCallback(async (hosts: Array<{ id: string }>) => {
@@ -190,6 +198,19 @@ export default function SettingsScreen() {
 
   useEffect(() => {
     TemplateRepoPreferenceService.get().then(setTemplatesRepoPref);
+  }, []);
+
+  // Hydrate app icon state on mount
+  useEffect(() => {
+    const init = async () => {
+      const [hydration, supported] = await Promise.all([
+        AppIconService.hydrate(),
+        AppIconService.isSupported(),
+      ]);
+      setAppIcon(hydration.current);
+      setAppIconSupported(supported);
+    };
+    void init();
   }, []);
 
   const refreshLfsPending = useCallback(async (repoPaths: string[]) => {
@@ -1011,6 +1032,27 @@ export default function SettingsScreen() {
     Linking.openURL('https://github.com/settings/keys');
   }, []);
 
+  const handleAppIconSelect = useCallback(async (name: AppIconName) => {
+    setAppIconLoading(true);
+    try {
+      const result = name === null
+        ? await AppIconService.reset()
+        : await AppIconService.set(name);
+      if (result.success && result.current !== undefined) {
+        setAppIcon(result.current);
+        HapticService.success();
+      } else if (!result.success && !result.unavailable) {
+        HapticService.error();
+        Alert.alert(
+          t('common.error'),
+          result.error ?? t('settings.appIcon.error', { defaultValue: 'Failed to change app icon' }),
+        );
+      }
+    } finally {
+      setAppIconLoading(false);
+    }
+  }, [t]);
+
   const handleResetOnboarding = useCallback(() => {
     HapticService.warning();
     Alert.alert(t('settings.resetOnboardingTitle'), t('settings.resetOnboardingBody'), [
@@ -1162,6 +1204,10 @@ export default function SettingsScreen() {
         syncHealth={syncHealth}
         onToggleSSH={handleToggleSSH}
         hostUseSsh={hostUseSsh}
+        appIcon={appIcon}
+        appIconSupported={appIconSupported}
+        appIconLoading={appIconLoading}
+        onOpenAppIconPicker={() => setShowAppIconPicker(true)}
       />
       <SettingsModals
         colors={colors}
@@ -1246,6 +1292,90 @@ export default function SettingsScreen() {
         onClose={() => setShowAccentColorPicker(false)}
         onSelect={(color) => { setAccentColor(color); setShowAccentColorPicker(false); }}
       />
+      <Modal
+        visible={showAppIconPicker}
+        onRequestClose={() => setShowAppIconPicker(false)}
+        bottomSheet
+        contentStyle={{ padding: 16, paddingBottom: 34 }}
+      >
+        <View className="flex-row justify-between items-center mb-3">
+          <Text style={{ color: colors.text, fontSize: 17, fontWeight: '600' }}>
+            {t('settings.appIcon.title', { defaultValue: 'App Icon' })}
+          </Text>
+          <TouchableOpacity onPress={() => setShowAppIconPicker(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Ionicons name="close" size={22} color={colors.textSecondary} />
+          </TouchableOpacity>
+        </View>
+        <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 16 }}>
+          {t('settings.appIcon.pickerHint', { defaultValue: 'Choose an alternate app icon' })}
+        </Text>
+        <Group>
+          <GroupRow
+            testID="settings.button.app-icon.default"
+            onPress={() => { void handleAppIconSelect(null); }}
+            leading={
+              <Image
+                source={require('../../assets/generated/alternate/current-blue/icon.png')}
+                style={{ width: 40, height: 40, borderRadius: 8 }}
+              />
+            }
+            trailing={appIcon === null ? <Ionicons name="checkmark" size={20} color={colors.primary} /> : null}
+          >
+            <Text style={{ color: appIcon === null ? colors.primary : colors.text, fontSize: 16 }}>
+              {t('settings.appIcon.default', { defaultValue: 'Default' })}
+            </Text>
+          </GroupRow>
+          <GroupRow
+            testID="settings.button.app-icon.neon"
+            onPress={() => { void handleAppIconSelect('Neon'); }}
+            leading={
+              <Image
+                source={require('../../assets/generated/alternate/neon/icon.png')}
+                style={{ width: 40, height: 40, borderRadius: 8 }}
+              />
+            }
+            trailing={appIcon === 'Neon' ? <Ionicons name="checkmark" size={20} color={colors.primary} /> : null}
+          >
+            <Text style={{ color: appIcon === 'Neon' ? colors.primary : colors.text, fontSize: 16 }}>Neon</Text>
+          </GroupRow>
+          <GroupRow
+            testID="settings.button.app-icon.grayscale"
+            onPress={() => { void handleAppIconSelect('Grayscale'); }}
+            leading={
+              <Image
+                source={require('../../assets/generated/alternate/grayscale/icon.png')}
+                style={{ width: 40, height: 40, borderRadius: 8 }}
+              />
+            }
+            trailing={appIcon === 'Grayscale' ? <Ionicons name="checkmark" size={20} color={colors.primary} /> : null}
+          >
+            <Text style={{ color: appIcon === 'Grayscale' ? colors.primary : colors.text, fontSize: 16 }}>Grayscale</Text>
+          </GroupRow>
+          <GroupRow
+            testID="settings.button.app-icon.gold"
+            onPress={() => { void handleAppIconSelect('Gold'); }}
+            leading={
+              <Image
+                source={require('../../assets/generated/alternate/gold/icon.png')}
+                style={{ width: 40, height: 40, borderRadius: 8 }}
+              />
+            }
+            trailing={appIcon === 'Gold' ? <Ionicons name="checkmark" size={20} color={colors.primary} /> : null}
+          >
+            <Text style={{ color: appIcon === 'Gold' ? colors.primary : colors.text, fontSize: 16 }}>Gold</Text>
+          </GroupRow>
+        </Group>
+        <TouchableOpacity
+          testID="settings.button.app-icon.reset"
+          onPress={() => { void handleAppIconSelect(null); }}
+          className="mt-4 py-3.5 rounded-lg items-center"
+          style={{ backgroundColor: colors.surface }}
+        >
+          <Text style={{ color: colors.text, fontSize: 16 }}>
+            {t('settings.appIcon.reset', { defaultValue: 'Reset to Default' })}
+          </Text>
+        </TouchableOpacity>
+      </Modal>
       </View>
       <ScreenHeader title={t('settings.title')} />
     </SafeAreaView>

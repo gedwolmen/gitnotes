@@ -29,6 +29,7 @@ import { describeAvailability } from '../../services/ai/providerAvailabilityCopy
 import type { GitHostProvider } from '../../services/git/GitHost';
 import { GIT_HOST_LABELS } from '../../services/git/GitHost';
 import { useTokens } from '../../contexts/ThemeContext';
+import type { AppIconName } from '../../services/AppIconService';
 
 type ThemeColors = {
   background: string;
@@ -157,6 +158,10 @@ onRemoveAccount: (id: string, login: string) => void;
   syncHealth: ForegroundSyncHealth;
   onToggleSSH: (hostId: string) => void;
   hostUseSsh: Record<string, boolean>;
+  appIcon: AppIconName | null;
+  appIconSupported: boolean;
+  appIconLoading: boolean;
+  onOpenAppIconPicker: () => void;
 };
 
 function formatLfsBytes(bytes: number): string {
@@ -252,6 +257,10 @@ export function SettingsContent(props: SettingsContentProps) {
     syncHealth,
     onToggleSSH,
     hostUseSsh,
+    appIcon,
+    appIconSupported,
+    appIconLoading,
+    onOpenAppIconPicker,
   } = props;
   // Tokens hook gives us spacing/radii/type so the styled disconnect
   // button matches the rest of the app without hardcoded values.
@@ -402,6 +411,32 @@ export function SettingsContent(props: SettingsContentProps) {
           }
         >
           <Text style={[styles.settingLabel, { color: colors.text }]}>{t('settings.accentColor', { defaultValue: 'Accent Color' })}</Text>
+        </GroupRow>
+        <GroupRow
+          testID="settings.row.app-icon"
+          onPress={appIconSupported && !appIconLoading ? onOpenAppIconPicker : undefined}
+          disabled={!appIconSupported || appIconLoading}
+          trailing={
+            appIconLoading ? (
+              <ActivityIndicator size="small" color={colors.textSecondary} />
+            ) : appIconSupported ? (
+              <View className="flex-row items-center gap-1">
+                <Text style={[styles.settingValue, { color: colors.textSecondary }]}>
+                  {appIcon ?? t('settings.appIcon.default', { defaultValue: 'Default' })}
+                </Text>
+                <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+              </View>
+            ) : (
+              <Text style={[styles.settingValue, { color: colors.textSecondary }]}>
+                {t('settings.appIcon.unavailable', { defaultValue: 'Unavailable' })}
+              </Text>
+            )
+          }
+        >
+          <View className="flex-row items-center gap-2">
+            <Ionicons name="apps-outline" size={20} color={colors.text} />
+            <Text style={[styles.settingLabel, { color: colors.text }]}>{t('settings.appIcon.title', { defaultValue: 'App Icon' })}</Text>
+          </View>
         </GroupRow>
       </Group>
 
