@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -6,6 +6,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Button } from '../components/ui';
 import { SafeAreaView } from '../components/ui/SafeAreaView';
 import { useTheme } from '../contexts/ThemeContext';
+import { useAccounts } from '../contexts/AccountsContext';
 import {
   GitHubOAuthService,
   pendingOAuthFlows,
@@ -20,6 +21,7 @@ export default function OAuthCallbackScreen() {
   const { colors } = useTheme();
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<OAuthCallbackRoute>();
+  const { refreshAccounts } = useAccounts();
   const [result, setResult] = useState<OAuthCallbackResult | null>(null);
 
   useEffect(() => {
@@ -56,6 +58,12 @@ export default function OAuthCallbackScreen() {
   const handleDone = () => {
     navigation.navigate('MainTabs', { screen: 'SettingsTab' });
   };
+
+  useEffect(() => {
+    if (result?.outcome === 'success') {
+      refreshAccounts().catch(() => undefined);
+    }
+  }, [refreshAccounts, result]);
 
   if (!result) {
     return (

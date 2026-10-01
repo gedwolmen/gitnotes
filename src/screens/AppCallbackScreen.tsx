@@ -13,7 +13,7 @@
  * in-memory pending App flow, keyed by the `state` parameter.
  */
 
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { View, Text, ActivityIndicator } from 'react-native';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -21,6 +21,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTheme } from '../contexts/ThemeContext';
 import { SafeAreaView } from '../components/ui/SafeAreaView';
 import { Button } from '../components/ui';
+import { useAccounts } from '../contexts/AccountsContext';
 import {
   GitHubAppService,
   pendingAppFlows,
@@ -35,6 +36,7 @@ export default function AppCallbackScreen() {
   const { colors } = useTheme();
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<AppCallbackRoute>();
+  const { refreshAccounts } = useAccounts();
 
   const [result, setResult] = useState<AppCallbackResult | null>(null);
 
@@ -65,6 +67,12 @@ export default function AppCallbackScreen() {
   const handleDone = () => {
     navigation.navigate('MainTabs', { screen: 'SettingsTab' });
   };
+
+  useEffect(() => {
+    if (result?.outcome === 'success') {
+      refreshAccounts().catch(() => undefined);
+    }
+  }, [refreshAccounts, result]);
 
   if (!result) {
     return (
