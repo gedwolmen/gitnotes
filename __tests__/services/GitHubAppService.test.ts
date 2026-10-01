@@ -22,16 +22,19 @@ const TEST_BACKEND = 'https://gitnotes-backend.example.com';
 const TEST_HOST_ID = 'github:user@example.com';
 const TEST_INSTALLATION_URL = 'https://github.com/apps/test-app/installations/new?state=test-state';
 
+const FAKE_ACCOUNT_APP = { id: 'acc-app-456', login: 'appuser', name: 'App User', email: '', avatarUrl: '', addedAt: Date.now(), hostIds: [] };
+const FAKE_HOST_APP = { id: 'acc-app-456:github:default', accountId: 'acc-app-456', provider: 'github' as const, instanceBaseUrl: null, hostLogin: 'appuser', hostUserId: 789, name: 'App User', email: null, avatarUrl: null, addedAt: Date.now() };
+
 /** Loads GitHubAppService fresh each time with mocks in place. */
 const loadService = async () => {
   const mockPost = jest.fn<() => Promise<unknown>>();
   const mockSetGitHubAppCredential = jest.fn<() => Promise<void>>();
-  const pendingMap = new Map<string, {
-    selectedRepositoryIds: string[];
-    selectedRepositories: string[];
-    backendUrl: string;
-    hostId: string;
-  }>();
+  const mockAddAccount = jest.fn<() => Promise<typeof FAKE_ACCOUNT_APP>>();
+  const mockUpsertHostConnection = jest.fn<() => Promise<typeof FAKE_HOST_APP>>();
+  const mockSetActiveAccountId = jest.fn<() => Promise<void>>();
+  const mockSetActiveHostId = jest.fn<() => Promise<void>>();
+  const mockGetActiveHostId = jest.fn<() => Promise<string | null>>();
+  mockGetActiveHostId.mockResolvedValue(null);
 
   jest.doMock('expo-web-browser', () => ({
     openBrowserAsync: jest.fn<() => Promise<{ type: string }>>(),
@@ -47,7 +50,14 @@ const loadService = async () => {
   }));
 
   jest.doMock('@/services/AccountStorage', () => ({
-    AccountStorage: { setGitHubAppCredential: mockSetGitHubAppCredential },
+    AccountStorage: {
+      setGitHubAppCredential: mockSetGitHubAppCredential,
+      addAccount: mockAddAccount,
+      upsertHostConnection: mockUpsertHostConnection,
+      setActiveAccountId: mockSetActiveAccountId,
+      setActiveHostId: mockSetActiveHostId,
+      getActiveHostId: mockGetActiveHostId,
+    },
   }));
 
   jest.doMock('@/services/git/contracts', () => ({
@@ -66,7 +76,11 @@ const loadService = async () => {
     });
   });
 
-  return { mod, mockPost, mockSetGitHubAppCredential, pendingMap };
+  return {
+    mod, mockPost, mockSetGitHubAppCredential,
+    mockAddAccount, mockUpsertHostConnection,
+    mockSetActiveAccountId, mockSetActiveHostId, mockGetActiveHostId,
+  };
 };
 
 describe('GitHubAppService', () => {
@@ -293,9 +307,9 @@ describe('GitHubAppService', () => {
           account_login: 'testuser',
           account_id: 789,
           token: 'installation-token-abc',
-          expires_at: Math.floor(Date.now() / 1000) + 3600,
+          expires_at: Date.now() + 3600000,
           renewal_grant_token: 'grant-token-xyz',
-          renewal_grant_expires_at: Math.floor(Date.now() / 1000) + 86400,
+          renewal_grant_expires_at: Date.now() + 86400000,
         },
       });
 
@@ -337,6 +351,130 @@ describe('GitHubAppService', () => {
       expect(result.outcome).toBe('duplicate');
       expect(result.code).toBe('duplicate');
       expect(mod.pendingAppFlows.has(fakeState)).toBe(false);
+    });
+  });
+
+  describe('first-time App install (null hostId)', () => {
+    it('buildInstallUrl() accepts hostId: null and stores null in pending flow', async () => {
+      const { mod, mockPost } = await loadService();
+      const fakeState = 'app-null-host-state';
+      mockPost.mockResolvedValueOnce({
+        data: { installation_url: TEST_INSTALLATION_URL, state: fakeState },
+      });
+
+      const result = await mod.GitHubAppService.buildInstallUrl({
+        backendUrl: TEST_BACKEND,
+        hostId: null as unknown as string,
+        selectedRepositoryIds: ['1', '2'],
+      });
+
+      expect(result.ok).toBe(true);
+      const pending = mod.pendingAppFlows.get(fakeState);
+      expect(pending).toBeDefined();
+      expect(pending!.hostId).toBeNull();
+    });
+
+    it('handleCallback() with null hostId creates account, host connection, and stores App credential under resolved hostId', async () => {
+      const {
+        mod, mockPost, mockAddAccount, mockUpsertHostConnection,
+        mockSetActiveAccountId, mockSetActiveHostId, mockGetActiveHostId, mockSetGitHubAppCredential,
+      } = await loadService();
+
+      const fakeState = 'callback-state-null-host';
+      mod.pendingAppFlows.set(fakeState, {
+        selectedRepositoryIds: ['1'],
+        selectedRepositories: ['owner/repo'],
+        backendUrl: TEST_BACKEND,
+        hostId: null,
+      });
+
+      mockPost.mockResolvedValueOnce({
+        data: {
+          installation_id: 111222,
+          app_id: 654321,
+          app_slug: 'my-app',
+          account_login: 'appuser',
+          account_id: 333,
+          token: 'installation-token-null-host',
+          expires_at: Date.now() + 3600000,
+          renewal_grant_token: 'grant-null-host',
+          renewal_grant_expires_at: Date.now() + 86400000,
+        },
+      });
+      mockAddAccount.mockResolvedValue(FAKE_ACCOUNT_APP);
+      mockUpsertHostConnection.mockResolvedValue(FAKE_HOST_APP);
+      mockGetActiveHostId.mockResolvedValue(null);
+
+      const result = await mod.GitHubAppService.handleCallback({
+        installationId: '111222',
+        state: fakeState,
+      });
+
+      expect(result.outcome).toBe('success');
+      expect(mockAddAccount).toHaveBeenCalledWith('installation-token-null-host', expect.objectContaining({
+        login: 'appuser',
+        name: 'appuser',
+      }));
+      expect(mockUpsertHostConnection).toHaveBeenCalledWith(expect.objectContaining({
+        accountId: 'acc-app-456',
+        provider: 'github',
+        instanceBaseUrl: null,
+        hostLogin: 'appuser',
+        hostUserId: 333,
+        token: 'installation-token-null-host',
+      }));
+      expect(mockSetActiveAccountId).toHaveBeenCalledWith('acc-app-456');
+      expect(mockSetActiveHostId).toHaveBeenCalledWith('acc-app-456:github:default');
+      expect(mockSetGitHubAppCredential).toHaveBeenCalledWith('acc-app-456:github:default', expect.objectContaining({
+        kind: 'github_app',
+        accountLogin: 'appuser',
+        accountId: 333,
+        installationId: 111222,
+      }));
+    });
+
+    it('handleCallback() with null hostId does not set active account/host when one already exists', async () => {
+      const {
+        mod, mockPost, mockAddAccount, mockUpsertHostConnection,
+        mockSetActiveAccountId, mockSetActiveHostId, mockGetActiveHostId, mockSetGitHubAppCredential,
+      } = await loadService();
+
+      const fakeState = 'callback-state-null-host-existing';
+      mod.pendingAppFlows.set(fakeState, {
+        selectedRepositoryIds: ['1'],
+        selectedRepositories: ['owner/repo'],
+        backendUrl: TEST_BACKEND,
+        hostId: null,
+      });
+
+      mockPost.mockResolvedValueOnce({
+        data: {
+          installation_id: 222333,
+          app_id: 777888,
+          app_slug: 'another-app',
+          account_login: 'anotheruser',
+          account_id: 444,
+          token: 'token-another',
+          expires_at: Math.floor(Date.now() / 1000) + 3600,
+          renewal_grant_token: 'grant-another',
+          renewal_grant_expires_at: Math.floor(Date.now() / 1000) + 86400,
+        },
+      });
+      mockAddAccount.mockResolvedValue(FAKE_ACCOUNT_APP);
+      mockUpsertHostConnection.mockResolvedValue(FAKE_HOST_APP);
+      mockGetActiveHostId.mockResolvedValue('existing-active-host');
+
+      const result = await mod.GitHubAppService.handleCallback({
+        installationId: '222333',
+        state: fakeState,
+      });
+
+      expect(result.outcome).toBe('success');
+      expect(mockSetActiveAccountId).not.toHaveBeenCalled();
+      expect(mockSetActiveHostId).not.toHaveBeenCalled();
+      expect(mockSetGitHubAppCredential).toHaveBeenCalledWith('acc-app-456:github:default', expect.objectContaining({
+        kind: 'github_app',
+      }));
     });
   });
 });

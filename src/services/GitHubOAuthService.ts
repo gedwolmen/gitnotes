@@ -27,6 +27,9 @@ import type {
   OAuthErrorCode,
   GitHubOAuthAvailability,
 } from './git/contracts';
+import {
+  validateOAuthCredential,
+} from './git/contracts';
 import { AccountStorage } from './AccountStorage';
 import { generateId } from '../utils/ids';
 
@@ -74,7 +77,8 @@ export interface PendingOAuthFlow {
   backendUrl: string;
   redirectUri: string;
   clientId: string;
-  hostId: string;
+  /** null means first-time OAuth: no existing host connection yet. */
+  hostId: string | null;
 }
 
 /**
@@ -168,7 +172,7 @@ export class GitHubOAuthService {
     backendUrl: string;
     redirectUri: string;
     clientId: string;
-    hostId: string;
+    hostId: string | null;
     scopes?: string[];
   }): Promise<OAuthInitiationResult> {
     const { backendUrl, redirectUri, clientId, hostId, scopes = ['read:user'] } = params;
@@ -251,7 +255,7 @@ export class GitHubOAuthService {
     redirectUri: string;
     clientId: string;
     backendUrl: string;
-    hostId: string;
+    hostId: string | null;
   }): Promise<OAuthCallbackResult> {
     const { code, codeVerifier, state, redirectUri, clientId, backendUrl, hostId } = params;
 
@@ -277,9 +281,39 @@ export class GitHubOAuthService {
         refresh_expires_at: number;
       };
 
+      let resolvedHostId: string;
+
+      if (hostId === null) {
+        const account = await AccountStorage.addAccount(data.access_token, {
+          login: data.login,
+          name: data.login,
+          email: '',
+          avatarUrl: '',
+        });
+        const host = await AccountStorage.upsertHostConnection({
+          accountId: account.id,
+          provider: 'github',
+          instanceBaseUrl: null,
+          hostLogin: data.login,
+          hostUserId: data.user_id,
+          name: data.login,
+          email: null,
+          avatarUrl: null,
+          token: data.access_token,
+        });
+        const currentActiveHostId = await AccountStorage.getActiveHostId();
+        if (!currentActiveHostId) {
+          await AccountStorage.setActiveAccountId(account.id);
+          await AccountStorage.setActiveHostId(host.id);
+        }
+        resolvedHostId = host.id;
+      } else {
+        resolvedHostId = hostId;
+      }
+
       const credential: GitHubOAuthCredentialRecord = {
-        id: `${hostId}:oauth`,
-        hostId,
+        id: `${resolvedHostId}:oauth`,
+        hostId: resolvedHostId,
         kind: 'oauth',
         addedAt: Date.now(),
         accessToken: data.access_token,
@@ -293,14 +327,12 @@ export class GitHubOAuthService {
         },
       };
 
-      // Validate before storing.
-      const { validateOAuthCredential } = await import('./git/contracts');
       const valid = validateOAuthCredential(credential);
       if (!valid.valid) {
         return { outcome: 'malformed' };
       }
 
-      await AccountStorage.setOAuthCredential(hostId, credential);
+      await AccountStorage.setOAuthCredential(resolvedHostId, credential);
       return { outcome: 'success', credential };
     } catch (err) {
       pendingOAuthFlows.delete(state);

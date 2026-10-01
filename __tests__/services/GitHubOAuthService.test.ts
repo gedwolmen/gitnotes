@@ -9,15 +9,46 @@ const TEST_CLIENT_ID = 'Iv1.test-client-id';
 const TEST_HOST_ID = 'github:user@example.com';
 const TEST_REDIRECT_URI = 'gitnotes://oauth/callback';
 
+const FAKE_ACCOUNT = { id: 'acc-123', login: 'testuser', name: 'Test User', email: 'test@example.com', avatarUrl: 'https://example.com/avatar.png', addedAt: Date.now(), hostIds: [] };
+const FAKE_HOST = { id: 'acc-123:github:default', accountId: 'acc-123', provider: 'github' as const, instanceBaseUrl: null, hostLogin: 'testuser', hostUserId: 123, name: 'Test User', email: 'test@example.com', avatarUrl: 'https://example.com/avatar.png', addedAt: Date.now() };
+
 const loadService = async () => {
   const mockPost = jest.fn<() => Promise<unknown>>();
   const mockGetRandomBytesAsync = jest.fn<() => Promise<string>>();
   const mockDigestStringAsync = jest.fn<() => Promise<string>>();
   const mockOpenBrowserAsync = jest.fn<() => Promise<{ type: string }>>();
+  const mockAddAccount = jest.fn<() => Promise<typeof FAKE_ACCOUNT>>();
+  const mockUpsertHostConnection = jest.fn<() => Promise<typeof FAKE_HOST>>();
+  const mockSetActiveAccountId = jest.fn<() => Promise<void>>();
+  const mockSetActiveHostId = jest.fn<() => Promise<void>>();
+  const mockGetActiveHostId = jest.fn<() => Promise<string | null>>();
+  const mockSetOAuthCredential = jest.fn<() => Promise<void>>();
   const uuid = { current: 'test-state-abc' };
+
+  mockGetActiveHostId.mockResolvedValue(null);
 
   const mod = await new Promise<typeof import('../../src/services/GitHubOAuthService')>((resolve) => {
     jest.isolateModules(() => {
+      jest.unmock('@/services/AccountStorage');
+      jest.unmock('axios');
+      jest.unmock('cross-fetch');
+      jest.doMock('@/services/AccountStorage', () => ({
+        AccountStorage: {
+          addAccount: mockAddAccount,
+          upsertHostConnection: mockUpsertHostConnection,
+          setActiveAccountId: mockSetActiveAccountId,
+          setActiveHostId: mockSetActiveHostId,
+          getActiveHostId: mockGetActiveHostId,
+          setOAuthCredential: mockSetOAuthCredential,
+        },
+      }));
+
+      jest.doMock('@/services/git/contracts', () => ({
+        validateOAuthCredential: () => ({ valid: true }),
+        isOAuthExpired: () => false,
+        isRefreshExpired: () => false,
+      }));
+
       jest.doMock('axios', () => ({
         default: {
           create: () => ({
@@ -40,12 +71,19 @@ const loadService = async () => {
       }));
 
       const m = require('../../src/services/GitHubOAuthService');
-      m.setHttpClient({ post: mockPost, get: jest.fn() });
+      const mockGet = jest.fn<() => Promise<unknown>>();
+      m.setHttpClient({ post: mockPost, get: mockGet });
+
       resolve(m);
     });
   });
 
-  return { mod, mockPost, mockGetRandomBytesAsync, mockDigestStringAsync, mockOpenBrowserAsync, setUuid: (s: string) => { uuid.current = s; } };
+  return {
+    mod, mockPost, mockGetRandomBytesAsync, mockDigestStringAsync, mockOpenBrowserAsync,
+    mockAddAccount, mockUpsertHostConnection, mockSetActiveAccountId, mockSetActiveHostId,
+    mockGetActiveHostId, mockSetOAuthCredential,
+    setUuid: (s: string) => { uuid.current = s; },
+  };
 };
 
 describe('GitHubOAuthService', () => {
@@ -103,8 +141,6 @@ describe('GitHubOAuthService', () => {
         redirectUri: TEST_REDIRECT_URI,
       });
 
-      console.log('DEBUG initiate result:', JSON.stringify(result));
-      console.log('DEBUG mockPost calls:', mockPost.mock.calls);
       expect(result.ok).toBe(true);
 
       const pending = mod.pendingOAuthFlows.get('test-state-abc');
@@ -212,6 +248,139 @@ describe('GitHubOAuthService', () => {
       expect(result.outcome).toBe('backend_error');
       expect(result.code).toBe('network_error');
       expect(mod.pendingOAuthFlows.has('state-abc')).toBe(false);
+    });
+  });
+
+  describe('first-time OAuth (null hostId)', () => {
+    it('initiate() accepts hostId: null and stores null in pending flow', async () => {
+      const { mod, mockPost, mockGetRandomBytesAsync, mockDigestStringAsync, setUuid } = await loadService();
+      setUuid('oauth-state-null-host');
+      mockGetRandomBytesAsync.mockResolvedValue('verifier-null');
+      mockDigestStringAsync.mockResolvedValue('sha-256-null');
+      mockPost.mockResolvedValueOnce({
+        data: {
+          authorization_url: 'https://github.com/login/oauth/authorize?client_id=Iv1.test&redirect_uri=gitnotes://oauth/callback&state=oauth-state-null-host',
+          state: 'oauth-state-null-host',
+        },
+      });
+
+      const result = await mod.GitHubOAuthService.initiate({
+        backendUrl: TEST_BACKEND,
+        hostId: null as unknown as string,
+        clientId: TEST_CLIENT_ID,
+        redirectUri: TEST_REDIRECT_URI,
+      });
+
+      expect(result.ok).toBe(true);
+      const pending = mod.pendingOAuthFlows.get('oauth-state-null-host');
+      expect(pending).toBeDefined();
+      expect(pending!.hostId).toBeNull();
+    });
+
+    it('exchangeCode() with null hostId creates account, host connection, and stores OAuth credential under resolved hostId', async () => {
+      const {
+        mod, mockPost, mockAddAccount, mockUpsertHostConnection,
+        mockSetActiveAccountId, mockSetActiveHostId, mockGetActiveHostId, mockSetOAuthCredential,
+      } = await loadService();
+
+      mod.pendingOAuthFlows.set('state-first-oauth', {
+        verifier: 'verifier-first',
+        backendUrl: TEST_BACKEND,
+        redirectUri: TEST_REDIRECT_URI,
+        clientId: TEST_CLIENT_ID,
+        hostId: null,
+      });
+
+      mockPost.mockResolvedValueOnce({
+        data: {
+          login: 'firstuser',
+          user_id: 456,
+          access_token: 'access-token-first',
+          expires_at: Date.now() + 3600000,
+          refresh_token: 'refresh-token-first',
+          refresh_expires_at: Date.now() + 86400000,
+        },
+      });
+      mockAddAccount.mockResolvedValue(FAKE_ACCOUNT);
+      mockUpsertHostConnection.mockResolvedValue(FAKE_HOST);
+      mockGetActiveHostId.mockResolvedValue(null);
+
+      const result = await mod.GitHubOAuthService.exchangeCode({
+        code: 'auth-code-first',
+        codeVerifier: 'verifier-first',
+        state: 'state-first-oauth',
+        redirectUri: TEST_REDIRECT_URI,
+        clientId: TEST_CLIENT_ID,
+        backendUrl: TEST_BACKEND,
+        hostId: null,
+      });
+
+      expect(result.outcome).toBe('success');
+      expect(mockAddAccount).toHaveBeenCalledWith('access-token-first', expect.objectContaining({
+        login: 'firstuser',
+        name: 'firstuser',
+      }));
+      expect(mockUpsertHostConnection).toHaveBeenCalledWith(expect.objectContaining({
+        accountId: 'acc-123',
+        provider: 'github',
+        instanceBaseUrl: null,
+        hostLogin: 'firstuser',
+        hostUserId: 456,
+        token: 'access-token-first',
+      }));
+      expect(mockSetActiveAccountId).toHaveBeenCalledWith('acc-123');
+      expect(mockSetActiveHostId).toHaveBeenCalledWith('acc-123:github:default');
+      expect(mockSetOAuthCredential).toHaveBeenCalledWith('acc-123:github:default', expect.objectContaining({
+        kind: 'oauth',
+        login: 'firstuser',
+        userId: 456,
+      }));
+    });
+
+    it('exchangeCode() with existing active host does not set active account/host when one already exists', async () => {
+      const {
+        mod, mockPost, mockAddAccount, mockUpsertHostConnection,
+        mockSetActiveAccountId, mockSetActiveHostId, mockGetActiveHostId, mockSetOAuthCredential,
+      } = await loadService();
+
+      mod.pendingOAuthFlows.set('state-first-oauth-active', {
+        verifier: 'verifier-first-2',
+        backendUrl: TEST_BACKEND,
+        redirectUri: TEST_REDIRECT_URI,
+        clientId: TEST_CLIENT_ID,
+        hostId: null,
+      });
+
+      mockPost.mockResolvedValueOnce({
+        data: {
+          login: 'seconduser',
+          user_id: 789,
+          access_token: 'access-token-second',
+          expires_at: Date.now() + 3600000,
+          refresh_token: 'refresh-token-second',
+          refresh_expires_at: Date.now() + 86400000,
+        },
+      });
+      mockAddAccount.mockResolvedValue(FAKE_ACCOUNT);
+      mockUpsertHostConnection.mockResolvedValue(FAKE_HOST);
+      mockGetActiveHostId.mockResolvedValue('existing-host-id');
+
+      const result = await mod.GitHubOAuthService.exchangeCode({
+        code: 'auth-code-second',
+        codeVerifier: 'verifier-first-2',
+        state: 'state-first-oauth-active',
+        redirectUri: TEST_REDIRECT_URI,
+        clientId: TEST_CLIENT_ID,
+        backendUrl: TEST_BACKEND,
+        hostId: null,
+      });
+
+      expect(result.outcome).toBe('success');
+      expect(mockSetActiveAccountId).not.toHaveBeenCalled();
+      expect(mockSetActiveHostId).not.toHaveBeenCalled();
+      expect(mockSetOAuthCredential).toHaveBeenCalledWith('acc-123:github:default', expect.objectContaining({
+        kind: 'oauth',
+      }));
     });
   });
 });

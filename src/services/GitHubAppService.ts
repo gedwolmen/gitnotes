@@ -4,7 +4,8 @@ export interface PendingAppFlow {
   selectedRepositoryIds: string[];
   selectedRepositories: string[];
   backendUrl: string;
-  hostId: string;
+  /** null means first-time App install: no existing host connection yet. */
+  hostId: string | null;
 }
 
 /**
@@ -108,7 +109,7 @@ export class GitHubAppService {
    */
   static async buildInstallUrl(params: {
     backendUrl: string;
-    hostId: string;
+    hostId: string | null;
     selectedRepositoryIds: string[];
     selectedRepositories?: SelectedRepository[];
   }): Promise<AppInitiationResult> {
@@ -251,9 +252,41 @@ export class GitHubAppService {
         return { owner, repo };
       });
 
+      let resolvedHostId: string;
+
+      if (hostId === null) {
+        // First-time App install: no existing host connection.
+        // Create account + host connection from backend response.
+        const account = await AccountStorage.addAccount(data.token, {
+          login: data.account_login,
+          name: data.account_login,
+          email: '',
+          avatarUrl: '',
+        });
+        const host = await AccountStorage.upsertHostConnection({
+          accountId: account.id,
+          provider: 'github',
+          instanceBaseUrl: null,
+          hostLogin: data.account_login,
+          hostUserId: data.account_id,
+          name: data.account_login,
+          email: null,
+          avatarUrl: null,
+          token: data.token,
+        });
+        const currentActiveHostId = await AccountStorage.getActiveHostId();
+        if (!currentActiveHostId) {
+          await AccountStorage.setActiveAccountId(account.id);
+          await AccountStorage.setActiveHostId(host.id);
+        }
+        resolvedHostId = host.id;
+      } else {
+        resolvedHostId = hostId;
+      }
+
       const credential: GitHubAppCredentialRecord = {
-        id: `${hostId}:github_app`,
-        hostId,
+        id: `${resolvedHostId}:github_app`,
+        hostId: resolvedHostId,
         kind: 'github_app',
         addedAt: Date.now(),
         installationId: data.installation_id,
@@ -277,7 +310,7 @@ export class GitHubAppService {
         return { outcome: 'malformed' };
       }
 
-      await AccountStorage.setGitHubAppCredential(hostId, credential);
+      await AccountStorage.setGitHubAppCredential(resolvedHostId, credential);
       return { outcome: 'success', credential };
     } catch (err) {
       const error = err as {
