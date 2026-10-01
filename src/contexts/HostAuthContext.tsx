@@ -42,6 +42,40 @@ export interface HostAuthContextValue {
   ) => Promise<GitHostUser | null>;
   clearToken: (provider: GitHostProvider) => Promise<void>;
   setBaseUrl: (provider: GitHostProvider, baseUrl: string) => Promise<void>;
+  /**
+   * Connect a GitHub OAuth credential for a host.
+   * The OAuth credential must have been stored via `AccountStorage.setOAuthCredential`.
+   * Registers the OAuth access token with the native Git engine for clone/fetch/push.
+   *
+   * Returns the OAuth credential record on success.
+   */
+  connectGitHubOAuth: (hostId: string) => Promise<import('../services/git/contracts').GitHubOAuthCredentialRecord | null>;
+  /**
+   * Disconnect the GitHub OAuth credential for a host.
+   * Removes the credential from AccountStorage and clears native Git registration.
+   */
+  disconnectGitHubOAuth: (hostId: string) => Promise<void>;
+  /**
+   * Connect a GitHub App installation credential for a host.
+   * The App credential must have been stored via `AccountStorage.setGitHubAppCredential`.
+   * Registers the App installation token with the native Git engine for clone/fetch/push.
+   *
+   * Returns the App credential record on success.
+   */
+  connectGitHubApp: (hostId: string) => Promise<import('../services/git/contracts').GitHubAppCredentialRecord | null>;
+  /**
+   * Disconnect the GitHub App installation credential for a host.
+   * Removes the credential from AccountStorage and clears native Git registration.
+   */
+  disconnectGitHubApp: (hostId: string) => Promise<void>;
+  /**
+   * Renew the GitHub App installation token for a host.
+   * Uses the stored renewal grant to get a fresh installation token.
+   * Re-registers the new token with the native Git engine.
+   *
+   * Returns the renewed App credential record on success.
+   */
+  renewGitHubAppToken: (hostId: string) => Promise<import('../services/git/contracts').GitHubAppCredentialRecord | null>;
 }
 
 const HOST_ORDER: GitHostProvider[] = ['github', 'gitlab', 'gitea', 'forgejo'];
@@ -250,6 +284,76 @@ export function HostAuthProvider({ children }: HostAuthProviderProps) {
     [refresh],
   );
 
+  const connectGitHubOAuth = useCallback(
+    async (hostId: string) => {
+      const { AccountStorage } = await import('../services/AccountStorage');
+      const cred = await AccountStorage.getOAuthCredential(hostId);
+      if (!cred) return null;
+      const { registerGitHubOAuthCredential } = await import('../services/git/NativeCredentialBridge');
+      // OAuth tokens are user-level — register against a wildcard repo key so any
+      // repo lookup on this host picks up the OAuth credential.
+      const wildcardRepoId = `${hostId}:oauth-all-repos`;
+      await registerGitHubOAuthCredential(wildcardRepoId, hostId, cred.accessToken);
+      return cred;
+    },
+    [],
+  );
+
+  const disconnectGitHubOAuth = useCallback(
+    async (hostId: string) => {
+      const { AccountStorage } = await import('../services/AccountStorage');
+      await AccountStorage.deleteOAuthCredential(hostId);
+      const { clearHostCredentials } = await import('../services/git/NativeCredentialBridge');
+      await clearHostCredentials(hostId);
+    },
+    [],
+  );
+
+  const connectGitHubApp = useCallback(
+    async (hostId: string) => {
+      const { AccountStorage } = await import('../services/AccountStorage');
+      const cred = await AccountStorage.getGitHubAppCredential(hostId);
+      if (!cred) return null;
+      const { registerGitHubAppCredential } = await import('../services/git/NativeCredentialBridge');
+      for (const repo of cred.selectedRepositories) {
+        const repoId = `${repo.owner}/${repo.repo}`;
+        await registerGitHubAppCredential(repoId, hostId, cred.token);
+      }
+      return cred;
+    },
+    [],
+  );
+
+  const disconnectGitHubApp = useCallback(
+    async (hostId: string) => {
+      const { AccountStorage } = await import('../services/AccountStorage');
+      await AccountStorage.deleteGitHubAppCredential(hostId);
+      const { clearHostCredentials } = await import('../services/git/NativeCredentialBridge');
+      await clearHostCredentials(hostId);
+    },
+    [],
+  );
+
+  const renewGitHubAppToken = useCallback(
+    async (hostId: string) => {
+      const { AccountStorage } = await import('../services/AccountStorage');
+      const { GitHubAppService } = await import('../services/GitHubAppService');
+      const cred = await AccountStorage.getGitHubAppCredential(hostId);
+      if (!cred) return null;
+      const result = await GitHubAppService.renewInstallationToken({ credential: cred });
+      if (!result.ok) return null;
+      const renewed = result.credential;
+      await AccountStorage.setGitHubAppCredential(hostId, renewed);
+      const { registerGitHubAppCredential } = await import('../services/git/NativeCredentialBridge');
+      for (const repo of renewed.selectedRepositories) {
+        const repoId = `${repo.owner}/${repo.repo}`;
+        await registerGitHubAppCredential(repoId, hostId, renewed.token);
+      }
+      return renewed;
+    },
+    [],
+  );
+
   const value = useMemo<HostAuthContextValue>(
     () => ({
       hosts,
@@ -258,8 +362,13 @@ export function HostAuthProvider({ children }: HostAuthProviderProps) {
       setToken,
       clearToken,
       setBaseUrl,
+      connectGitHubOAuth,
+      disconnectGitHubOAuth,
+      connectGitHubApp,
+      disconnectGitHubApp,
+      renewGitHubAppToken,
     }),
-    [hosts, status, refresh, setToken, clearToken, setBaseUrl],
+    [hosts, status, refresh, setToken, clearToken, setBaseUrl, connectGitHubOAuth, disconnectGitHubOAuth, connectGitHubApp, disconnectGitHubApp, renewGitHubAppToken],
   );
 
   return (

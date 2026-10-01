@@ -2,6 +2,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import http, { setAuthToken, clearAuthToken } from './http';
 import AuthService from './AuthService';
 import { extractHttpErrorDetails } from './git/syncFailure';
+import { AccountStorage } from './AccountStorage';
+import type { GitHubOAuthCredentialRecord } from './git/contracts';
+import type { GitHubAppCredentialRecord } from './git/contracts';
 
 const USER_KEY = '@gitnotes:github_user';
 
@@ -1216,9 +1219,43 @@ class GitHubServiceClass {
     opts?: TokenOpts,
   ): Promise<T> {
     const override = opts?.tokenOverride;
-    if (!this.token && !override) throw new Error('GitHub token is not configured');
-    const response = await http.request<T>({ url, method, data, ...(override ? { authOverride: override } : {}) });
-    return response.data;
+
+    // Resolve the token: explicit override > credential-kind resolution > singleton.
+    let resolvedToken: string | null = null;
+    if (override) {
+      resolvedToken = override;
+    } else if (opts?.credentialKind && opts?.hostId) {
+      const { resolveGitHubRepoToken } = await import('./git/NativeCredentialBridge');
+      resolvedToken = (await resolveGitHubRepoToken({ repoId: opts.repoId!, hostId: opts.hostId! })).token;
+    } else {
+      resolvedToken = this.token;
+    }
+
+    if (!resolvedToken) throw new Error('GitHub token is not configured');
+
+    try {
+      const response = await http.request<T>({ url, method, data, ...(resolvedToken ? { authOverride: resolvedToken } : {}) });
+      return response.data;
+    } catch (error) {
+      // Attempt 401 recovery when using an App credential.
+      if (
+        opts?.credentialKind === 'github_app' &&
+        opts?.hostId &&
+        opts?.repoId &&
+        isAppRecoverable401(error)
+      ) {
+        const { recoverFromApp401 } = await import('./git/NativeCredentialBridge');
+        const appCred = await AccountStorage.getGitHubAppCredential(opts.hostId);
+        if (appCred) {
+          const renewed = await recoverFromApp401(opts.repoId, opts.hostId, appCred);
+          if (renewed) {
+            const retryResponse = await http.request<T>({ url, method, data, authOverride: renewed.token });
+            return retryResponse.data;
+          }
+        }
+      }
+      throw error;
+    }
   }
 
   private async requestPaginated(url: string): Promise<{ data: any; nextUrl: string | null }> {
@@ -1251,6 +1288,35 @@ class GitHubServiceClass {
       `https://api.github.com/repos/${owner}/${repo}`,
     );
   }
+
+  static async registerOAuthCredentialForNative(params: {
+    repoId: string;
+    hostId: string;
+    oauthCredential: GitHubOAuthCredentialRecord;
+  }): Promise<void> {
+    const { registerGitHubOAuthCredential } = await import('./git/NativeCredentialBridge');
+    await registerGitHubOAuthCredential(params.repoId, params.hostId, params.oauthCredential.accessToken);
+  }
+
+  static async registerGitHubAppCredentialForNative(params: {
+    repoId: string;
+    hostId: string;
+    appCredential: GitHubAppCredentialRecord;
+  }): Promise<void> {
+    const { registerGitHubAppCredential, enforceAppRepositorySelection } = await import('./git/NativeCredentialBridge');
+    enforceAppRepositorySelection(params.repoId, params.appCredential);
+    await registerGitHubAppCredential(params.repoId, params.hostId, params.appCredential.token);
+  }
+
+  static async clearNativeCredential(repoId: string): Promise<void> {
+    const { clearRepoCredential } = await import('./git/NativeCredentialBridge');
+    await clearRepoCredential(repoId);
+  }
+
+  static async clearNativeCredentialsForHost(hostId: string): Promise<void> {
+    const { clearHostCredentials } = await import('./git/NativeCredentialBridge');
+    await clearHostCredentials(hostId);
+  }
 }
 
 // Re-export the class under a stable name so the GitHost adapter can
@@ -1260,6 +1326,27 @@ export const GitHubServiceStatic = GitHubServiceClass;
 export interface TokenOpts {
   /** Per-call GitHub token override; bypasses the singleton active-account header. */
   tokenOverride?: string;
+  /**
+   * Use a specific credential kind for this request instead of the singleton token.
+   * - `'github_app'`: use the GitHub App installation token (requires repo to be in selection)
+   * - `'oauth'`: use the GitHub OAuth token
+   * - `'token'`: use the PAT (default when not specified and no override)
+   *
+   * When a kind is specified, the service resolves the appropriate token from
+   * AccountStorage, handles App pre-expiry renewal, and retries on recoverable 401.
+   */
+  credentialKind?: 'github_app' | 'oauth' | 'token';
+  /**
+   * Target repository for App/OAuth credential resolution (owner/repo).
+   * Required when `credentialKind` is `'github_app'` or `'oauth'` and no
+   * `tokenOverride` is provided.
+   */
+  repoId?: string;
+  /**
+   * Host connection id for credential resolution.
+   * Required when `credentialKind` is specified.
+   */
+  hostId?: string;
 }
 
 function parseNextLink(linkHeader: string | null | undefined): string | null {
@@ -1270,6 +1357,12 @@ function parseNextLink(linkHeader: string | null | undefined): string | null {
 
 function isNotFound(error: unknown): boolean {
   return typeof error === 'object' && error !== null && (error as { status?: number }).status === 404;
+}
+
+function isAppRecoverable401(error: unknown): boolean {
+  if (typeof error !== 'object' || error === null) return false;
+  const status = (error as { status?: number }).status;
+  return status === 401;
 }
 
 export const GitHubService = new GitHubServiceClass();
