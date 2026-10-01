@@ -1048,6 +1048,12 @@ export default function SettingsScreen() {
           result.error ?? t('settings.appIcon.error', { defaultValue: 'Failed to change app icon' }),
         );
       }
+    } catch {
+      HapticService.error();
+      Alert.alert(
+        t('common.error'),
+        t('settings.appIcon.error', { defaultValue: 'Failed to change app icon' }),
+      );
     } finally {
       setAppIconLoading(false);
     }
@@ -1302,7 +1308,7 @@ export default function SettingsScreen() {
           <Text style={{ color: colors.text, fontSize: 17, fontWeight: '600' }}>
             {t('settings.appIcon.title', { defaultValue: 'App Icon' })}
           </Text>
-          <TouchableOpacity onPress={() => setShowAppIconPicker(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <TouchableOpacity onPress={appIconLoading ? undefined : () => setShowAppIconPicker(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} disabled={appIconLoading}>
             <Ionicons name="close" size={22} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
@@ -1312,6 +1318,7 @@ export default function SettingsScreen() {
         <Group>
           <GroupRow
             testID="settings.button.app-icon.default"
+            disabled={appIconLoading}
             onPress={() => { void handleAppIconSelect(null); }}
             leading={
               <Image
@@ -1327,6 +1334,7 @@ export default function SettingsScreen() {
           </GroupRow>
           <GroupRow
             testID="settings.button.app-icon.neon"
+            disabled={appIconLoading}
             onPress={() => { void handleAppIconSelect('Neon'); }}
             leading={
               <Image
@@ -1340,6 +1348,7 @@ export default function SettingsScreen() {
           </GroupRow>
           <GroupRow
             testID="settings.button.app-icon.grayscale"
+            disabled={appIconLoading}
             onPress={() => { void handleAppIconSelect('Grayscale'); }}
             leading={
               <Image
@@ -1353,6 +1362,7 @@ export default function SettingsScreen() {
           </GroupRow>
           <GroupRow
             testID="settings.button.app-icon.gold"
+            disabled={appIconLoading}
             onPress={() => { void handleAppIconSelect('Gold'); }}
             leading={
               <Image
@@ -1367,6 +1377,7 @@ export default function SettingsScreen() {
         </Group>
         <TouchableOpacity
           testID="settings.button.app-icon.reset"
+          disabled={appIconLoading}
           onPress={() => { void handleAppIconSelect(null); }}
           className="mt-4 py-3.5 rounded-lg items-center"
           style={{ backgroundColor: colors.surface }}
