@@ -31,6 +31,10 @@ type ProductionStackParamList = {
   ExploreIssues: { repoId: string };
   ExplorePullRequests: { repoId: string };
   Calendar: { selectedDate?: string };
+  // OAuth deep-link callback — accepts code+state (success) or error+error_description+state (denied)
+  OAuthCallback: { code?: string; state?: string; error?: string; error_description?: string };
+  // GitHub App deep-link callback
+  AppCallback: { installation_id: string; state: string };
 };
 
 type DevOnlyStackParamList = {

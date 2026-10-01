@@ -152,6 +152,16 @@ onRemoveAccount: (id: string, login: string) => void;
   syncHealth: ForegroundSyncHealth;
   onToggleSSH: (hostId: string) => void;
   hostUseSsh: Record<string, boolean>;
+  // GitHub OAuth
+  onConnectOAuth: (hostId: string) => void;
+  onDisconnectOAuth: (hostId: string) => void;
+  oauthLoading: Record<string, boolean>;
+  oauthError: Record<string, string | null>;
+  // GitHub App
+  onConnectGitHubApp: (hostId: string) => void;
+  onDisconnectGitHubApp: (hostId: string) => void;
+  appLoading: Record<string, boolean>;
+  appError: Record<string, string | null>;
 };
 
 function formatLfsBytes(bytes: number): string {
@@ -242,6 +252,14 @@ export function SettingsContent(props: SettingsContentProps) {
     syncHealth,
     onToggleSSH,
     hostUseSsh,
+    onConnectOAuth,
+    onDisconnectOAuth,
+    oauthLoading,
+    oauthError,
+    onConnectGitHubApp,
+    onDisconnectGitHubApp,
+    appLoading,
+    appError,
   } = props;
   // Tokens hook gives us spacing/radii/type so the styled disconnect
   // button matches the rest of the app without hardcoded values.
@@ -547,6 +565,39 @@ export function SettingsContent(props: SettingsContentProps) {
                               onValueChange={() => onToggleSSH(host.id)}
                             />
                           </View>
+                          {host.provider === 'github' ? (
+                            <>
+                              <View className="flex-row items-center gap-1.5">
+                                <Text style={{ fontSize: type.xs, color: colors.textSecondary }}>OAuth</Text>
+                                <ActivityIndicator
+                                  size="small"
+                                  color={colors.primary}
+                                  testID={`settings.spinner.oauth.${host.id}`}
+                                />
+                                <TouchableOpacity
+                                  testID={`settings.button.connect-oauth.${host.id}`}
+                                  onPress={() => onConnectOAuth(host.id)}
+                                  disabled={oauthLoading[host.id]}
+                                  accessibilityRole="button"
+                                >
+                                  <Text style={{ fontSize: type.xs, color: oauthError[host.id] ? colors.error : colors.primary }}>Connect</Text>
+                                </TouchableOpacity>
+                              </View>
+                              <View className="flex-row items-center gap-1.5">
+                                <Text style={{ fontSize: type.xs, color: colors.textSecondary }}>App</Text>
+                                <TouchableOpacity
+                                  testID={`settings.button.connect-github-app.${host.id}`}
+                                  onPress={() => onConnectGitHubApp(host.id)}
+                                  disabled={appLoading[host.id]}
+                                  accessibilityRole="button"
+                                >
+                                  <Text style={{ fontSize: type.xs, color: appError[host.id] ? colors.error : colors.primary }}>
+                                    {appLoading[host.id] ? '…' : 'Install'}
+                                  </Text>
+                                </TouchableOpacity>
+                              </View>
+                            </>
+                          ) : null}
                           <TouchableOpacity
                             onPress={() => onDisconnectHost(host.id)}
                             testID={`settings.button.disconnect-host.${host.id}`}
