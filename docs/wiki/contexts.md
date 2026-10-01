@@ -247,28 +247,20 @@ App
 
 ## ThemeContext
 
-**Purpose:** Provides theme colors, style, and dark mode state, plus an optional global accent color override.
+**Purpose:** Provides theme colors, style, and dark mode state.
 
 **Provides:**
 ```typescript
 {
-  theme: 'light' | 'dark' | 'system';
-  isDark: boolean;
   style: 'neumorphic' | 'flat';
+  isDark: boolean;
   colors: Palette;
-  accentColor: string | null;
-  setTheme: (theme: 'light' | 'dark' | 'system') => void;
   setStyle: (style: 'neumorphic' | 'flat') => void;
-  setAccentColor: (color: string | null) => void;
-  tokens: Tokens;
+  setDark: (isDark: boolean) => void;
 }
 ```
 
 **Palette:** `{ bg, surface, highlight, shadow, text, textSecondary, accent, accentMuted, error, success, warning, background, surfaceSecondary, primary, border, card, elevated }`
-
-**Accent color override:** `accentColor` is `null` by default, meaning no custom override is applied. When set to a valid six-digit hex color, both `accent` and `primary` in the palette are replaced with that color, and `accentMuted` is derived deterministically using HSL math that preserves hue while shifting lightness based on dark/light mode. Setting to `null` resets to the active theme's built-in defaults. The value persists locally via AsyncStorage under `@gitnotes:accent`.
-
-**Tokens:** `{ colors: Palette, radii, spacing, type }` — the full design token set derived from the current palette.
 
 **Consumed by:** All screens and components via `useTheme()` hook
 

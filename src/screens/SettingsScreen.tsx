@@ -5,7 +5,6 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { useTheme } from '../contexts/ThemeContext';
 import { SafeAreaView } from '../components/ui/SafeAreaView';
-import HexColorPickerModal from '../components/HexColorPickerModal';
 import { useNotes } from '../contexts/NoteContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useRepos } from '../contexts/RepoContext';
@@ -76,8 +75,8 @@ type ImportAtAddOutcome = 'imported' | 'cancelled' | 'failed';
 
 export default function SettingsScreen() {
   const { t } = useTranslation();
-  const { theme, colors, setTheme, style: uiStyle, setStyle, accentColor, setAccentColor } = useTheme();
-  const { isPro, loading: isProLoading } = useProStatus();
+  const { theme, colors, setTheme, style: uiStyle, setStyle } = useTheme();
+  const { isPro } = useProStatus();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const openPaywall = useCallback(() => {
     navigation.navigate('Paywall');
@@ -153,7 +152,6 @@ export default function SettingsScreen() {
   const [showConnectHostModal, setShowConnectHostModal] = useState(false);
   const [connectHostPreset, setConnectHostPreset] = useState<GitHostProvider | undefined>(undefined);
   const [showModelSelector, setShowModelSelector] = useState(false);
-  const [showAccentColorPicker, setShowAccentColorPicker] = useState(false);
   const [showProviderConfig, setShowProviderConfig] = useState(false);
   const [showChatRepoPicker, setShowChatRepoPicker] = useState(false);
   const [editingProvider, setEditingProvider] = useState<AIProviderConfig | undefined>();
@@ -1116,12 +1114,8 @@ export default function SettingsScreen() {
         onClearData={clearData}
         onResetOnboarding={handleResetOnboarding}
         isPro={isPro}
-        isProLoading={isProLoading}
         proStatusLabel={proStatusLabel}
         onOpenPaywall={openPaywall}
-        accentColor={accentColor}
-        setAccentColor={setAccentColor}
-        onOpenAccentColorPicker={() => setShowAccentColorPicker(true)}
         onManageTemplates={() => navigation.navigate('TemplateManager' as never)}
         onToggleAI={() => { void toggleAI(); }}
         dailyQuoteEnabled={dailyQuoteEnabled}
@@ -1234,17 +1228,6 @@ export default function SettingsScreen() {
         onClose={() => { setShowConnectHostModal(false); setConnectHostPreset(undefined); }}
         presetProvider={connectHostPreset}
         colors={colors}
-      />
-      <HexColorPickerModal
-        visible={showAccentColorPicker}
-        initialColor={accentColor ?? colors.accent}
-        allowClear
-        clearTestID="hex-color-picker-clear"
-        cancelTestID="hex-color-picker-cancel"
-        confirmTestID="hex-color-picker-confirm"
-        title={t('settings.accentColor')}
-        onClose={() => setShowAccentColorPicker(false)}
-        onSelect={(color) => { setAccentColor(color); setShowAccentColorPicker(false); }}
       />
       </View>
       <ScreenHeader title={t('settings.title')} />

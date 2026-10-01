@@ -297,9 +297,8 @@
     },
     "security": "Security",
     "appearance": "Appearance",
-    "updatedUI": "Fancy UI",
+    "updatedUI": "Neumorphic UI",
     "darkMode": "Dark Mode",
-    "accentColor": "Accent Color",
     "useSystemTheme": "Use System Theme",
     "active": "Active",
     "inactive": "Inactive",
@@ -875,7 +874,6 @@
     "settings": {
       "updatedUI": "Soft-UI shadows give a tactile, elevated feel. Toggle off for the classic flat look.",
       "darkMode": "Switch between light and dark appearance. For system settings, use the option below.",
-      "accentColor": "Choose any hex color to personalize your app's accent. Applies across all themes and styles.",
       "useSystemTheme": "Automatically match your device's light or dark mode setting.",
       "language": "Choose your preferred language for the app interface. System default follows your device.",
       "biometricLock": "Require Face ID or Touch ID to unlock the app and protect your notes.",

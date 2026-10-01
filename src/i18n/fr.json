@@ -179,7 +179,6 @@
     "appearance": "Apparence",
     "updatedUI": "UI élégante",
     "darkMode": "Mode sombre",
-    "accentColor": "Couleur d'accentuation",
     "useSystemTheme": "Utiliser le thème du système",
     "active": "Actif",
     "inactive": "Inactif",
@@ -535,7 +534,6 @@
     "settings": {
       "updatedUI": "Les ombres Soft-UI donnent une sensation tactile et surélevée. Désactivez pour l'apparence classique plate.",
       "darkMode": "Basculez entre l'apparence claire et sombre. Pour les paramètres système, utilisez l'option ci-dessous.",
-      "accentColor": "Choisissez n'importe quelle couleur hex pour personnaliser l'accent de votre application. S'applique à tous les thèmes et styles.",
       "useSystemTheme": "Correspond automatiquement au mode clair ou sombre de votre appareil.",
       "language": "Choisissez votre langue préférée pour l'interface de l'application. Par défaut du système suit votre appareil.",
       "biometricLock": "Exiger Face ID ou Touch ID pour déverrouiller l'application et protéger vos notes.",

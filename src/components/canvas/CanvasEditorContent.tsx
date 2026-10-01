@@ -543,14 +543,6 @@ export default function CanvasEditorContent() {
   }, [elements]);
 
   useEffect(() => {
-    if (!isCommittingDrawing.value) return;
-    const active = activeDrawingElement.value;
-    if (!active || !elements.some((element) => element.id === active.id)) return;
-    activeDrawingElement.value = null;
-    isCommittingDrawing.value = false;
-  }, [elements, activeDrawingElement, isCommittingDrawing]);
-
-  useEffect(() => {
     return () => {
       for (const img of imageCacheRef.current.values()) {
         if (img) img.dispose();
@@ -858,12 +850,12 @@ export default function CanvasEditorContent() {
   }, [elements]);
 
   const commitActiveDrawing = useCallback((element: CanvasStroke | CanvasShape | null) => {
-    if (!element) {
-      isCommittingDrawing.value = false;
-      return;
+    if (element) {
+      setElements((prev) => [...prev, element]);
     }
-    setElements((prev) => [...prev, element]);
-  }, [isCommittingDrawing]);
+    activeDrawingElement.value = null;
+    isCommittingDrawing.value = false;
+  }, [activeDrawingElement, isCommittingDrawing]);
 
   const activeStrokeColor = useDerivedValue(() => {
     const element = activeDrawingElement.value;

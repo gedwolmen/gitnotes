@@ -10,8 +10,7 @@ GitNotēs has two tiers: **Free** and **Pro**.
 |---------|------|-----|
 | Notes, todos, canvases | ✅ | ✅ |
 | GitHub sync | ✅ | ✅ |
-| Neumorphic "Fancy UI" | ❌ | ✅ |
-| Customizable accent color | ❌ | ✅ |
+| Neumorphic UI | ❌ | ✅ |
 | Advanced AI (Claude 3.5, GPT-4o) | ❌ | ✅ |
 | Multi-host (GitLab, Gitea) | ❌ | ✅ |
 | Unlimited repos | 3 | Unlimited |
