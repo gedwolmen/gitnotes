@@ -194,7 +194,9 @@ pub fn remove_paths(path: &Path, paths: &[String], keep_worktree: bool) -> Resul
 pub fn discard_files(path: &Path, paths: &[String]) -> Result<()> {
     run_with_lock(path, || {
         let repo = open_repo(path)?;
-        let workdir = repo.workdir().ok_or_else(|| EngineError::Invalid("Not a working directory".into()))?;
+        let workdir = repo
+            .workdir()
+            .ok_or_else(|| EngineError::Invalid("Not a working directory".into()))?;
         let head = repo.head()?;
         let commit = head.peel_to_commit()?;
         let tree = commit.tree()?;
@@ -255,42 +257,54 @@ pub fn stage_file_lines(path: &Path, file_path: &str, hunks: &[HunkSelection]) -
 
         let mut selected_old: std::collections::HashSet<u32> = std::collections::HashSet::new();
         let mut selected_new: std::collections::HashSet<u32> = std::collections::HashSet::new();
-        let is_changed = |line: &DiffLine| !matches!(line.origin, DiffLineOrigin::Context | DiffLineOrigin::ContextEof);
-        let mut block: Vec<&DiffLine> = Vec::new();
-        let flush_block = |block: Vec<&DiffLine>,
-                               selected_old: &mut std::collections::HashSet<u32>,
-                               selected_new: &mut std::collections::HashSet<u32>| {
-            // Invariant: a replacement block stages atomically — staging its
-            // additions without its deletions would duplicate the old lines.
-            let has_selected_addition = block.iter().any(|line| {
-                matches!(line.origin, DiffLineOrigin::Addition | DiffLineOrigin::AdditionEof)
-                    && selected.contains(&line.index)
-            });
-            for line in block {
-                match line.origin {
-                    DiffLineOrigin::Addition | DiffLineOrigin::AdditionEof => {
-                        if selected.contains(&line.index) {
-                            if let Some(lineno) = line.new_lineno {
-                                selected_new.insert(lineno);
-                            }
-                        }
-                    }
-                    DiffLineOrigin::Deletion | DiffLineOrigin::DeletionEof => {
-                        if selected.contains(&line.index) || has_selected_addition {
-                            if let Some(lineno) = line.old_lineno {
-                                selected_old.insert(lineno);
-                            }
-                        }
-                    }
-                    DiffLineOrigin::Context | DiffLineOrigin::ContextEof => {}
-                }
-            }
+        let is_changed = |line: &DiffLine| {
+            !matches!(
+                line.origin,
+                DiffLineOrigin::Context | DiffLineOrigin::ContextEof
+            )
         };
+        let mut block: Vec<&DiffLine> = Vec::new();
+        let flush_block =
+            |block: Vec<&DiffLine>,
+             selected_old: &mut std::collections::HashSet<u32>,
+             selected_new: &mut std::collections::HashSet<u32>| {
+                // Invariant: a replacement block stages atomically — staging its
+                // additions without its deletions would duplicate the old lines.
+                let has_selected_addition = block.iter().any(|line| {
+                    matches!(
+                        line.origin,
+                        DiffLineOrigin::Addition | DiffLineOrigin::AdditionEof
+                    ) && selected.contains(&line.index)
+                });
+                for line in block {
+                    match line.origin {
+                        DiffLineOrigin::Addition | DiffLineOrigin::AdditionEof => {
+                            if selected.contains(&line.index) {
+                                if let Some(lineno) = line.new_lineno {
+                                    selected_new.insert(lineno);
+                                }
+                            }
+                        }
+                        DiffLineOrigin::Deletion | DiffLineOrigin::DeletionEof => {
+                            if selected.contains(&line.index) || has_selected_addition {
+                                if let Some(lineno) = line.old_lineno {
+                                    selected_old.insert(lineno);
+                                }
+                            }
+                        }
+                        DiffLineOrigin::Context | DiffLineOrigin::ContextEof => {}
+                    }
+                }
+            };
         for line in &lines {
             if is_changed(line) {
                 block.push(line);
             } else if !block.is_empty() {
-                flush_block(std::mem::take(&mut block), &mut selected_old, &mut selected_new);
+                flush_block(
+                    std::mem::take(&mut block),
+                    &mut selected_old,
+                    &mut selected_new,
+                );
             }
         }
         if !block.is_empty() {
@@ -321,12 +335,18 @@ pub fn stage_file_lines(path: &Path, file_path: &str, hunks: &[HunkSelection]) -
                     staged_content.push_str(&line.content);
                 }
                 DiffLineOrigin::Deletion | DiffLineOrigin::DeletionEof => {
-                    if line.old_lineno.is_none_or(|lineno| !selected_old.contains(&lineno)) {
+                    if line
+                        .old_lineno
+                        .is_none_or(|lineno| !selected_old.contains(&lineno))
+                    {
                         staged_content.push_str(&line.content);
                     }
                 }
                 DiffLineOrigin::Addition | DiffLineOrigin::AdditionEof => {
-                    if line.new_lineno.is_some_and(|lineno| selected_new.contains(&lineno)) {
+                    if line
+                        .new_lineno
+                        .is_some_and(|lineno| selected_new.contains(&lineno))
+                    {
                         staged_content.push_str(&line.content);
                     }
                 }
@@ -646,7 +666,9 @@ pub fn delete_branch(path: &Path, name: &str) -> Result<()> {
 pub fn rename_branch(path: &Path, name: &str, new_name: &str) -> Result<BranchInfo> {
     run_with_lock(path, || {
         if new_name.trim().is_empty() {
-            return Err(EngineError::Invalid("new branch name is required".to_string()));
+            return Err(EngineError::Invalid(
+                "new branch name is required".to_string(),
+            ));
         }
         let repo = open_repo(path)?;
         let mut branch = repo.find_branch(name, BranchType::Local)?;
@@ -740,7 +762,11 @@ pub fn revert_commit(path: &Path, oid_str: &str, author: &Author) -> Result<Comm
         };
         let parent_refs: Vec<&git2::Commit> = parents.iter().collect();
         let summary = commit.summary().ok().flatten().unwrap_or_default();
-        let message = format!("Revert \"{}\"\n\nThis reverts commit {}.", summary, commit.id());
+        let message = format!(
+            "Revert \"{}\"\n\nThis reverts commit {}.",
+            summary,
+            commit.id()
+        );
         let new_oid = repo.commit(Some("HEAD"), &sig, &sig, &message, &tree, &parent_refs)?;
         let reverted = repo.find_commit(new_oid)?;
         commit_to_info(&reverted)
@@ -1534,8 +1560,7 @@ mod tests {
             .lines
             .iter()
             .find(|line| {
-                matches!(line.origin, DiffLineOrigin::Addition)
-                    && line.content.contains("selected")
+                matches!(line.origin, DiffLineOrigin::Addition) && line.content.contains("selected")
             })
             .unwrap();
         stage_file_lines(

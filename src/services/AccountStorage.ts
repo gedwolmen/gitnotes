@@ -2,6 +2,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 import type { GitHostProvider } from './git/GitHost';
+import type {
+  GitHubOAuthCredentialRecord,
+  GitHubAppCredentialRecord,
+  CredentialRecord,
+  CredentialKind,
+} from './git/contracts';
+import { isKnownCredentialKind } from './git/contracts';
 
 const ACCOUNTS_KEY = '@gitnotes:accounts';
 const HOSTS_KEY = '@gitnotes:host_connections';
@@ -20,6 +27,16 @@ const USE_SSH_KEY_PREFIX_NATIVE = 'gitnotes_host_use_ssh_';
 
 const LEGACY_TOKEN_KEY_WEB = '@gitnotes:github_token';
 const LEGACY_TOKEN_KEY_NATIVE = 'gitnotes_github_token';
+
+// ── New OAuth / GitHub App credential keys (independent of token/SSH keys) ──
+const OAUTH_CREDENTIAL_PREFIX_WEB = '@gitnotes:oauth_cred:';
+const OAUTH_CREDENTIAL_PREFIX_NATIVE = 'gitnotes_oauth_cred_';
+const GITHUB_APP_CREDENTIAL_PREFIX_WEB = '@gitnotes:gh_app_cred:';
+const GITHUB_APP_CREDENTIAL_PREFIX_NATIVE = 'gitnotes_gh_app_cred_';
+
+// Maps hostId → list of credential ids of all kinds stored for that host.
+// Enables bulk removal without iterating all AsyncStorage keys.
+const HOST_CREDENTIALS_KEY = '@gitnotes:host_credential_ids';
 
 export interface StoredAccount {
   id: string;
@@ -198,6 +215,152 @@ async function deleteLegacyToken(): Promise<void> {
 
 function generateAccountId(): string {
   return `acc-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+// ── Credential index helpers ─────────────────────────────────────────────────
+
+async function readHostCredentialIds(): Promise<Record<string, string[]>> {
+  const raw = await AsyncStorage.getItem(HOST_CREDENTIALS_KEY);
+  if (!raw) return {};
+  try {
+    const parsed = JSON.parse(raw);
+    return typeof parsed === 'object' && parsed !== null ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+async function writeHostCredentialIds(
+  mapping: Record<string, string[]>,
+): Promise<void> {
+  await AsyncStorage.setItem(HOST_CREDENTIALS_KEY, JSON.stringify(mapping));
+}
+
+async function addHostCredentialId(
+  hostId: string,
+  credId: string,
+): Promise<void> {
+  const mapping = await readHostCredentialIds();
+  const existing = mapping[hostId] ?? [];
+  if (!existing.includes(credId)) {
+    mapping[hostId] = [...existing, credId];
+    await writeHostCredentialIds(mapping);
+  }
+}
+
+async function removeHostCredentialId(
+  hostId: string,
+  credId: string,
+): Promise<void> {
+  const mapping = await readHostCredentialIds();
+  const existing = mapping[hostId] ?? [];
+  const filtered = existing.filter((id) => id !== credId);
+  if (filtered.length === 0) {
+    delete mapping[hostId];
+  } else {
+    mapping[hostId] = filtered;
+  }
+  await writeHostCredentialIds(mapping);
+}
+
+// ── OAuth credential helpers ──────────────────────────────────────────────────
+
+function oauthCredKeyFor(hostId: string): string {
+  if (Platform.OS === 'web') return `${OAUTH_CREDENTIAL_PREFIX_WEB}${hostId}`;
+  return `${OAUTH_CREDENTIAL_PREFIX_NATIVE}${hostId.replace(/[^A-Za-z0-9_]/g, '_')}`;
+}
+
+async function readOAuthCredential(
+  hostId: string,
+): Promise<GitHubOAuthCredentialRecord | null> {
+  const key = oauthCredKeyFor(hostId);
+  const raw = Platform.OS === 'web'
+    ? await AsyncStorage.getItem(key)
+    : await SecureStore.getItemAsync(key).catch(() => null);
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed?.kind !== 'oauth') return null;
+    return parsed as GitHubOAuthCredentialRecord;
+  } catch {
+    return null;
+  }
+}
+
+async function writeOAuthCredential(
+  hostId: string,
+  cred: GitHubOAuthCredentialRecord,
+): Promise<void> {
+  const key = oauthCredKeyFor(hostId);
+  if (Platform.OS === 'web') {
+    await AsyncStorage.setItem(key, JSON.stringify(cred));
+  } else {
+    await SecureStore.setItemAsync(key, JSON.stringify(cred));
+  }
+  await addHostCredentialId(hostId, cred.id);
+}
+
+async function deleteOAuthCredential(hostId: string): Promise<void> {
+  const key = oauthCredKeyFor(hostId);
+  if (Platform.OS === 'web') {
+    await AsyncStorage.removeItem(key);
+  } else {
+    await SecureStore.deleteItemAsync(key).catch(() => undefined);
+  }
+  const existing = await readOAuthCredential(hostId);
+  if (existing) {
+    await removeHostCredentialId(hostId, existing.id);
+  }
+}
+
+// ── GitHub App credential helpers ───────────────────────────────────────────
+
+function githubAppCredKeyFor(hostId: string): string {
+  if (Platform.OS === 'web') return `${GITHUB_APP_CREDENTIAL_PREFIX_WEB}${hostId}`;
+  return `${GITHUB_APP_CREDENTIAL_PREFIX_NATIVE}${hostId.replace(/[^A-Za-z0-9_]/g, '_')}`;
+}
+
+async function readGitHubAppCredential(
+  hostId: string,
+): Promise<GitHubAppCredentialRecord | null> {
+  const key = githubAppCredKeyFor(hostId);
+  const raw = Platform.OS === 'web'
+    ? await AsyncStorage.getItem(key)
+    : await SecureStore.getItemAsync(key).catch(() => null);
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed?.kind !== 'github_app') return null;
+    return parsed as GitHubAppCredentialRecord;
+  } catch {
+    return null;
+  }
+}
+
+async function writeGitHubAppCredential(
+  hostId: string,
+  cred: GitHubAppCredentialRecord,
+): Promise<void> {
+  const key = githubAppCredKeyFor(hostId);
+  if (Platform.OS === 'web') {
+    await AsyncStorage.setItem(key, JSON.stringify(cred));
+  } else {
+    await SecureStore.setItemAsync(key, JSON.stringify(cred));
+  }
+  await addHostCredentialId(hostId, cred.id);
+}
+
+async function deleteGitHubAppCredential(hostId: string): Promise<void> {
+  const key = githubAppCredKeyFor(hostId);
+  if (Platform.OS === 'web') {
+    await AsyncStorage.removeItem(key);
+  } else {
+    await SecureStore.deleteItemAsync(key).catch(() => undefined);
+  }
+  const existing = await readGitHubAppCredential(hostId);
+  if (existing) {
+    await removeHostCredentialId(hostId, existing.id);
+  }
 }
 
 async function listHostConnections(): Promise<HostConnection[]> {
@@ -379,6 +542,8 @@ export class AccountStorage {
     for (const host of hosts) {
       if (host.accountId === id) {
         await deleteHostToken(host.id);
+        await deleteOAuthCredential(host.id);
+        await deleteGitHubAppCredential(host.id);
       }
     }
     await writeHostConnections(remainingHosts);
@@ -421,11 +586,19 @@ export class AccountStorage {
     await Promise.all(accounts.map((a) => deleteTokenById(a.id)));
     const hosts = await listHostConnections();
     await Promise.all(hosts.map((h) => deleteHostToken(h.id)));
+    const hostIds = await readHostCredentialIds();
+    await Promise.all(
+      Object.keys(hostIds).flatMap((hid) => [
+        deleteOAuthCredential(hid),
+        deleteGitHubAppCredential(hid),
+      ]),
+    );
     await writeHostConnections([]);
     await this.writeAccounts([]);
     await this.setActiveAccountId(null);
     await this.setActiveHostId(null);
     await deleteLegacyToken();
+    await AsyncStorage.removeItem(HOST_CREDENTIALS_KEY).catch(() => undefined);
   }
 
   // ── Host connections ─────────────────────────────────────────────────
@@ -576,6 +749,122 @@ export class AccountStorage {
     if (removedAccountIds.length > 0) {
       await this.clearAccountAiState();
     }
+
+    // Clean up any OAuth / GitHub App credentials for this host.
+    await deleteOAuthCredential(hostId);
+    await deleteGitHubAppCredential(hostId);
+  }
+
+  // ── OAuth / GitHub App credentials ─────────────────────────────────────
+
+  /**
+   * Read the OAuth credential for a host, or null if none is stored.
+   * Validates the `kind` discriminator before returning.
+   */
+  static async getOAuthCredential(
+    hostId: string,
+  ): Promise<GitHubOAuthCredentialRecord | null> {
+    const cred = await readOAuthCredential(hostId);
+    if (!cred) return null;
+    if (cred.kind !== 'oauth') return null;
+    return cred;
+  }
+
+  /**
+   * Persist a GitHub OAuth credential for a host.
+   * Rejects unknown kinds, empty tokens, expired metadata, and cross-provider reuse.
+   * Stores under a separate key from the existing host_token keys so that
+   * OAuth and PAT/token auth are fully isolated at rest.
+   */
+  static async setOAuthCredential(
+    hostId: string,
+    cred: GitHubOAuthCredentialRecord,
+  ): Promise<void> {
+    if (!isKnownCredentialKind(cred.kind)) {
+      throw new Error(`Cannot store credential with unknown kind: ${cred.kind}`);
+    }
+    if (cred.kind !== 'oauth') {
+      throw new Error(`Expected kind 'oauth', got '${cred.kind}'`);
+    }
+    if (!cred.accessToken || cred.accessToken.length === 0) {
+      throw new Error('Cannot store OAuth credential with empty access token');
+    }
+    if (typeof cred.expiresAt !== 'number' || cred.expiresAt <= Date.now()) {
+      throw new Error('Cannot store OAuth credential with expired metadata');
+    }
+    if (!cred.renewal?.refreshToken || !cred.renewal?.backendUrl) {
+      throw new Error('Cannot store OAuth credential with invalid renewal metadata');
+    }
+    if (typeof cred.userId !== 'number' || cred.userId <= 0) {
+      throw new Error('Cannot store OAuth credential with invalid userId');
+    }
+    await writeOAuthCredential(hostId, cred);
+  }
+
+  /**
+   * Delete the OAuth credential for a host. Idempotent when no credential exists.
+   */
+  static async deleteOAuthCredential(hostId: string): Promise<void> {
+    await deleteOAuthCredential(hostId);
+  }
+
+  /**
+   * Read the GitHub App credential for a host, or null if none is stored.
+   * Validates the `kind` discriminator before returning.
+   */
+  static async getGitHubAppCredential(
+    hostId: string,
+  ): Promise<GitHubAppCredentialRecord | null> {
+    const cred = await readGitHubAppCredential(hostId);
+    if (!cred) return null;
+    if (cred.kind !== 'github_app') return null;
+    return cred;
+  }
+
+  /**
+   * Persist a GitHub App installation credential for a host.
+   * Rejects empty repository selections, expired metadata, and invalid renewal.
+   * Stores under a separate key from all existing credential keys so that
+   * a GitHub App failure cannot cascade to PAT/SSH for the same host.
+   */
+  static async setGitHubAppCredential(
+    hostId: string,
+    cred: GitHubAppCredentialRecord,
+  ): Promise<void> {
+    if (!isKnownCredentialKind(cred.kind)) {
+      throw new Error(`Cannot store credential with unknown kind: ${cred.kind}`);
+    }
+    if (cred.kind !== 'github_app') {
+      throw new Error(`Expected kind 'github_app', got '${cred.kind}'`);
+    }
+    if (!cred.token || cred.token.length === 0) {
+      throw new Error('Cannot store GitHub App credential with empty token');
+    }
+    if (typeof cred.expiresAt !== 'number' || cred.expiresAt <= Date.now()) {
+      throw new Error('Cannot store GitHub App credential with expired metadata');
+    }
+    if (!Array.isArray(cred.selectedRepositories) || cred.selectedRepositories.length === 0) {
+      throw new Error('Cannot store GitHub App credential with empty repository selection');
+    }
+    for (const repo of cred.selectedRepositories) {
+      if (!repo.owner || !repo.repo) {
+        throw new Error('Cannot store GitHub App credential with incomplete repository entry');
+      }
+    }
+    if (!cred.renewal?.grantToken || !cred.renewal?.backendUrl) {
+      throw new Error('Cannot store GitHub App credential with invalid renewal metadata');
+    }
+    if (typeof cred.installationId !== 'number' || cred.installationId <= 0) {
+      throw new Error('Cannot store GitHub App credential with invalid installationId');
+    }
+    await writeGitHubAppCredential(hostId, cred);
+  }
+
+  /**
+   * Delete the GitHub App credential for a host. Idempotent when no credential exists.
+   */
+  static async deleteGitHubAppCredential(hostId: string): Promise<void> {
+    await deleteGitHubAppCredential(hostId);
   }
 
   // ── Legacy ───────────────────────────────────────────────────────────

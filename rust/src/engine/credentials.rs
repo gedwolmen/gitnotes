@@ -89,6 +89,12 @@ fn credentials_for(
         CredentialSource::UserPass { username, password } => {
             Cred::userpass_plaintext(username, password)
         }
+        CredentialSource::GitHubOAuth { token } => {
+            Cred::userpass_plaintext("x-access-token", token)
+        }
+        CredentialSource::GitHubAppInstallation { token } => {
+            Cred::userpass_plaintext("x-access-token", token)
+        }
         CredentialSource::SshKey {
             username,
             private_key,
@@ -188,5 +194,37 @@ mod tests {
             Some(CredentialSource::Default)
         );
         assert_eq!(resolve(None, Some("unknown")), None);
+    }
+
+    #[test]
+    fn github_oauth_credential_variants() {
+        let oauth = CredentialSource::GitHubOAuth {
+            token: "gho_test_token".into(),
+        };
+        set_credential("oauth-repo", oauth.clone());
+        assert_eq!(
+            get_credential("oauth-repo"),
+            Some(CredentialSource::GitHubOAuth {
+                token: "gho_test_token".into(),
+            })
+        );
+        assert!(clear_credential("oauth-repo"));
+        assert_eq!(get_credential("oauth-repo"), None);
+    }
+
+    #[test]
+    fn github_app_installation_credential_variants() {
+        let app = CredentialSource::GitHubAppInstallation {
+            token: "ghs_test_token".into(),
+        };
+        set_credential("app-repo", app.clone());
+        assert_eq!(
+            get_credential("app-repo"),
+            Some(CredentialSource::GitHubAppInstallation {
+                token: "ghs_test_token".into(),
+            })
+        );
+        assert!(clear_credential("app-repo"));
+        assert_eq!(get_credential("app-repo"), None);
     }
 }

@@ -16,6 +16,13 @@ import { Platform } from 'react-native';
 import { AuthService } from '../../AuthService';
 import { AccountStorage } from '../../AccountStorage';
 import { StorageService } from '../../StorageService';
+import {
+  resolveGitHubRepoToken,
+  registerGitHubAppCredential,
+  registerGitHubOAuthCredential,
+  registerPatCredential,
+  initNativeCredentialBridge,
+} from '../NativeCredentialBridge';
 
 // Shape of the native module surface. Named (not `typeof GitEngineModule`) so the
 // generic below is the full interface, not the flow-narrowed `null` initializer type.
@@ -89,6 +96,18 @@ if (
   throw new Error(
     'GitEngine Android native module not available. Run `yarn build:rust --android` first.',
   );
+}
+
+// Wire the native credential bridge to the native module so that
+// registerGitHubAppCredential / registerGitHubOAuthCredential / registerPatCredential
+// actually propagate credentials to the Rust engine.
+// This is idempotent — calling init twice with the same functions is safe.
+if (GitEngineModule) {
+  initNativeCredentialBridge({
+    setCredential: (repoId, cred) =>
+      GitEngineModule!.setCredential(repoId, cred as Parameters<NativeGitEngineModule['setCredential']>[1]) as Promise<void>,
+    clearCredential: (repoId) => GitEngineModule!.clearCredential(repoId) as Promise<boolean>,
+  });
 }
 
 // Stub for missing auth modules
@@ -258,19 +277,58 @@ export async function generateSshKey(passphrase?: string | null): Promise<Genera
   return run(() => GitEngineModule!.generateSshKey(passphrase ?? null), { publicKey: '', privateKey: '' });
 }
 
+/**
+ * Ensure a credential is registered with the native engine before a git operation.
+ *
+ * For GitHub hosts: resolves App > OAuth > PAT via the credential bridge, enforces
+ * repository selection for App credentials, and registers the resolved token with
+ * the native Rust engine.
+ *
+ * For non-GitHub hosts or when the bridge is unavailable: falls back to the
+ * legacy CredentialStore/PAT path.
+ *
+ * SSH credentials pass through unchanged.
+ *
+ * @throws NativeCredentialBridgeError when App credential fails (expired, not in selection)
+ * @throws Error when no credential is available for the repo
+ */
 async function ensureCredentialForOp(repoId: string | null | undefined): Promise<void> {
   if (!repoId || !GitEngineModule) return;
 
+  // Short-circuit: if SSH is already registered, use it.
   const existing = await GitEngineModule!.getCredential(repoId);
   if (existing?.kind === 'ssh') return;
 
+  // Look up the saved repo to check if it's a GitHub host.
+  const repo = (await StorageService.getSavedRepositories()).find((entry) => entry.id === repoId);
+  if (repo?.hostId) {
+    const hostConnection = await AccountStorage.getHostConnection(repo.hostId);
+    if (hostConnection?.provider === 'github') {
+      // GitHub host — use the credential bridge for proper App/OAuth/PAT resolution.
+      const { token, kind } = await resolveGitHubRepoToken({ repoId, hostId: repo.hostId });
+      switch (kind) {
+        case 'github_app':
+          await registerGitHubAppCredential(repoId, repo.hostId, token);
+          break;
+        case 'oauth':
+          await registerGitHubOAuthCredential(repoId, repo.hostId, token);
+          break;
+        case 'token':
+          await registerPatCredential(repoId, repo.hostId, token);
+          break;
+        // SSH is already handled above; 'ssh' cannot reach here.
+      }
+      return;
+    }
+  }
+
+  // Non-GitHub host or no saved repo — use legacy CredentialStore path.
   const stored = await CredentialStore.get(repoId);
   if (stored) {
     await GitEngineModule!.setCredential(repoId, toNativeCredential(stored));
     return;
   }
 
-  const repo = (await StorageService.getSavedRepositories()).find((entry) => entry.id === repoId);
   if (repo?.hostId) {
     const [hostConnection, token] = await Promise.all([
       AccountStorage.getHostConnection(repo.hostId),

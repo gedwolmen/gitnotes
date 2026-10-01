@@ -8,11 +8,12 @@ import {
   validateHostToken,
 } from '../services/AuthService';
 import type { GitHostProvider } from '../services/git/GitHost';
-import { GitHubService } from '../services/GitHubService';
+import { GitHubService, GitHubServiceStatic } from '../services/GitHubService';
 import { AccountStorage, StoredAccount } from '../services/AccountStorage';
 import { clearActiveGitHostCache } from '../services/git/activeHost';
 import { useAIStore } from '../stores/aiStore';
 import { useProStore } from '../stores/proStore';
+import type { GitHubOAuthCredentialRecord, GitHubAppCredentialRecord } from '../services/git/contracts';
 
 interface ConnectHostResult {
   ok: boolean;
@@ -50,6 +51,20 @@ interface AccountsContextValue {
     token: string,
     instanceBaseUrl?: string | null,
   ) => Promise<{ ok: boolean; reason?: 'invalid' | 'missing_repo_scope' | 'missing_contents_permission' | 'saml' | 'no_repository_access' | 'network' }>;
+
+  /** Connect a stored GitHub OAuth credential to the native Git engine for a host.
+   *  Returns the credential on success, null if none is stored. */
+  connectGitHubOAuth: (hostId: string) => Promise<GitHubOAuthCredentialRecord | null>;
+  /** Disconnect the GitHub OAuth credential for a host (clears from storage + native engine). */
+  disconnectGitHubOAuth: (hostId: string) => Promise<void>;
+  /** Connect a stored GitHub App installation credential to the native Git engine for a host.
+   *  Registers all selected repositories. Returns the credential on success, null if none stored. */
+  connectGitHubApp: (hostId: string) => Promise<GitHubAppCredentialRecord | null>;
+  /** Disconnect the GitHub App installation credential for a host (clears from storage + native engine). */
+  disconnectGitHubApp: (hostId: string) => Promise<void>;
+  /** Renew the GitHub App installation token for a host using its stored renewal grant.
+   *  Re-registers the renewed token with the native Git engine. Returns renewed credential on success. */
+  renewGitHubAppToken: (hostId: string) => Promise<GitHubAppCredentialRecord | null>;
 
   // ── Legacy aliases (kept so existing useAuth() callers keep compiling) ──
   setToken: (token: string) => Promise<boolean>;
@@ -364,6 +379,63 @@ export function AccountsProvider({ children }: { children: ReactNode }) {
     [],
   );
 
+  const connectGitHubOAuth = useCallback(
+    async (hostId: string): Promise<GitHubOAuthCredentialRecord | null> => {
+      const cred = await AccountStorage.getOAuthCredential(hostId);
+      if (!cred) return null;
+      await GitHubServiceStatic.registerOAuthCredentialForNative({ repoId: hostId, hostId, oauthCredential: cred });
+      return cred;
+    },
+    [],
+  );
+
+  const disconnectGitHubOAuth = useCallback(
+    async (hostId: string): Promise<void> => {
+      await AccountStorage.deleteOAuthCredential(hostId);
+      await GitHubServiceStatic.clearNativeCredentialsForHost(hostId);
+    },
+    [],
+  );
+
+  const connectGitHubApp = useCallback(
+    async (hostId: string): Promise<GitHubAppCredentialRecord | null> => {
+      const cred = await AccountStorage.getGitHubAppCredential(hostId);
+      if (!cred) return null;
+      for (const repo of cred.selectedRepositories) {
+        const repoId = `${repo.owner}/${repo.repo}`;
+        await GitHubServiceStatic.registerGitHubAppCredentialForNative({ repoId, hostId, appCredential: cred });
+      }
+      return cred;
+    },
+    [],
+  );
+
+  const disconnectGitHubApp = useCallback(
+    async (hostId: string): Promise<void> => {
+      await AccountStorage.deleteGitHubAppCredential(hostId);
+      await GitHubServiceStatic.clearNativeCredentialsForHost(hostId);
+    },
+    [],
+  );
+
+  const renewGitHubAppToken = useCallback(
+    async (hostId: string): Promise<GitHubAppCredentialRecord | null> => {
+      const { GitHubAppService } = await import('../services/GitHubAppService');
+      const cred = await AccountStorage.getGitHubAppCredential(hostId);
+      if (!cred) return null;
+      const result = await GitHubAppService.renewInstallationToken({ credential: cred });
+      if (!result.ok) return null;
+      const renewed = result.credential;
+      await AccountStorage.setGitHubAppCredential(hostId, renewed);
+      for (const repo of renewed.selectedRepositories) {
+        const repoId = `${repo.owner}/${repo.repo}`;
+        await GitHubServiceStatic.registerGitHubAppCredentialForNative({ repoId, hostId, appCredential: renewed });
+      }
+      return renewed;
+    },
+    [],
+  );
+
   const accounts = useMemo(() => flattenAccounts(accountSummaries), [accountSummaries]);
 
   const value = useMemo<AccountsContextValue>(
@@ -385,6 +457,11 @@ export function AccountsProvider({ children }: { children: ReactNode }) {
       setToken,
       clearToken,
       addAccount,
+      connectGitHubOAuth,
+      disconnectGitHubOAuth,
+      connectGitHubApp,
+      disconnectGitHubApp,
+      renewGitHubAppToken,
     }),
     [
       authState,
@@ -403,6 +480,11 @@ export function AccountsProvider({ children }: { children: ReactNode }) {
       setToken,
       clearToken,
       addAccount,
+      connectGitHubOAuth,
+      disconnectGitHubOAuth,
+      connectGitHubApp,
+      disconnectGitHubApp,
+      renewGitHubAppToken,
     ],
   );
 
@@ -433,6 +515,11 @@ export function useAccounts(): AccountsContextValue {
       setToken: async () => false,
       clearToken: async () => {},
       addAccount: async () => null,
+      connectGitHubOAuth: async () => null,
+      disconnectGitHubOAuth: async () => {},
+      connectGitHubApp: async () => null,
+      disconnectGitHubApp: async () => {},
+      renewGitHubAppToken: async () => null,
     };
   }
   return ctx;

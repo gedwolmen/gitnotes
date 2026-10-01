@@ -28,6 +28,8 @@ import ThoughtDumpScreen from '../screens/ThoughtDumpScreen';
 import CalendarScreen from '../screens/CalendarScreen';
 import PaywallScreen from '../screens/PaywallScreen';
 import OnboardingScreen from '../screens/OnboardingScreen';
+import OAuthCallbackScreen from '../screens/OAuthCallbackScreen';
+import AppCallbackScreen from '../screens/AppCallbackScreen';
 import ExploreCommitScreen from '../screens/ExploreCommitScreen';
 import ExploreConflictScreen from '../screens/ExploreConflictScreen';
 import ConflictResolveScreen from '../screens/ConflictResolveScreen';
@@ -44,11 +46,6 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 
 const getLinkingConfig = (): LinkingOptions<RootStackParamList> => {
   const baseConfig: LinkingOptions<RootStackParamList> = {
-    // Only the custom-scheme prefix is accepted until the gitnotes.app domain
-    // hosts an apple-app-site-association / .well-known/assetlinks.json with
-    // matching associatedDomains entitlement (iOS) + android:autoVerify intent
-    // filter (Android). Without that, another app on the same OS can register
-    // the same https:// pattern and hijack the link — see #266.
     prefixes: ['gitnotes://'],
     config: {
       screens: {
@@ -66,14 +63,13 @@ const getLinkingConfig = (): LinkingOptions<RootStackParamList> => {
         ChatThreadList: 'chat',
         ChatScreen: 'chat/:threadId',
         ThoughtDump: 'thought-dump',
+        OAuthCallback: 'oauth/callback',
+        AppCallback: 'app/callback',
       },
     },
   };
 
   if (__DEV__) {
-    // NeumorphicGallery is a dev-only screen for testing neumorphic UI components
-    // Guard both the deep link and import to prevent production builds from
-    // including or registering this dev artifact — see #1073
     (baseConfig.config as NonNullable<typeof baseConfig.config>).screens.NeumorphicGallery = '__dev__/neumorphic';
   }
 
@@ -306,6 +302,16 @@ export default function AppNavigator({ showOnboarding, onOnboardingComplete, onO
             <Stack.Screen
               name="ConflictResolve"
               component={ConflictResolveScreen}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="OAuthCallback"
+              component={OAuthCallbackScreen}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="AppCallback"
+              component={AppCallbackScreen}
               options={{ headerShown: false }}
             />
             {__DEV__ && (

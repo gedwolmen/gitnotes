@@ -5,6 +5,25 @@ import {
   forgejoHostService,
 } from './git/gitHostFactory';
 import type { GitHostProvider } from './git/GitHost';
+import type {
+  GitHubOAuthCredentialRecord,
+  GitHubAppCredentialRecord,
+  OAuthErrorCode,
+  GitHubAppErrorCode,
+  GitHubOAuthAvailability,
+  GitHubAppAvailability,
+  ProviderAuthAvailability,
+  GlobalAuthAvailability,
+  CredentialValidity,
+} from './git/contracts';
+import {
+  validateOAuthCredential,
+  isOAuthExpired,
+  isRefreshExpired,
+  validateGitHubAppCredential,
+  isInstallationTokenExpired,
+  hasEmptyRepositorySelection,
+} from './git/contracts';
 
 export interface GitHubUser {
   id: number;
@@ -524,6 +543,158 @@ export class AuthService {
     const summary = summaries.find((s) => s.account.id === accountId);
     if (!summary) return { ok: false, reason: 'not-found' };
     return { ok: true, summary };
+  }
+
+  // ── GitHub OAuth credential management ─────────────────────────────────
+
+  /**
+   * Retrieve the stored OAuth credential for a GitHub host.
+   * Returns null when no OAuth credential has been stored for this host.
+   */
+  static async getGitHubOAuthCredential(
+    hostId: string,
+  ): Promise<GitHubOAuthCredentialRecord | null> {
+    return AccountStorage.getOAuthCredential(hostId);
+  }
+
+  /**
+   * Validate an OAuth credential record's metadata.
+   * Returns the record if valid, null if missing or invalid.
+   * Does NOT check with GitHub — caller handles network validation.
+   */
+  static async validateGitHubOAuthCredential(
+    cred: GitHubOAuthCredentialRecord,
+  ): Promise<{ valid: true; record: GitHubOAuthCredentialRecord } | { valid: false; reason: string }> {
+    const result = validateOAuthCredential(cred);
+    if (!result.valid) return result;
+    return { valid: true, record: cred };
+  }
+
+  /**
+   * Remove the OAuth credential for a host.
+   * Idempotent when no credential is stored.
+   */
+  static async removeGitHubOAuthCredential(hostId: string): Promise<void> {
+    await AccountStorage.deleteOAuthCredential(hostId);
+  }
+
+  /**
+   * Store a GitHub OAuth credential for a host.
+   * Validates the record before storing; throws on invalid metadata.
+   */
+  static async setGitHubOAuthCredential(
+    hostId: string,
+    cred: GitHubOAuthCredentialRecord,
+  ): Promise<void> {
+    const validation = await this.validateGitHubOAuthCredential(cred);
+    if (!validation.valid) {
+      throw new Error(`Invalid OAuth credential: ${validation.reason}`);
+    }
+    await AccountStorage.setOAuthCredential(hostId, cred);
+  }
+
+  // ── GitHub App credential management ───────────────────────────────────
+
+  /**
+   * Retrieve the stored GitHub App installation credential for a host.
+   * Returns null when no GitHub App credential has been stored for this host.
+   */
+  static async getGitHubAppCredential(
+    hostId: string,
+  ): Promise<GitHubAppCredentialRecord | null> {
+    return AccountStorage.getGitHubAppCredential(hostId);
+  }
+
+  /**
+   * Validate a GitHub App credential record's metadata.
+   * Returns the record if valid, null if missing or invalid.
+   * Rejects empty repository selections — caller must ensure at least one
+   * repo is selected before storing.
+   * Does NOT check with GitHub — caller handles network validation.
+   */
+  static async validateGitHubAppCredential(
+    cred: GitHubAppCredentialRecord,
+  ): Promise<{ valid: true; record: GitHubAppCredentialRecord } | { valid: false; reason: string }> {
+    if (hasEmptyRepositorySelection(cred)) {
+      return { valid: false, reason: 'empty_repository_selection' };
+    }
+    const result = validateGitHubAppCredential(cred);
+    if (!result.valid) return result;
+    return { valid: true, record: cred };
+  }
+
+  /**
+   * Remove the GitHub App credential for a host.
+   * Idempotent when no credential is stored.
+   */
+  static async removeGitHubAppCredential(hostId: string): Promise<void> {
+    await AccountStorage.deleteGitHubAppCredential(hostId);
+  }
+
+  /**
+   * Store a GitHub App installation credential for a host.
+   * Validates the record (including non-empty repository selection) before storing.
+   */
+  static async setGitHubAppCredential(
+    hostId: string,
+    cred: GitHubAppCredentialRecord,
+  ): Promise<void> {
+    const validation = await this.validateGitHubAppCredential(cred);
+    if (!validation.valid) {
+      throw new Error(`Invalid GitHub App credential: ${validation.reason}`);
+    }
+    await AccountStorage.setGitHubAppCredential(hostId, cred);
+  }
+
+  // ── Feature-scoped availability ─────────────────────────────────────────
+
+  /**
+   * Compute per-provider availability state for GitHub OAuth and GitHub App.
+   * Each provider's state is independent — one provider's failure does NOT
+   * affect another provider's availability.
+   *
+   * Non-GitHub providers always return `isAvailable: true` when a token
+   * exists (token/PAT auth is handled by the existing flow).
+   */
+  static async getProviderAuthAvailability(
+    hostId: string,
+    provider: GitHostProvider,
+  ): Promise<ProviderAuthAvailability> {
+    if (provider !== 'github') {
+      const token = await AccountStorage.getHostToken(hostId);
+      return { provider, isAvailable: !!token };
+    }
+
+    const [oauthCred, appCred] = await Promise.all([
+      AccountStorage.getOAuthCredential(hostId),
+      AccountStorage.getGitHubAppCredential(hostId),
+    ]);
+
+    const oauthAvailable: GitHubOAuthAvailability = oauthCred
+      ? {
+          available: !isOAuthExpired(oauthCred) && !isRefreshExpired(oauthCred),
+          error: null,
+          backendReachable: true,
+        }
+      : { available: false, error: null, backendReachable: false };
+
+    const appAvailable: GitHubAppAvailability = appCred
+      ? {
+          available: !isInstallationTokenExpired(appCred),
+          error: null,
+          backendReachable: true,
+        }
+      : { available: false, error: null, backendReachable: false };
+
+    const hasToken = !!(await AccountStorage.getHostToken(hostId));
+    const isAvailable = hasToken || oauthAvailable.available || appAvailable.available;
+
+    return {
+      provider,
+      isAvailable,
+      oauth: oauthAvailable,
+      githubApp: appAvailable,
+    };
   }
 }
 
