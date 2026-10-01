@@ -21,6 +21,10 @@ pub enum CredentialSource {
     },
     /// Let libgit2 try its default paths (ssh agent, config, credential helpers).
     Default,
+    /// GitHub OAuth access token — used as a bearer for HTTPS auth.
+    GitHubOAuth { token: String },
+    /// GitHub App installation token scoped to selected repositories.
+    GitHubAppInstallation { token: String },
 }
 
 /// Kind of a working-tree/index change for a file.

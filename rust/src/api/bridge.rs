@@ -49,10 +49,7 @@ pub fn set_ssl_cert_directory(cert_dir: String) -> Result<(), BridgeError> {
 }
 
 #[uniffi::export]
-pub fn set_ssl_cert_locations(
-    cert_file: String,
-    cert_dir: String,
-) -> Result<(), BridgeError> {
+pub fn set_ssl_cert_locations(cert_file: String, cert_dir: String) -> Result<(), BridgeError> {
     let file_path = std::path::Path::new(&cert_file);
     let dir_path = std::path::Path::new(&cert_dir);
     let file_exists = file_path.exists();

@@ -184,8 +184,7 @@ fn main() {
     } else if let Ok(cargo_home) = std::env::var("CARGO_HOME") {
         Path::new(&cargo_home).join("registry/src")
     } else {
-        Path::new(&std::env::var("HOME").unwrap_or_default())
-            .join(".cargo/registry/src")
+        Path::new(&std::env::var("HOME").unwrap_or_default()).join(".cargo/registry/src")
     };
 
     eprintln!("build.rs: registry_base={}", registry_base.display());
@@ -215,7 +214,9 @@ fn main() {
         eprintln!("build.rs: failed to read registry_base");
     }
 
-    cc::Build::new().file("src/chkstk_stub.c").compile("chkstk_stub");
+    cc::Build::new()
+        .file("src/chkstk_stub.c")
+        .compile("chkstk_stub");
     println!("cargo:rerun-if-changed=src/chkstk_stub.c");
     println!("cargo:rerun-if-changed=patches/openssl-cert-verify.patch");
 }
