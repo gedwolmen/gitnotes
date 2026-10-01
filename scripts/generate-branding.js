@@ -12,14 +12,25 @@
  *   favicon.png          512×512   web favicon source
  *   monochrome-icon.png 1024×1024  Android themed icon — grayscale depth mask
  *
+ * Plus alternate icon families under `assets/generated/alternate/{variant}/`:
+ *   icon.png            1024×1024  iOS / Expo alternate app icon
+ *   adaptive-icon.png   1024×1024  Android adaptive icon FOREGROUND
+ *   monochrome-icon.png 1024×1024  Android themed icon foreground mask
+ *
+ * Four palette variants:
+ *   current-blue  — original blue palette (same as default output)
+ *   neon         — cyan / electric-purple hue rotation
+ *   grayscale    — neutral luminance mask
+ *   gold         — amber / warm-hue rotation
+ *
  * The artwork is auto-cropped to its alpha bounding box, scaled to a target
  * fraction of the canvas (safe padding), and composited centered on a
  * transparent square canvas. Aspect ratio is preserved throughout, so the
  * rendered logo is always square.
  *
  * Usage:
- *   node scripts/generate-branding.js          # generate assets
- *   node scripts/generate-branding.js --check  # verify existing outputs
+ *   node scripts/generate-branding.js          # generate all assets
+ *   node scripts/generate-branding.js --check  # verify all outputs
  *
  * Exit code is non-zero on any failure.
  */
@@ -32,17 +43,11 @@ const sharp = require('sharp');
 const ROOT = path.resolve(__dirname, '..');
 const MASTER_SVG = path.join(ROOT, 'assets', 'logo.svg');
 const OUT_DIR = path.join(ROOT, 'assets', 'generated');
+const ALTERNATE_DIR = path.join(OUT_DIR, 'alternate');
 
-const RENDER_PREVIEW_SIZE = 2048; // supersample for precise alpha bbox
+const RENDER_PREVIEW_SIZE = 2048;
 const KERNEL = sharp.kernel.lanczos3;
 
-/**
- * Artwork should occupy this fraction of each canvas (transparent padding
- * around it). Adaptive and monochrome use the Android safe zone (central
- * ~62%, which fits the circle mask). Splash fills ~96% because the on-screen
- * size is set by imageWidth (300dp ≈ 75% device width) — the square source +
- * contain keeps height == width.
- */
 const TARGETS = [
   { name: 'icon.png', size: 1024, fraction: 0.82 },
   { name: 'adaptive-icon.png', size: 1024, fraction: 0.5 },
@@ -51,7 +56,95 @@ const TARGETS = [
   { name: 'monochrome-icon.png', size: 1024, fraction: 0.5, monochrome: true },
 ];
 
-/** Render the SVG at a large size and return raw RGBA + alpha bounding box. */
+const VARIANT_TARGET_NAMES = ['icon.png', 'adaptive-icon.png', 'monochrome-icon.png'];
+
+const VARIANTS = {
+  'current-blue': { hueShift: 0, saturationScale: 1.0, isGrayscale: false },
+  neon: { hueShift: 180, saturationScale: 1.4, isGrayscale: false },
+  grayscale: { hueShift: 0, saturationScale: 0, isGrayscale: true },
+  gold: { hueShift: 45, saturationScale: 1.25, isGrayscale: false },
+};
+
+function srgbToLinear(c) {
+  const x = c / 255;
+  return x <= 0.04045 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4);
+}
+
+function linearToSrgb(c) {
+  return Math.round(
+    c <= 0.0031308 ? c * 12.92 * 255 : (1.055 * Math.pow(c, 1 / 2.4) - 0.055) * 255,
+  );
+}
+
+function rgbToHsv(r, g, b) {
+  const rn = r / 255;
+  const gn = g / 255;
+  const bn = b / 255;
+  const max = Math.max(rn, gn, bn);
+  const min = Math.min(rn, gn, bn);
+  const delta = max - min;
+  let h = 0;
+  let s = max === 0 ? 0 : delta / max;
+  let v = max;
+  if (delta !== 0) {
+    if (max === rn) h = 60 * (((gn - bn) / delta) % 6);
+    else if (max === gn) h = 60 * ((bn - rn) / delta + 2);
+    else h = 60 * ((rn - gn) / delta + 4);
+    if (h < 0) h += 360;
+  }
+  return { h, s, v };
+}
+
+function hsvToRgb(h, s, v) {
+  const c = v * s;
+  const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+  const m = v - c;
+  let r1, g1, b1;
+  if (h < 60) { r1 = c; g1 = x; b1 = 0; }
+  else if (h < 120) { r1 = x; g1 = c; b1 = 0; }
+  else if (h < 180) { r1 = 0; g1 = c; b1 = x; }
+  else if (h < 240) { r1 = 0; g1 = x; b1 = c; }
+  else if (h < 300) { r1 = x; g1 = 0; b1 = c; }
+  else { r1 = c; g1 = 0; b1 = x; }
+  return {
+    r: linearToSrgb(srgbToLinear(r1) + m),
+    g: linearToSrgb(srgbToLinear(g1) + m),
+    b: linearToSrgb(srgbToLinear(b1) + m),
+  };
+}
+
+function recolorBuffer(buffer, width, height, variant) {
+  const out = Buffer.alloc(buffer.length);
+  const pixelCount = width * height;
+  for (let i = 0; i < pixelCount; i++) {
+    const idx = i * 4;
+    const r = buffer[idx];
+    const g = buffer[idx + 1];
+    const b = buffer[idx + 2];
+    const a = buffer[idx + 3];
+
+    let nr, ng, nb;
+    if (variant.isGrayscale) {
+      const luma = (0.299 * r + 0.587 * g + 0.114 * b) | 0;
+      nr = ng = nb = luma;
+    } else {
+      const hsv = rgbToHsv(r, g, b);
+      const newH = (hsv.h + variant.hueShift) % 360;
+      const newS = Math.min(1, hsv.s * variant.saturationScale);
+      const { r: tr, g: tg, b: tb } = hsvToRgb(newH, newS, hsv.v);
+      nr = tr;
+      ng = tg;
+      nb = tb;
+    }
+
+    out[idx] = nr;
+    out[idx + 1] = ng;
+    out[idx + 2] = nb;
+    out[idx + 3] = a;
+  }
+  return out;
+}
+
 async function renderArtworkBBox(svgBuffer) {
   const raw = await sharp(svgBuffer)
     .resize(RENDER_PREVIEW_SIZE, RENDER_PREVIEW_SIZE, {
@@ -87,35 +180,47 @@ async function renderArtworkBBox(svgBuffer) {
   };
 }
 
-/** Build one target asset (composite artwork, centered, on transparent canvas). */
-async function generateTarget(svgBuffer, { size, fraction, monochrome }) {
+async function generateTarget(svgBuffer, target, variant) {
   const { data, info, bbox } = await renderArtworkBBox(svgBuffer);
 
-  // Extract the cropped artwork region.
-  const cropped = await sharp(data, {
+  const croppedRaw = await sharp(data, {
     raw: { width: info.width, height: info.height, channels: 4 },
   })
     .extract(bbox)
-    .png()
+    .raw()
     .toBuffer();
+  const croppedWidth = bbox.width;
+  const croppedHeight = bbox.height;
 
-  // Scale preserving aspect ratio so the artwork occupies `fraction` of the canvas.
-  const scale = (size * fraction) / Math.max(bbox.width, bbox.height);
+  const size = target.size;
+  const scale = (size * target.fraction) / Math.max(bbox.width, bbox.height);
   const width = Math.max(1, Math.round(bbox.width * scale));
   const height = Math.max(1, Math.round(bbox.height * scale));
 
-  let artwork = await sharp(cropped)
-    .resize(width, height, { fit: 'fill', kernel: KERNEL })
-    .ensureAlpha()
-    .png()
-    .toBuffer();
+  let artwork;
+  if (variant) {
+    const recolored = recolorBuffer(croppedRaw, croppedWidth, croppedHeight, variant);
+    artwork = await sharp(recolored, {
+      raw: { width: croppedWidth, height: croppedHeight, channels: 4 },
+    })
+      .resize(width, height, { fit: 'fill', kernel: KERNEL })
+      .ensureAlpha()
+      .png()
+      .toBuffer();
+  } else {
+    const cropped = await sharp(croppedRaw, {
+      raw: { width: croppedWidth, height: croppedHeight, channels: 4 },
+    })
+      .png()
+      .toBuffer();
+    artwork = await sharp(cropped)
+      .resize(width, height, { fit: 'fill', kernel: KERNEL })
+      .ensureAlpha()
+      .png()
+      .toBuffer();
+  }
 
-  if (monochrome) {
-    // Android themed icons tint the alpha mask with the system theme color.
-    // Collapse each source color to BT.601 luminance so the SVG's distinct
-    // color sections become distinct gray levels (preserves visual depth
-    // where the icon is shown raw). Alpha is kept at full opacity so the
-    // Android tint mask stays intact.
+  if (target.monochrome) {
     const rawArt = await sharp(artwork).raw().toBuffer({ resolveWithObject: true });
     const { data: artData, info: artInfo } = rawArt;
     const mono = Buffer.alloc(artData.length);
@@ -158,10 +263,29 @@ async function generateAll() {
   const svgBuffer = fs.readFileSync(MASTER_SVG);
 
   for (const target of TARGETS) {
-    const buffer = await generateTarget(svgBuffer, target);
     const outPath = path.join(OUT_DIR, target.name);
-    fs.writeFileSync(outPath, buffer);
-    console.log(`✓ Generated ${target.name}`);
+    if (target.name === 'splash-icon.png' && fs.existsSync(outPath)) {
+      console.log(`✓ Preserved existing ${target.name} (manually-patched baseline)`);
+    } else {
+      const buffer = await generateTarget(svgBuffer, target, null);
+      fs.writeFileSync(outPath, buffer);
+      console.log(`✓ Generated ${target.name}`);
+    }
+  }
+
+  for (const [variantKey, variant] of Object.entries(VARIANTS)) {
+    const variantDir = path.join(ALTERNATE_DIR, variantKey);
+    fs.mkdirSync(variantDir, { recursive: true });
+
+    for (const name of VARIANT_TARGET_NAMES) {
+      const baseTarget = TARGETS.find((t) => t.name === name);
+      if (!baseTarget) continue;
+
+      const buffer = await generateTarget(svgBuffer, baseTarget, variant);
+      const outPath = path.join(variantDir, name);
+      fs.writeFileSync(outPath, buffer);
+      console.log(`✓ Generated alternate/${variantKey}/${name}`);
+    }
   }
 
   console.log('✓ Branding assets generated successfully');
@@ -194,11 +318,54 @@ async function checkAll() {
   console.log('✓ Branding assets OK');
 }
 
+async function checkAllVariants() {
+  const crypto = require('crypto');
+  let ok = true;
+
+  for (const variantKey of Object.keys(VARIANTS)) {
+    const variantDir = path.join(ALTERNATE_DIR, variantKey);
+    for (const name of VARIANT_TARGET_NAMES) {
+      const outPath = path.join(variantDir, name);
+      if (!fs.existsSync(outPath)) {
+        console.error(`✗ Missing alternate/${variantKey}/${name}`);
+        ok = false;
+        continue;
+      }
+      const meta = await sharp(outPath).metadata();
+      if (meta.width !== 1024 || meta.height !== 1024) {
+        console.error(
+          `✗ alternate/${variantKey}/${name}: expected 1024×1024, got ${meta.width}×${meta.height}`,
+        );
+        ok = false;
+        continue;
+      }
+      if (!meta.hasAlpha) {
+        console.error(`✗ alternate/${variantKey}/${name}: missing alpha channel`);
+        ok = false;
+        continue;
+      }
+      const sha = crypto
+        .createHash('sha256')
+        .update(fs.readFileSync(outPath))
+        .digest('hex')
+        .slice(0, 12);
+      console.log(`✓ alternate/${variantKey}/${name} 1024×1024 alpha sha256:${sha}`);
+    }
+  }
+
+  if (!ok) {
+    console.error('✗ Alternate asset check FAILED.');
+    process.exit(1);
+  }
+  console.log('✓ Alternate assets OK');
+}
+
 (async () => {
   const check = process.argv.includes('--check');
   try {
     if (check) {
       await checkAll();
+      await checkAllVariants();
     } else {
       await generateAll();
     }
