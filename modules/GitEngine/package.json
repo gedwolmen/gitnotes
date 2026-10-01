@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "Local Expo module bridging the Rust git2 engine (gitnotes_git2) to JS via UniFFI.",
+  "license": "MPL-2.0",
   "main": "index.ts",
   "types": "index.ts"
 }

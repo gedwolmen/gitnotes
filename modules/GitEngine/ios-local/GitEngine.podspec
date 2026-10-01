@@ -3,7 +3,7 @@ Pod::Spec.new do |s|
   s.version      = '0.1.0'
   s.summary      = 'Expo native module for GitEngine Rust bindings'
   s.homepage    = 'https://github.com/skepjandi/gitnotes'
-  s.license      = { :type => 'MIT' }
+  s.license      = { :type => 'MPL-2.0' }
   s.author       = { 'GitNotes' => 'dev@gitnotes.app' }
   s.source       = { :path => '.' }
   s.platform     = :ios, '16.4'

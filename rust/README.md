@@ -4,6 +4,11 @@ Native git engine for GitNotes on top of `git2` (libgit2, vendored). Exposed
 to the app through UniFFI-generated Swift/Kotlin bindings wrapped by the
 `modules/GitEngine` Expo module.
 
+## License
+
+The Git engine is licensed under MPL-2.0. The license applies to this crate
+and its generated platform bindings.
+
 ## Layout
 
 - `src/engine/` — pure git2 logic (ops, credentials, lock, timeouts, keys).
