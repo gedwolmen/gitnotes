@@ -180,6 +180,14 @@
     "updatedUI": "팬시 UI",
     "darkMode": "다크 모드",
     "accentColor": "강조 색상",
+    "appIcon": {
+      "title": "앱 아이콘",
+      "default": "기본",
+      "pickerHint": "대체 앱 아이콘 선택",
+      "unavailable": "사용 불가",
+      "error": "앱 아이콘 변경 실패",
+      "reset": "기본값으로 재설정"
+    },
     "useSystemTheme": "시스템 테마 사용",
     "active": "활성",
     "inactive": "비활성",

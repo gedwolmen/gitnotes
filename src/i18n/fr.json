@@ -180,6 +180,14 @@
     "updatedUI": "UI élégante",
     "darkMode": "Mode sombre",
     "accentColor": "Couleur d'accentuation",
+    "appIcon": {
+      "title": "Icône d'application",
+      "default": "Par défaut",
+      "pickerHint": "Choisissez une icône d'application alternative",
+      "unavailable": "Indisponible",
+      "error": "Échec du changement d'icône d'application",
+      "reset": "Réinitialiser par défaut"
+    },
     "useSystemTheme": "Utiliser le thème du système",
     "active": "Actif",
     "inactive": "Inactif",
