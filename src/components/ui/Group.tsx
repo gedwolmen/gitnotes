@@ -18,7 +18,7 @@ export function Group(props: GroupProps) {
   const items = React.Children.toArray(children).filter(Boolean);
 
   const surfaceStyle: StyleProp<ViewStyle> =
-    themeStyle === 'flat'
+    themeStyle === 'flat' || themeStyle === 'neo-brutalist'
       ? { borderWidth: 0 }
       : undefined;
 

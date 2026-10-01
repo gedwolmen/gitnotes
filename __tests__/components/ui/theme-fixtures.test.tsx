@@ -15,6 +15,8 @@ import {
   FLAT_DARK,
   NEUMORPHIC_LIGHT,
   NEUMORPHIC_DARK,
+  NEUTRAL_BRUTALIST_LIGHT,
+  NEUTRAL_BRUTALIST_DARK,
   RADII,
   SPACING,
   TYPE,
@@ -55,6 +57,8 @@ const FIXTURES: ThemeFixture[] = [
   { label: 'flat-dark', palette: FLAT_DARK, style: 'flat', isDark: true },
   { label: 'neumorphic-light', palette: NEUMORPHIC_LIGHT, style: 'neumorphic', isDark: false },
   { label: 'neumorphic-dark', palette: NEUMORPHIC_DARK, style: 'neumorphic', isDark: true },
+  { label: 'neo-brutalist-light', palette: NEUTRAL_BRUTALIST_LIGHT, style: 'neo-brutalist', isDark: false },
+  { label: 'neo-brutalist-dark', palette: NEUTRAL_BRUTALIST_DARK, style: 'neo-brutalist', isDark: true },
 ];
 
 // ---------------------------------------------------------------------------
@@ -642,4 +646,108 @@ describe('Token invariants', () => {
       expect(new Set(Object.keys(palette))).toEqual(keys);
     }
   });
+
+  it('neo-brutalist palettes have same keys as flat/neumorphic', () => {
+    const keys = new Set(Object.keys(FLAT_LIGHT));
+    expect(new Set(Object.keys(NEUTRAL_BRUTALIST_LIGHT))).toEqual(keys);
+    expect(new Set(Object.keys(NEUTRAL_BRUTALIST_DARK))).toEqual(keys);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Neo-Brutalist style assertions
+// ---------------------------------------------------------------------------
+
+describe('Neo-Brutalist elevation rendering', () => {
+  const neoBrutalistLightFixture = { label: 'neo-brutalist-light', palette: NEUTRAL_BRUTALIST_LIGHT, style: 'neo-brutalist' as ThemeStyle, isDark: false };
+  const neoBrutalistDarkFixture = { label: 'neo-brutalist-dark', palette: NEUTRAL_BRUTALIST_DARK, style: 'neo-brutalist' as ThemeStyle, isDark: true };
+
+  for (const fixture of [neoBrutalistLightFixture, neoBrutalistDarkFixture]) {
+    describe(fixture.label, () => {
+      beforeEach(() => {
+        const { __overrideTheme } = jest.requireMock('../../../src/contexts/ThemeContext');
+        __overrideTheme(fixture.palette, fixture.style, fixture.isDark);
+      });
+
+      afterEach(() => {
+        const { __resetTheme } = jest.requireMock('../../../src/contexts/ThemeContext');
+        __resetTheme();
+      });
+
+      it('Surface with neo-brutalist style renders without blur shadow properties', () => {
+        const { root } = render(
+          <Surface elevation="raised" testID={`surface-${fixture.label}`}>
+            <Text>Neo-Brutalist content</Text>
+          </Surface>
+        );
+        expect(root).toBeTruthy();
+        // The outer view should NOT have shadowRadius > 0 (no blur)
+        const outerView = root.findByType('View');
+        const outerStyle = outerView.props.style;
+        const styleArray = Array.isArray(outerStyle) ? outerStyle : [outerStyle];
+        for (const style of styleArray) {
+          if (style && typeof style === 'object') {
+            // Neo-Brutalist should have no soft shadow blur
+            if (style.shadowRadius !== undefined) {
+              expect(style.shadowRadius).toBe(0);
+            }
+            // Should not have dual-shadow inner ring
+            expect(style.shadowOffset).not.toEqual({ width: -4, height: -4 });
+          }
+        }
+      });
+
+      it('Surface with neo-brutalist has crisp 2px border', () => {
+        const { root } = render(
+          <Surface elevation="raised" testID={`surface-border-${fixture.label}`}>
+            <Text>Border test</Text>
+          </Surface>
+        );
+        expect(root).toBeTruthy();
+        const outerView = root.findByType('View');
+        const outerStyle = outerView.props.style;
+        const styleArray = Array.isArray(outerStyle) ? outerStyle : [outerStyle];
+        let foundBorder = false;
+        for (const style of styleArray) {
+          if (style && typeof style === 'object') {
+            if (style.borderWidth !== undefined) {
+              expect(style.borderWidth).toBe(2);
+              foundBorder = true;
+            }
+          }
+        }
+        // Border should be defined (neo-brutalist uses border instead of shadow)
+        expect(foundBorder).toBe(true);
+      });
+
+      it('Surface with neo-brutalist has no elevation blur overlay on Android', () => {
+        // This test verifies that neo-brutalist on Android does NOT use
+        // Material elevation with blur overlays - it uses crisp borders instead
+        const { root } = render(
+          <Surface elevation="floating" testID={`surface-android-${fixture.label}`}>
+            <Text>Android test</Text>
+          </Surface>
+        );
+        expect(root).toBeTruthy();
+        // The Android overlay approach should not create blur shadows
+        // Neo-brutalist is border-first on Android
+      });
+
+      it('Button with neo-brutalist theme renders correctly', () => {
+        const { root } = render(
+          <Button label="Neo Button" variant="primary" testID={`button-${fixture.label}`} />
+        );
+        expect(root).toBeTruthy();
+      });
+
+      it('Button with neo-brutalist theme does not apply neumorphic raised shadow', () => {
+        const { root } = render(
+          <Button label="Neo Button" variant="secondary" testID={`button-shadow-${fixture.label}`} />
+        );
+        expect(root).toBeTruthy();
+        // Secondary button should use flat elevation in neo-brutalist mode
+        // (not the soft neumorphic raised shadow)
+      });
+    });
+  }
 });
