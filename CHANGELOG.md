@@ -8,6 +8,14 @@ All notable fixes and feature changes to GitNotēs are documented here.
 >
 > **History**: prior fixes (pre-2026-08) lived in single-PR wiki pages. Those pages were retired in [#1047](https://github.com/gedwolmen/gitnotes/pull/1047); their full diagnostic content is preserved in git history via `git log -p -- docs/wiki/<file>.md`.
 
+## 2026-10-01
+
+### fix(graph): keep top nodes below the screen header
+
+**What:** Graph content could render underneath the absolute screen header, leaving nodes near the top out of view. The transformed canvas could also extend over the search field and prevent typing.
+
+**Fix:** Reserve the measured screen-header height before rendering the graph search and canvas content, and clip the graph viewport so the transformed canvas cannot intercept controls outside it.
+
 ## 2026-09-30
 
 ### feat(onboarding): multi-provider token entry (GitHub, GitLab, Gitea, Forgejo)

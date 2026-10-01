@@ -17,9 +17,10 @@ import { buildBacklinkIndex } from '../services/BacklinksService';
 import { computeForceLayout } from '../utils/forceLayout';
 import { parseWikiLinks } from '../utils/wikiLinksParser';
 import { RootStackParamList } from '../navigation/types';
-import { ScreenHeader } from '../components/ui';
+import { ScreenHeader, useScreenHeaderHeight } from '../components/ui';
 import { SafeAreaView } from '../components/ui/SafeAreaView';
 import SearchBar from '../components/SearchBar';
+import { getGraphContentTopInset, getGraphViewportStyle } from './graphViewLayout';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -51,6 +52,7 @@ export default function GraphViewScreen() {
   const { setViewMode } = useViewMode();
   const setChatRepo = useAIStore((s) => s.setChatRepo);
   const { width: screenWidth } = Dimensions.get('window');
+  const headerHeight = useScreenHeaderHeight();
 
   const canvasWidth = CANVAS_SIZE;
   const canvasHeight = CANVAS_SIZE;
@@ -372,7 +374,14 @@ export default function GraphViewScreen() {
   }));
 
   return (
-    <SafeAreaView edges={[]} className="flex-1" style={{ backgroundColor: colors.background }}>
+    <SafeAreaView
+      edges={[]}
+      className="flex-1"
+      style={{
+        backgroundColor: colors.background,
+        paddingTop: getGraphContentTopInset(headerHeight),
+      }}
+    >
       <ScreenHeader
         title={t('notes.graphView')}
         onBack={handleCloseScreen}
@@ -388,7 +397,7 @@ export default function GraphViewScreen() {
         </View>
       )}
 
-      <View className="flex-1" onLayout={handleContainerLayout}>
+      <View className="flex-1" onLayout={handleContainerLayout} style={getGraphViewportStyle()}>
         {notes.length === 0 ? (
           <View className="flex-1 items-center justify-center p-8">
             <Ionicons name="git-network-outline" size={64} color={colors.textSecondary} />
