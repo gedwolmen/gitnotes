@@ -534,9 +534,9 @@
   "hints": {
     "settings": {
       "updatedUI": "Soft-UI-Schatten verleihen ein taktiles, erhöhtes Gefühl. Deaktiviere für den klassischen flachen Look.",
-"darkMode": "Wechsle zwischen hellem und dunklem Erscheinungsbild. Für Systemeinstellungen verwende die Option unten.",
-"accentColor": "Wähle eine beliebige Hex-Farbe, um die Akzentfarbe deiner App zu personalisieren. Gilt für alle Themes und Stile.",
-"useSystemTheme": "Automatisch an den hellen oder dunklen Modus deines Geräts anpassen.",
+      "darkMode": "Wechsle zwischen hellem und dunklem Erscheinungsbild. Für Systemeinstellungen verwende die Option unten.",
+      "accentColor": "Wähle eine beliebige Hex-Farbe, um die Akzentfarbe deiner App zu personalisieren. Gilt für alle Themes und Stile.",
+      "useSystemTheme": "Automatisch an den hellen oder dunklen Modus deines Geräts anpassen.",
       "language": "Wähle deine bevorzugte Sprache für die App-Oberfläche. Systemstandard folgt deinem Gerät.",
       "biometricLock": "Erfordert Face ID oder Touch ID zum Entsperren der App und zum Schutz deiner Notizen.",
       "lockTimeout": "Wie lange nach dem Schließen der App, bevor die biometrische Sperre aktiviert wird.",

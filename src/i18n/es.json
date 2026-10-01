@@ -534,9 +534,9 @@
   "hints": {
     "settings": {
       "updatedUI": "Las sombras Soft-UI dan una sensación táctil y elevada. Desactiva para el aspecto clásico plano.",
-"darkMode": "Cambia entre apariencia clara y oscura. Para ajustes del sistema, usa la opción siguiente.",
-"accentColor": "Elige cualquier color hexadecimal para personalizar el acento de tu app. Se aplica en todos los temas y estilos.",
-"useSystemTheme": "Coincide automáticamente con el modo claro u oscuro de tu dispositivo.",
+      "darkMode": "Cambia entre apariencia clara y oscura. Para ajustes del sistema, usa la opción siguiente.",
+      "accentColor": "Elige cualquier color hexadecimal para personalizar el acento de tu app. Se aplica en todos los temas y estilos.",
+      "useSystemTheme": "Coincide automáticamente con el modo claro u oscuro de tu dispositivo.",
       "language": "Elige tu idioma preferido para la interfaz de la app. El valor del sistema sigue tu dispositivo.",
       "biometricLock": "Requiere Face ID o Touch ID para desbloquear la app y proteger tus notas.",
       "lockTimeout": "Cuánto tiempo después de cerrar la app antes de que se active el bloqueo biométrico.",
