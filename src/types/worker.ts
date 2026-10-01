@@ -2,7 +2,7 @@
  * Types for the GitNotēs Worker API.
  * These types preserve the contract from the Cloudflare Worker implementation.
  *
- * Base URL: https://api.gitnotes.org/api/v1
+ * Base URL: https://worker.gitnotes.org/api/v1
  * Error envelope: { code: string, message: string } with snake_case codes.
  */
 
@@ -15,8 +15,10 @@ import { z } from "zod";
 /**
  * Production base URL for the Worker API.
  * Local overrides supported via EXPO_PUBLIC_GITNOTES_BACKEND_URL env var.
+ *
+ * The deployed Worker API is served at worker.gitnotes.org.
  */
-export const WORKER_BASE_URL = "https://api.gitnotes.org/api/v1";
+export const WORKER_BASE_URL = "https://worker.gitnotes.org/api/v1";
 
 /**
  * Environment variable name for backend URL override.

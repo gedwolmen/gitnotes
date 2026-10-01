@@ -26,7 +26,7 @@ import {
   GITHUB_APP_INSTALL_URL_RESPONSE_FIXTURE,
   GITHUB_APP_RENEWAL_RESPONSE_FIXTURE,
 } from "./contract_fixtures";
-import { WorkerErrorCode } from "../../src/types/worker";
+import { WorkerErrorCode, WORKER_BASE_URL } from "../../src/types/worker";
 
 describe("Worker Contract: Field Names", () => {
   describe("OAuthExchangeResponse fields", () => {
@@ -287,5 +287,16 @@ describe("Worker Contract: Health Response", () => {
 
   it("health status must be 'ok'", () => {
     expect(HEALTH_RESPONSE_FIXTURE.status).toBe("ok");
+  });
+});
+
+describe("Worker Base URL", () => {
+  it("WORKER_BASE_URL must point to the deployed Worker API", () => {
+    expect(WORKER_BASE_URL).toBe("https://worker.gitnotes.org/api/v1");
+  });
+
+  it("WORKER_BASE_URL must not have a double /api/v1 path", () => {
+    const matches = WORKER_BASE_URL.match(/\/api\/v1.*\/api\/v1/);
+    expect(matches).toBeNull();
   });
 });

@@ -2,7 +2,7 @@
  * GitNotēs Worker API client.
  *
  * Provides typed HTTP calls to the Cloudflare Worker backend at
- * https://api.gitnotes.org/api/v1 (production) with local override support
+ * https://worker.gitnotes.org/api/v1 (production) with local override support
  * via EXPO_PUBLIC_GITNOTES_BACKEND_URL.
  *
  * Error handling follows the Worker contract: non-2xx responses return
