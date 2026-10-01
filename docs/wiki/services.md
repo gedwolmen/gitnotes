@@ -169,7 +169,7 @@ GitNotēs uses a **centralized branch model** for clone-mode repositories:
 
 | File | Purpose |
 |------|---------|
-| `workerApi.ts` | Typed HTTP client for the Cloudflare Worker backend. Uses `EXPO_PUBLIC_GITNOTES_BACKEND_URL` with production fallback `https://api.gitnotes.org/api/v1`. |
+| `workerApi.ts` | Typed HTTP client for the Cloudflare Worker backend. Uses `EXPO_PUBLIC_GITNOTES_BACKEND_URL` with production fallback `https://worker.gitnotes.org/api/v1`. |
 | `GitHubOAuthService.ts` | GitHub OAuth PKCE flow — initiates, exchanges codes, revokes tokens. Uses `EXPO_PUBLIC_GITHUB_OAUTH_CLIENT_ID` for the public client ID. |
 | `GitHubAppService.ts` | GitHub App installation flow — generates signed JWS handoffs, exchanges installation tokens, renews via one-time grant tokens. |
 
@@ -177,7 +177,7 @@ GitNotēs uses a **centralized branch model** for clone-mode repositories:
 
 | Variable | Purpose | Default |
 |----------|---------|---------|
-| `EXPO_PUBLIC_GITNOTES_BACKEND_URL` | Worker API base URL | `https://api.gitnotes.org/api/v1` |
+| `EXPO_PUBLIC_GITNOTES_BACKEND_URL` | Worker API base URL | `https://worker.gitnotes.org/api/v1` |
 | `EXPO_PUBLIC_GITHUB_OAUTH_CLIENT_ID` | GitHub OAuth app client ID (public, non-secret) | — |
 
 **Callbacks (fixed deep links):**
