@@ -1017,30 +1017,31 @@ export default function SettingsScreen() {
     Linking.openURL('https://github.com/settings/keys');
   }, []);
 
-  const handleConnectOAuth = useCallback(async (hostId: string) => {
-    setOauthLoading((prev) => ({ ...prev, [hostId]: true }));
-    setOauthError((prev) => ({ ...prev, [hostId]: null }));
+  const handleConnectOAuth = useCallback(async (hostId: string | null) => {
+    const key = hostId ?? '__fresh__';
+    setOauthLoading((prev) => ({ ...prev, [key]: true }));
+    setOauthError((prev) => ({ ...prev, [key]: null }));
     try {
       const backendUrl = process.env.EXPO_PUBLIC_GITNOTES_BACKEND_URL;
       const clientId = process.env.EXPO_PUBLIC_GITHUB_OAUTH_CLIENT_ID;
       if (!backendUrl || !clientId) {
-        setOauthError((prev) => ({ ...prev, [hostId]: 'OAuth not configured on this device' }));
+        setOauthError((prev) => ({ ...prev, [key]: 'OAuth not configured on this device' }));
         return;
       }
       const redirectUri = 'gitnotes://oauth/callback';
       const result = await GitHubOAuthService.initiate({ backendUrl, redirectUri, clientId, hostId });
       if (!result.ok) {
-        setOauthError((prev) => ({ ...prev, [hostId]: result.reason }));
+        setOauthError((prev) => ({ ...prev, [key]: result.reason }));
         return;
       }
       const opened = await GitHubOAuthService.openAuthorizationUrl(result.authorizationUrl);
       if (!opened) {
-        setOauthError((prev) => ({ ...prev, [hostId]: 'Could not open browser' }));
+        setOauthError((prev) => ({ ...prev, [key]: 'Could not open browser' }));
       }
     } catch (err) {
-      setOauthError((prev) => ({ ...prev, [hostId]: err instanceof Error ? err.message : 'Unknown error' }));
+      setOauthError((prev) => ({ ...prev, [key]: err instanceof Error ? err.message : 'Unknown error' }));
     } finally {
-      setOauthLoading((prev) => ({ ...prev, [hostId]: false }));
+      setOauthLoading((prev) => ({ ...prev, [key]: false }));
     }
   }, []);
 
@@ -1057,28 +1058,29 @@ export default function SettingsScreen() {
     }
   }, []);
 
-  const handleConnectGitHubApp = useCallback(async (hostId: string) => {
-    setAppLoading((prev) => ({ ...prev, [hostId]: true }));
-    setAppError((prev) => ({ ...prev, [hostId]: null }));
+  const handleConnectGitHubApp = useCallback(async (hostId: string | null) => {
+    const key = hostId ?? '__fresh__';
+    setAppLoading((prev) => ({ ...prev, [key]: true }));
+    setAppError((prev) => ({ ...prev, [key]: null }));
     try {
       const backendUrl = process.env.EXPO_PUBLIC_GITNOTES_BACKEND_URL;
       if (!backendUrl) {
-        setAppError((prev) => ({ ...prev, [hostId]: 'Backend URL not set on this device' }));
+        setAppError((prev) => ({ ...prev, [key]: 'Backend URL not set on this device' }));
         return;
       }
       const result = await GitHubAppService.buildInstallUrl({ backendUrl, hostId, selectedRepositoryIds: [] });
       if (!result.ok) {
-        setAppError((prev) => ({ ...prev, [hostId]: result.reason }));
+        setAppError((prev) => ({ ...prev, [key]: result.reason }));
         return;
       }
       const opened = await GitHubAppService.openInstallationUrl(result.installationUrl);
       if (!opened) {
-        setAppError((prev) => ({ ...prev, [hostId]: 'Could not open browser' }));
+        setAppError((prev) => ({ ...prev, [key]: 'Could not open browser' }));
       }
     } catch (err) {
-      setAppError((prev) => ({ ...prev, [hostId]: err instanceof Error ? err.message : 'Unknown error' }));
+      setAppError((prev) => ({ ...prev, [key]: err instanceof Error ? err.message : 'Unknown error' }));
     } finally {
-      setAppLoading((prev) => ({ ...prev, [hostId]: false }));
+      setAppLoading((prev) => ({ ...prev, [key]: false }));
     }
   }, []);
 

@@ -316,6 +316,8 @@
     "githubAccount": "GitHub Account",
     "githubAccounts": "GitHub Accounts",
     "connectGithub": "Connect GitHub",
+    "connectWithGitHub": "Connect with GitHub",
+    "installGithubApp": "Install GitHub App",
     "changeToken": "Change Token",
     "replaceActiveToken": "Replace Active Token",
     "addAnotherAccount": "Add another account",

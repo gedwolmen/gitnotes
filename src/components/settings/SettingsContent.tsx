@@ -158,12 +158,12 @@ onRemoveAccount: (id: string, login: string) => void;
   onToggleSSH: (hostId: string) => void;
   hostUseSsh: Record<string, boolean>;
   // GitHub OAuth
-  onConnectOAuth: (hostId: string) => void;
+  onConnectOAuth: (hostId: string | null) => void;
   onDisconnectOAuth: (hostId: string) => void;
   oauthLoading: Record<string, boolean>;
   oauthError: Record<string, string | null>;
   // GitHub App
-  onConnectGitHubApp: (hostId: string) => void;
+  onConnectGitHubApp: (hostId: string | null) => void;
   onDisconnectGitHubApp: (hostId: string) => void;
   appLoading: Record<string, boolean>;
   appError: Record<string, string | null>;
@@ -263,11 +263,9 @@ export function SettingsContent(props: SettingsContentProps) {
     onToggleSSH,
     hostUseSsh,
     onConnectOAuth,
-    onDisconnectOAuth,
     oauthLoading,
     oauthError,
     onConnectGitHubApp,
-    onDisconnectGitHubApp,
     appLoading,
     appError,
   } = props;
@@ -489,18 +487,57 @@ export function SettingsContent(props: SettingsContentProps) {
 
       <Group title={t('accounts.title')}>
         {accountSummaries.length === 0 ? (
-          // No accounts AND no legacy authState: show the unified host picker
-          // entry. This is the new first-run path — any host works.
-          <GroupRow
-            testID="settings.button.connect-host"
-            onPress={() => onAddHost()}
-            leading={<Ionicons name="add-circle-outline" size={20} color={colors.primary} />}
-            trailing={<Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />}
-          >
-            <Text style={[styles.settingLabel, { color: colors.primary }]}>
-              {t('connectHost.connectHost')}
-            </Text>
-          </GroupRow>
+          <>
+            {/* PAT-based Connect Host */}
+            <GroupRow
+              testID="settings.button.connect-host"
+              onPress={() => onAddHost()}
+              leading={<Ionicons name="add-circle-outline" size={20} color={colors.primary} />}
+              trailing={<Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />}
+            >
+              <Text style={[styles.settingLabel, { color: colors.primary }]}>
+                {t('connectHost.connectHost')}
+              </Text>
+            </GroupRow>
+            {/* OAuth-based GitHub connect — fresh install path */}
+            <GroupRow
+              testID="settings.button.connect-github-oauth"
+              onPress={() => onConnectOAuth(null)}
+              leading={<Ionicons name="logo-github" size={20} color={colors.primary} />}
+              trailing={
+                oauthLoading['__fresh__'] ? (
+                  <ActivityIndicator size="small" color={colors.primary} />
+                ) : oauthError['__fresh__'] ? (
+                  <Text style={{ fontSize: type.xs, color: colors.error }}>{oauthError['__fresh__']}</Text>
+                ) : (
+                  <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+                )
+              }
+            >
+              <Text style={[styles.settingLabel, { color: colors.primary }]}>
+                {t('settings.connectWithGitHub')}
+              </Text>
+            </GroupRow>
+            {/* GitHub App install — fresh install path */}
+            <GroupRow
+              testID="settings.button.install-github-app"
+              onPress={() => onConnectGitHubApp(null)}
+              leading={<Ionicons name="cube-outline" size={20} color={colors.primary} />}
+              trailing={
+                appLoading['__fresh__'] ? (
+                  <ActivityIndicator size="small" color={colors.primary} />
+                ) : appError['__fresh__'] ? (
+                  <Text style={{ fontSize: type.xs, color: colors.error }}>{appError['__fresh__']}</Text>
+                ) : (
+                  <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+                )
+              }
+            >
+              <Text style={[styles.settingLabel, { color: colors.primary }]}>
+                {t('settings.installGithubApp')}
+              </Text>
+            </GroupRow>
+          </>
         ) : (
           <>
             {accountSummaries.map((summary) => {
