@@ -115,7 +115,7 @@ src/
 
 Feel free to:
 
-- [Open an issue](https://github.com/gedwolmen/gitnotes/issues/new) for bugs or feature requests
+- [Open an issue](https://github.com/skepjandi/gitnotes/issues/new) for bugs or feature requests
 - Join the discussion on existing issues
 
 ## License

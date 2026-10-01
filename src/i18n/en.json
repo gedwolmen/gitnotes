@@ -299,6 +299,7 @@
     "appearance": "Appearance",
     "updatedUI": "Fancy UI",
     "darkMode": "Dark Mode",
+    "accentColor": "Accent Color",
     "useSystemTheme": "Use System Theme",
     "active": "Active",
     "inactive": "Inactive",
@@ -637,11 +638,16 @@
       "scheduledTitle": "Scheduled Learning",
       "scheduledDescription": "Let AI generate daily or weekly learning notes on your topics. You can also get Questioner notes with questions you answer and get graded — perfect for active recall and spaced repetition."
     },
-    "tokenTitle": "Connect GitHub",
-    "tokenDescription": "Enter a Fine-grained Personal Access Token to link your notes to GitHub repositories. Create one with read/write access to your chosen repositories. You can skip this and add it later in Settings.",
-    "tokenOpenLink": "Open GitHub token settings",
+    "tokenTitle": "Connect a Git Host",
+    "tokenDescription": "Select your provider and enter a Personal Access Token with read/write repository access. You can skip this and add it later in Settings.",
+    "tokenOpenLink": "Open token settings",
     "tokenPaste": "Paste from Clipboard",
     "tokenConnect": "Connect",
+    "provider": {
+      "label": "Provider"
+    },
+    "instanceUrlPlaceholder": "https://gitea.mycompany.com",
+    "tokenPlaceholder": "glpat_xxxxxxxxxxxxxxxxxxxx",
     "aiTitle": "GitNotēs AI",
     "aiDescription": "Chat over your notes, todos, and canvases. AI can read context and apply edits when you allow it.",
     "aiHelper": "You can turn this on or off anytime in Settings → AI.",
@@ -869,6 +875,7 @@
     "settings": {
       "updatedUI": "Soft-UI shadows give a tactile, elevated feel. Toggle off for the classic flat look.",
       "darkMode": "Switch between light and dark appearance. For system settings, use the option below.",
+      "accentColor": "Choose any hex color to personalize your app's accent. Applies across all themes and styles.",
       "useSystemTheme": "Automatically match your device's light or dark mode setting.",
       "language": "Choose your preferred language for the app interface. System default follows your device.",
       "biometricLock": "Require Face ID or Touch ID to unlock the app and protect your notes.",

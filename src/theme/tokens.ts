@@ -163,6 +163,64 @@ export const TEXT_ROLE_LINE_HEIGHT: Record<TextRole, LineHeight> = {
   caption: LINE_HEIGHT.xs,
 } as const;
 
+// Preserves hue, reduces saturation by 18pp, shifts lightness +20pp (light) or -22pp (dark).
+export function deriveAccentMuted(accent: string, isDark: boolean): string {
+  const hex = accent.replace('#', '');
+  if (hex.length !== 6) return accent;
+  const rRaw = parseInt(hex.slice(0, 2), 16);
+  const gRaw = parseInt(hex.slice(2, 4), 16);
+  const bRaw = parseInt(hex.slice(4, 6), 16);
+  if (Number.isNaN(rRaw) || Number.isNaN(gRaw) || Number.isNaN(bRaw)) return accent;
+
+  // Work in 0-1 range for HSL math
+  const r = rRaw / 255;
+  const g = gRaw / 255;
+  const b = bRaw / 255;
+
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  let h = 0;
+  let s = 0;
+
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+      case g: h = ((b - r) / d + 2) / 6; break;
+      case b: h = ((r - g) / d + 4) / 6; break;
+    }
+  }
+
+  const sMuted = Math.max(0, Math.min(1, s - 0.18));
+  const lightnessShift = isDark ? -0.22 : 0.20;
+  const lMuted = Math.max(0, Math.min(1, l + lightnessShift));
+
+  const hue2rgb = (p: number, q: number, t: number): number => {
+    if (t < 0) t += 1;
+    if (t > 1) t -= 1;
+    if (t < 1 / 6) return p + (q - p) * 6 * t;
+    if (t < 1 / 2) return q;
+    if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+    return p;
+  };
+
+  let rM: number, gM: number, bM: number;
+  if (sMuted === 0) {
+    rM = gM = bM = lMuted;
+  } else {
+    const q = lMuted < 0.5 ? lMuted * (1 + sMuted) : lMuted + sMuted - lMuted * sMuted;
+    const p = 2 * lMuted - q;
+    rM = hue2rgb(p, q, h + 1 / 3);
+    gM = hue2rgb(p, q, h);
+    bM = hue2rgb(p, q, h - 1 / 3);
+  }
+
+  const toHex = (v: number): string => Math.round(Math.max(0, Math.min(1, v)) * 255).toString(16).padStart(2, '0');
+  return `#${toHex(rM)}${toHex(gM)}${toHex(bM)}`;
+}
+
 export function resolveColors(style: ThemeStyle, isDark: boolean): Palette {
   if (style === 'flat') return isDark ? FLAT_DARK : FLAT_LIGHT;
   return isDark ? NEUMORPHIC_DARK : NEUMORPHIC_LIGHT;

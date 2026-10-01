@@ -14,9 +14,9 @@ If you discover a security vulnerability, please report it responsibly.
 
 Instead, please:
 
-1. **Private Vulnerability Reporting**: Use GitHub's [private vulnerability reporting](https://github.com/gedwolmen/gitnotes/security/advisories/new) feature to report securely.
+1. **Private Vulnerability Reporting**: Use GitHub's [private vulnerability reporting](https://github.com/skepjandi/gitnotes/security/advisories/new) feature to report securely.
 
-2. **Email**: Alternatively, contact the maintainers directly via the [GitHub security advisories](https://github.com/gedwolmen/gitnotes/security/advisories) page.
+2. **Email**: Alternatively, contact the maintainers directly via the [GitHub security advisories](https://github.com/skepjandi/gitnotes/security/advisories) page.
 
 Please include as much detail as possible:
 

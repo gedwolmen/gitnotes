@@ -117,8 +117,13 @@ onRemoveAccount: (id: string, login: string) => void;
   onClearData: () => void;
   onResetOnboarding: () => void;
   isPro: boolean;
+  isProLoading: boolean;
   proStatusLabel: string;
   onOpenPaywall: () => void;
+  accentColor: string | null;
+  setAccentColor: (color: string | null) => void;
+  /** Opens the HexColorPickerModal (Pro only); free users go to paywall via onOpenPaywall. */
+  onOpenAccentColorPicker: () => void;
   onManageTemplates: () => void;
   onToggleAI: () => void;
   onOpenModelSelector: () => void;
@@ -217,8 +222,13 @@ export function SettingsContent(props: SettingsContentProps) {
     onClearData,
     onResetOnboarding,
     isPro,
+    isProLoading,
     proStatusLabel,
     onOpenPaywall,
+    accentColor,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    setAccentColor,
+    onOpenAccentColorPicker,
     onManageTemplates,
     onToggleAI,
     onOpenModelSelector,
@@ -394,6 +404,22 @@ export function SettingsContent(props: SettingsContentProps) {
           }
         >
           <Text style={[styles.settingLabel, { color: colors.text }]}>{t('settings.useSystemTheme')}</Text>
+        </GroupRow>
+        <GroupRow
+          testID={isProLoading ? undefined : isPro ? 'settings.row.accent-color' : 'settings.row.accent-color-locked'}
+          onPress={isProLoading ? undefined : isPro ? onOpenAccentColorPicker : () => promptProUpgrade(t, onOpenPaywall)}
+          disabled={isProLoading}
+          trailing={
+            isProLoading ? (
+              <ActivityIndicator size="small" color={colors.textSecondary} />
+            ) : isPro ? (
+              <View testID="settings.swatch.accent-color" style={{ width: 24, height: 24, borderRadius: 6, backgroundColor: accentColor ?? colors.accent }} />
+            ) : (
+              <Ionicons name="lock-closed" size={18} color={colors.textSecondary} />
+            )
+          }
+        >
+          <Text style={[styles.settingLabel, { color: colors.text }]}>{t('settings.accentColor', { defaultValue: 'Accent Color' })}</Text>
         </GroupRow>
       </Group>
 
@@ -1215,7 +1241,7 @@ export function SettingsContent(props: SettingsContentProps) {
         </GroupRow>
         <GroupRow
           testID="settings.row.report-issue"
-          onPress={() => Linking.openURL('https://github.com/gedwolmen/gitnotes/issues')}
+          onPress={() => Linking.openURL('https://github.com/skepjandi/gitnotes/issues')}
           trailing={<Ionicons name="open-outline" size={18} color={colors.accent} />}
         >
           <Text style={[styles.settingLabel, { color: colors.primary }]}>{t('settings.reportIssue')}</Text>

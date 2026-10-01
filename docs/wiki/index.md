@@ -1,6 +1,6 @@
 # GitNotēs Wiki
 
-> Project knowledge base for contributors and AI agents. All pages are automatically synced to the [GitHub Wiki](https://github.com/gedwolmen/gitnotes/wiki) on every merge to `main`.
+> Project knowledge base for contributors and AI agents. All pages are automatically synced to the [GitHub Wiki](https://github.com/skepjandi/gitnotes/wiki) on every merge to `main`.
 
 ## Pages
 
@@ -41,6 +41,6 @@ If you are an AI agent modifying code in this repository, read the [Architecture
 
 ## See Also
 
-- [GitHub Wiki](https://github.com/gedwolmen/gitnotes/wiki)
+- [GitHub Wiki](https://github.com/skepjandi/gitnotes/wiki)
 - [CHANGELOG.md](../../CHANGELOG.md)
 - [AGENTS.md](../../AGENTS.md)

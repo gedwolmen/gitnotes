@@ -463,6 +463,7 @@ export default function CanvasEditorContent() {
   const savedTx = useSharedValue(0);
   const savedTy = useSharedValue(0);
   const activeDrawingElement = useSharedValue<CanvasStroke | CanvasShape | null>(null);
+  const isCommittingDrawing = useSharedValue(false);
   const contentBounds = useMemo(() => getCanvasContentBounds(elements), [elements]);
   const shouldAutoFitRef = useRef(true);
   const didAutoFitRef = useRef(!!canvasId);
@@ -540,6 +541,14 @@ export default function CanvasEditorContent() {
       }
     }
   }, [elements]);
+
+  useEffect(() => {
+    if (!isCommittingDrawing.value) return;
+    const active = activeDrawingElement.value;
+    if (!active || !elements.some((element) => element.id === active.id)) return;
+    activeDrawingElement.value = null;
+    isCommittingDrawing.value = false;
+  }, [elements, activeDrawingElement, isCommittingDrawing]);
 
   useEffect(() => {
     return () => {
@@ -849,10 +858,12 @@ export default function CanvasEditorContent() {
   }, [elements]);
 
   const commitActiveDrawing = useCallback((element: CanvasStroke | CanvasShape | null) => {
-    if (element) {
-      setElements((prev) => [...prev, element]);
+    if (!element) {
+      isCommittingDrawing.value = false;
+      return;
     }
-  }, []);
+    setElements((prev) => [...prev, element]);
+  }, [isCommittingDrawing]);
 
   const activeStrokeColor = useDerivedValue(() => {
     const element = activeDrawingElement.value;
@@ -1034,16 +1045,16 @@ export default function CanvasEditorContent() {
           }
 
           const completedElement = activeDrawingElement.value;
-          activeDrawingElement.value = null;
+          isCommittingDrawing.value = true;
           runOnJS(commitActiveDrawing)(completedElement);
         })
         .onFinalize(() => {
           'worklet';
-          if (activeDrawingElement.value !== null && tool !== 'eraser') {
+          if (activeDrawingElement.value !== null && tool !== 'eraser' && !isCommittingDrawing.value) {
             activeDrawingElement.value = null;
           }
         }),
-    [tool, color, size, filled, saveHistory, startTextPlacement, startChartPlacement, startImagePlacement, commitActiveDrawing, activeDrawingElement, eraseElementsAtPoint],
+    [tool, color, size, filled, saveHistory, startTextPlacement, startChartPlacement, startImagePlacement, commitActiveDrawing, activeDrawingElement, isCommittingDrawing, eraseElementsAtPoint],
   );
 
   const addTextElement = useCallback(() => {
