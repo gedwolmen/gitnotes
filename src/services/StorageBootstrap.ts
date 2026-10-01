@@ -14,6 +14,7 @@ const STARTUP_KEYS = [
   '@gitnotes:theme',
   '@gitnotes:glossy',
   '@gitnotes:style',
+  '@gitnotes:accent',
   '@gitnotes:viewMode',
   '@gitnotes:auth_token',
   '@gitnotes:auth_user',
