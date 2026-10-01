@@ -506,6 +506,14 @@ Key integration points:
 
 ---
 
+## License
+
+The Git implementation (`rust/`, `modules/GitEngine/`, and `src/services/git/`) is licensed under **MPL-2.0**. This covers the Rust native module, UniFFI-generated Swift/Kotlin bindings, the Expo module wrapper, and the TypeScript Git service/facade layer. Build artifacts (compiled staticlibs, `.so` binaries, generated bindings under `generated/`) are products of this license and are similarly scoped.
+
+The root application remains governed by the repository's root `LICENSE`; this section defines the Git implementation boundary and its component-level MPL-2.0 declarations without changing unrelated application files.
+
+---
+
 ## See Also
 
 - [Sync Architecture](./sync-architecture.md) — How GitEngine fits into sync
