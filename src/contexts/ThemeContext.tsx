@@ -6,6 +6,7 @@ import {
   Palette,
   ThemeStyle,
   resolveColors,
+  deriveAccentMuted,
   RADII,
   SPACING,
   TYPE,
@@ -26,6 +27,8 @@ interface ThemeContextType {
   style: ThemeStyle;
   setTheme: (theme: ThemeMode) => void;
   setStyle: (style: ThemeStyle) => void;
+  accentColor: string | null;
+  setAccentColor: (color: string | null) => void;
   colors: Palette;
   tokens: Tokens;
 }
@@ -34,9 +37,16 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 const THEME_STORAGE_KEY = '@gitnotes:theme';
 const STYLE_STORAGE_KEY = '@gitnotes:style';
+const ACCENT_STORAGE_KEY = '@gitnotes:accent';
 
 interface ThemeProviderProps {
   children: ReactNode;
+}
+
+const STRICT_HEX = /^#[0-9A-Fa-f]{6}$/;
+
+function isValidHex(hex: string): boolean {
+  return STRICT_HEX.test(hex);
 }
 
 function readBootTheme(): ThemeMode {
@@ -48,23 +58,19 @@ function readBootTheme(): ThemeMode {
 function readBootStyle(): ThemeStyle {
   const v = getBootValue('@gitnotes:style');
   if (v === 'neumorphic' || v === 'flat') return v;
-  // Fancy UI (neumorphic) is pro-gated — default fresh installs to flat.
   return 'flat';
 }
 
+function readBootAccent(): string | null {
+  const v = getBootValue('@gitnotes:accent');
+  if (typeof v === 'string' && isValidHex(v)) return v.toLowerCase();
+  return null;
+}
+
 export function ThemeProvider({ children }: ThemeProviderProps) {
-  // Lazy-init from the storage bootstrap cache so the very first paint
-  // uses the persisted theme. Without this, the initial render uses the
-  // 'system' default and `useColorScheme()` may return null on cold
-  // start, leaving the first frame in light mode. Surfaces with cached
-  // subtree state (custom TabBar, NavigationContainer chrome) end up
-  // briefly mismatched with the rest of the app.
-  //
-  // Falls back to AsyncStorage in loadPersisted for the rare case where
-  // the bootstrap cache is missing the key (e.g. tests mounting
-  // ThemeProvider without calling bootstrapStorage first).
   const [theme, setThemeState] = useState<ThemeMode>(readBootTheme);
   const [style, setStyleState] = useState<ThemeStyle>(readBootStyle);
+  const [accentColor, setAccentColorState] = useState<string | null>(readBootAccent);
   const systemColorScheme = useColorScheme();
 
   const loadPersisted = useCallback(async () => {
@@ -79,6 +85,12 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
         const savedStyle = await AsyncStorage.getItem(STYLE_STORAGE_KEY);
         if (savedStyle === 'neumorphic' || savedStyle === 'flat') {
           setStyleState(savedStyle);
+        }
+      }
+      if (getBootValue('@gitnotes:accent') === undefined) {
+        const savedAccent = await AsyncStorage.getItem(ACCENT_STORAGE_KEY);
+        if (typeof savedAccent === 'string' && isValidHex(savedAccent)) {
+          setAccentColorState(savedAccent.toLowerCase());
         }
       }
     } catch (error) {
@@ -115,7 +127,32 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     }
   }, []);
 
-  const colors = useMemo(() => resolveColors(style, isDark), [style, isDark]);
+  const setAccentColor = useCallback(async (color: string | null) => {
+    if (color !== null && !isValidHex(color)) return;
+    const normalized = color?.toLowerCase() ?? null;
+    try {
+      setAccentColorState(normalized);
+      if (normalized === null) {
+        await AsyncStorage.removeItem(ACCENT_STORAGE_KEY);
+      } else {
+        await AsyncStorage.setItem(ACCENT_STORAGE_KEY, normalized);
+      }
+    } catch (error) {
+      console.error('Error saving accent color:', error);
+    }
+  }, []);
+
+  const baseColors = useMemo(() => resolveColors(style, isDark), [style, isDark]);
+
+  const colors = useMemo<Palette>(() => {
+    if (accentColor === null) return baseColors;
+    return {
+      ...baseColors,
+      accent: accentColor,
+      primary: accentColor,
+      accentMuted: deriveAccentMuted(accentColor, isDark),
+    };
+  }, [baseColors, accentColor, isDark]);
 
   const tokens: Tokens = useMemo(
     () => ({ colors, radii: RADII, spacing: SPACING, type: TYPE }),
@@ -123,8 +160,8 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   );
 
   const value: ThemeContextType = useMemo(
-    () => ({ theme, isDark, style, setTheme, setStyle, colors, tokens }),
-    [theme, isDark, style, setTheme, setStyle, colors, tokens],
+    () => ({ theme, isDark, style, setTheme, setStyle, accentColor, setAccentColor, colors, tokens }),
+    [theme, isDark, style, setTheme, setStyle, accentColor, setAccentColor, colors, tokens],
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
@@ -159,8 +196,10 @@ export const SAFE_DEFAULT_THEME: ThemeContextType = {
   theme: 'system',
   isDark: false,
   style: 'flat',
-  setTheme: () => {},
-  setStyle: () => {},
+  setTheme: (() => { /* noop */ }) as () => void,
+  setStyle: (() => { /* noop */ }) as () => void,
+  accentColor: null,
+  setAccentColor: (() => { /* noop */ }) as (color: string | null) => void,
   colors: SAFE_DEFAULT_TOKENS.colors,
   tokens: SAFE_DEFAULT_TOKENS,
 };
