@@ -39,7 +39,12 @@ export default function AppCallbackScreen() {
   const [result, setResult] = useState<AppCallbackResult | null>(null);
 
   useEffect(() => {
-    const { installation_id, state } = route.params ?? {};
+    const { installation_id, state, error, error_description } = route.params ?? {};
+
+    if (error) {
+      setResult({ outcome: 'denied', code: error, message: error_description });
+      return;
+    }
 
     if (!installation_id || !state) {
       setResult({ outcome: 'malformed' });
