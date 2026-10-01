@@ -448,3 +448,128 @@ describe('ThemeContext neo-brutalist style persistence', () => {
     expect(result.current.colors).toEqual(NEUTRAL_BRUTALIST_LIGHT);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Unknown/invalid persisted-style fallback to Basic (flat)
+// ---------------------------------------------------------------------------
+describe('ThemeContext invalid persisted style fallback', () => {
+  beforeEach(async () => {
+    await prepStorage({});
+  });
+
+  afterEach(() => {
+    clearBootCache();
+  });
+
+  it('unknown style string in AsyncStorage falls back to flat', async () => {
+    const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+    await AsyncStorage.setItem('@gitnotes:style', 'not-a-real-style');
+    clearBootCache();
+    await bootstrapStorage();
+
+    const { result } = renderHook(() => useTheme(), {
+      wrapper: ({ children }) => <ThemeProvider>{children}</ThemeProvider>,
+    });
+    await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+    expect(result.current.style).toBe('flat');
+    expect(result.current.colors).toEqual(FLAT_LIGHT);
+  });
+
+  it('null style in AsyncStorage falls back to flat', async () => {
+    const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+    await AsyncStorage.setItem('@gitnotes:style', 'null');
+    clearBootCache();
+    await bootstrapStorage();
+
+    const { result } = renderHook(() => useTheme(), {
+      wrapper: ({ children }) => <ThemeProvider>{children}</ThemeProvider>,
+    });
+    await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+    expect(result.current.style).toBe('flat');
+  });
+
+  it('empty string style in AsyncStorage falls back to flat', async () => {
+    const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+    await AsyncStorage.setItem('@gitnotes:style', '');
+    clearBootCache();
+    await bootstrapStorage();
+
+    const { result } = renderHook(() => useTheme(), {
+      wrapper: ({ children }) => <ThemeProvider>{children}</ThemeProvider>,
+    });
+    await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+    expect(result.current.style).toBe('flat');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Provider remount / restart hydration — neo-brutalist survives unmount
+// ---------------------------------------------------------------------------
+describe('ThemeContext remount hydration', () => {
+  beforeEach(async () => {
+    await prepStorage({});
+  });
+
+  afterEach(() => {
+    clearBootCache();
+  });
+
+  it('neo-brutalist style survives ThemeProvider unmount/remount cycle', async () => {
+    const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+    await AsyncStorage.setItem('@gitnotes:style', 'neo-brutalist');
+    clearBootCache();
+    await bootstrapStorage();
+
+    // First mount
+    const { result, unmount } = renderHook(() => useTheme(), {
+      wrapper: ({ children }) => <ThemeProvider>{children}</ThemeProvider>,
+    });
+    await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+    expect(result.current.style).toBe('neo-brutalist');
+    expect(result.current.colors).toEqual(NEUTRAL_BRUTALIST_LIGHT);
+
+    // Unmount
+    unmount();
+
+    // Re-mount (simulates app restart)
+    clearBootCache();
+    await bootstrapStorage();
+
+    const { result: result2 } = renderHook(() => useTheme(), {
+      wrapper: ({ children }) => <ThemeProvider>{children}</ThemeProvider>,
+    });
+    await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+    expect(result2.current.style).toBe('neo-brutalist');
+    expect(result2.current.colors).toEqual(NEUTRAL_BRUTALIST_LIGHT);
+  });
+
+  it('neo-brutalist dark mode style survives ThemeProvider remount', async () => {
+    const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+    await AsyncStorage.setItem('@gitnotes:style', 'neo-brutalist');
+    await AsyncStorage.setItem('@gitnotes:theme', 'dark');
+    clearBootCache();
+    await bootstrapStorage();
+
+    // First mount
+    const { result, unmount } = renderHook(() => useTheme(), {
+      wrapper: ({ children }) => <ThemeProvider>{children}</ThemeProvider>,
+    });
+    await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+    expect(result.current.style).toBe('neo-brutalist');
+    expect(result.current.isDark).toBe(true);
+    expect(result.current.colors).toEqual(NEUTRAL_BRUTALIST_DARK);
+
+    // Unmount and remount
+    unmount();
+    clearBootCache();
+    await bootstrapStorage();
+
+    const { result: result2 } = renderHook(() => useTheme(), {
+      wrapper: ({ children }) => <ThemeProvider>{children}</ThemeProvider>,
+    });
+    await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+    expect(result2.current.style).toBe('neo-brutalist');
+    expect(result2.current.isDark).toBe(true);
+    expect(result2.current.colors).toEqual(NEUTRAL_BRUTALIST_DARK);
+  });
+});
