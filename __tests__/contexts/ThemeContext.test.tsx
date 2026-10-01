@@ -29,7 +29,11 @@ import { bootstrapStorage, clearBootCache } from '../../src/services/StorageBoot
 import { ThemeProvider, useTheme } from '../../src/contexts/ThemeContext';
 import {
   FLAT_LIGHT,
+  FLAT_DARK,
   NEUMORPHIC_LIGHT,
+  NEUMORPHIC_DARK,
+  NEUTRAL_BRUTALIST_LIGHT,
+  NEUTRAL_BRUTALIST_DARK,
   resolveColors,
   deriveAccentMuted,
   type Palette,
@@ -39,17 +43,23 @@ import {
 // ---------------------------------------------------------------------------
 // Boot cache helpers
 // ---------------------------------------------------------------------------
+const ALL_STORAGE_KEYS = [
+  '@gitnotes:theme',
+  '@gitnotes:style',
+  '@gitnotes:accent',
+];
+
 async function prepStorage(overrides: Record<string, string | null> = {}) {
-  await bootstrapStorage();
+  clearBootCache();
   const AsyncStorage = require('@react-native-async-storage/async-storage').default;
-  for (const [k, v] of Object.entries(overrides)) {
+  for (const k of ALL_STORAGE_KEYS) {
+    const v = overrides[k] ?? null;
     if (v === null) {
       await AsyncStorage.removeItem(k);
     } else {
       await AsyncStorage.setItem(k, v);
     }
   }
-  clearBootCache();
   await bootstrapStorage();
 }
 
@@ -121,7 +131,9 @@ describe('deriveAccentMuted', () => {
 describe('resolveColors baseline (no custom accent)', () => {
   const cases: Array<{ style: ThemeStyle; isDark: boolean; expected: Palette }> = [
     { style: 'flat', isDark: false, expected: FLAT_LIGHT },
+    { style: 'flat', isDark: true, expected: FLAT_DARK },
     { style: 'neumorphic', isDark: false, expected: NEUMORPHIC_LIGHT },
+    { style: 'neumorphic', isDark: true, expected: NEUMORPHIC_DARK },
   ];
 
   for (const { style, isDark, expected } of cases) {
@@ -130,6 +142,60 @@ describe('resolveColors baseline (no custom accent)', () => {
       expect(colors).toEqual(expected);
     });
   }
+});
+
+// ---------------------------------------------------------------------------
+// resolveColors defensive fallback — invalid runtime cast resolves to flat
+// ---------------------------------------------------------------------------
+describe('resolveColors defensive fallback for invalid runtime value', () => {
+  it('returns FLAT_LIGHT for an invalid style string cast to ThemeStyle', () => {
+    const invalidStyle = 'not-a-style' as ThemeStyle;
+    const colors = resolveColors(invalidStyle, false);
+    expect(colors).toEqual(FLAT_LIGHT);
+  });
+
+  it('returns FLAT_DARK for an invalid style string cast to ThemeStyle in dark mode', () => {
+    const invalidStyle = 'unknown' as ThemeStyle;
+    const colors = resolveColors(invalidStyle, true);
+    expect(colors).toEqual(FLAT_DARK);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Neo-Brutalist palette resolution
+// ---------------------------------------------------------------------------
+describe('resolveColors neo-brutalist', () => {
+  const PALETTE_KEYS: Array<keyof Palette> = [
+    'bg', 'surface', 'highlight', 'shadow', 'text', 'textSecondary',
+    'accent', 'accentMuted', 'error', 'success', 'warning',
+    'background', 'surfaceSecondary', 'primary', 'border', 'card', 'elevated',
+  ];
+
+  it('returns neo-brutalist-light palette with all 17 required keys', () => {
+    const colors = resolveColors('neo-brutalist', false);
+    for (const key of PALETTE_KEYS) {
+      expect(colors).toHaveProperty(key);
+      expect(typeof colors[key]).toBe('string');
+      expect(colors[key]).toMatch(/^#[0-9A-Fa-f]{6}$/);
+    }
+  });
+
+  it('returns neo-brutalist-dark palette with all 17 required keys', () => {
+    const colors = resolveColors('neo-brutalist', true);
+    for (const key of PALETTE_KEYS) {
+      expect(colors).toHaveProperty(key);
+      expect(typeof colors[key]).toBe('string');
+      expect(colors[key]).toMatch(/^#[0-9A-Fa-f]{6}$/);
+    }
+  });
+
+  it('neo-brutalist-light palette matches NEUTRAL_BRUTALIST_LIGHT', () => {
+    expect(resolveColors('neo-brutalist', false)).toEqual(NEUTRAL_BRUTALIST_LIGHT);
+  });
+
+  it('neo-brutalist-dark palette matches NEUTRAL_BRUTALIST_DARK', () => {
+    expect(resolveColors('neo-brutalist', true)).toEqual(NEUTRAL_BRUTALIST_DARK);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -307,5 +373,78 @@ describe('ThemeContext accent color', () => {
       return (Math.max(r, g, b) + Math.min(r, g, b)) / 2;
     };
     expect(toLightness(mutedDark)).toBeLessThan(toLightness(mutedLight));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Neo-Brutalist style persistence
+// ---------------------------------------------------------------------------
+describe('ThemeContext neo-brutalist style persistence', () => {
+  beforeEach(async () => {
+    await prepStorage({});
+  });
+
+  afterEach(() => {
+    clearBootCache();
+  });
+
+  it('readBootStyle accepts neo-brutalist from storage', async () => {
+    await prepStorage({ '@gitnotes:style': 'neo-brutalist' });
+    const { result } = renderHook(() => useTheme(), {
+      wrapper: ({ children }) => <ThemeProvider>{children}</ThemeProvider>,
+    });
+    await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+    expect(result.current.style).toBe('neo-brutalist');
+  });
+
+  it('loadPersisted accepts neo-brutalist from AsyncStorage', async () => {
+    const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+    await AsyncStorage.setItem('@gitnotes:style', 'neo-brutalist');
+    clearBootCache();
+    await bootstrapStorage();
+
+    const { result } = renderHook(() => useTheme(), {
+      wrapper: ({ children }) => <ThemeProvider>{children}</ThemeProvider>,
+    });
+    await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+    expect(result.current.style).toBe('neo-brutalist');
+  });
+
+  it('setStyle("neo-brutalist") persists to AsyncStorage', async () => {
+    const { result } = renderHook(() => useTheme(), {
+      wrapper: ({ children }) => <ThemeProvider>{children}</ThemeProvider>,
+    });
+    await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+
+    await act(async () => {
+      result.current.setStyle('neo-brutalist');
+    });
+
+    const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+    const stored = await AsyncStorage.getItem('@gitnotes:style');
+    expect(stored).toBe('neo-brutalist');
+    expect(result.current.style).toBe('neo-brutalist');
+  });
+
+  it('neo-brutalist style returns neo-brutalist-light colors in system=light mode', async () => {
+    await prepStorage({ '@gitnotes:style': 'neo-brutalist' });
+    const { result } = renderHook(() => useTheme(), {
+      wrapper: ({ children }) => <ThemeProvider>{children}</ThemeProvider>,
+    });
+    await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+    expect(result.current.colors).toEqual(NEUTRAL_BRUTALIST_LIGHT);
+  });
+
+  it('setStyle("neo-brutalist") applies neo-brutalist palette immediately', async () => {
+    const { result } = renderHook(() => useTheme(), {
+      wrapper: ({ children }) => <ThemeProvider>{children}</ThemeProvider>,
+    });
+    await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+
+    await act(async () => {
+      result.current.setStyle('neo-brutalist');
+    });
+
+    expect(result.current.colors).toEqual(NEUTRAL_BRUTALIST_LIGHT);
   });
 });

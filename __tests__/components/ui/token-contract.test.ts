@@ -3,6 +3,8 @@ import {
   FLAT_DARK,
   NEUMORPHIC_LIGHT,
   NEUMORPHIC_DARK,
+  NEUTRAL_BRUTALIST_LIGHT,
+  NEUTRAL_BRUTALIST_DARK,
   type Palette,
 } from '../../../src/theme/tokens';
 
@@ -49,6 +51,8 @@ const PALETTE_FIXTURES: PaletteFixture[] = [
   { label: 'flat-dark', palette: FLAT_DARK },
   { label: 'neumorphic-light', palette: NEUMORPHIC_LIGHT },
   { label: 'neumorphic-dark', palette: NEUMORPHIC_DARK },
+  { label: 'neo-brutalist-light', palette: NEUTRAL_BRUTALIST_LIGHT },
+  { label: 'neo-brutalist-dark', palette: NEUTRAL_BRUTALIST_DARK },
 ];
 
 describe('Palette contrast — text on background', () => {

@@ -57,7 +57,7 @@ function readBootTheme(): ThemeMode {
 
 function readBootStyle(): ThemeStyle {
   const v = getBootValue('@gitnotes:style');
-  if (v === 'neumorphic' || v === 'flat') return v;
+  if (v === 'neumorphic' || v === 'flat' || v === 'neo-brutalist') return v;
   return 'flat';
 }
 
@@ -83,7 +83,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
       }
       if (getBootValue('@gitnotes:style') === undefined) {
         const savedStyle = await AsyncStorage.getItem(STYLE_STORAGE_KEY);
-        if (savedStyle === 'neumorphic' || savedStyle === 'flat') {
+        if (savedStyle === 'neumorphic' || savedStyle === 'flat' || savedStyle === 'neo-brutalist') {
           setStyleState(savedStyle);
         }
       }

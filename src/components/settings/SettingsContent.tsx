@@ -70,7 +70,7 @@ type SettingsContentProps = {
   headerHeight: number;
   tabBarHeight: number;
   theme: 'light' | 'dark' | 'system';
-  uiStyle: 'flat' | 'neumorphic';
+  uiStyle: 'flat' | 'neumorphic' | 'neo-brutalist';
   accounts: Account[];
   activeAccountId: string | null;
   authState: AuthState;
@@ -85,7 +85,7 @@ type SettingsContentProps = {
   chatStorageLabel: string;
   providers: AIProviderConfig[];
   setTheme: (theme: 'light' | 'dark' | 'system') => void;
-  setStyle: (style: 'flat' | 'neumorphic') => void;
+  setStyle: (style: 'flat' | 'neumorphic' | 'neo-brutalist') => void;
   onOpenConnectToken: () => void;
   onOpenAddAccount: () => void;
   onSwitchAccount: (id: string) => void | Promise<void>;
