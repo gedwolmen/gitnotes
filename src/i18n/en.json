@@ -559,6 +559,11 @@
       "invalidTokenBody": "The token was rejected. It may be invalid, expired, or revoked — or lack the required repository permissions. Check the token in your provider's settings and update or regenerate it if needed.",
       "networkTitle": "Connection failed",
       "networkBody": "Could not reach the host. Check your network and try again."
+    },
+    "alternatives": {
+      "or": "or",
+      "githubOAuth": "Continue with GitHub OAuth",
+      "githubApp": "Continue with GitHub App"
     }
   },
   "ai": {

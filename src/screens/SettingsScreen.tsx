@@ -1328,6 +1328,12 @@ export default function SettingsScreen() {
         onClose={() => { setShowConnectHostModal(false); setConnectHostPreset(undefined); }}
         presetProvider={connectHostPreset}
         colors={colors}
+        onConnectOAuth={handleConnectOAuth}
+        onConnectGitHubApp={handleConnectGitHubApp}
+        oauthLoading={oauthLoading}
+        oauthError={oauthError}
+        appLoading={appLoading}
+        appError={appError}
       />
       <HexColorPickerModal
         visible={showAccentColorPicker}
