@@ -37,6 +37,8 @@ cp .env.example .env
 
 Key variables:
 - `EXPO_PUBLIC_REVENUECAT_API_KEY_IOS` / `EXPO_PUBLIC_REVENUECAT_API_KEY_ANDROID` — RevenueCat SDK keys (required for Pro paywall)
+- `EXPO_PUBLIC_GITNOTES_BACKEND_URL` — Worker API base URL (default: `https://api.gitnotes.org/api/v1`; local override supported)
+- `EXPO_PUBLIC_GITHUB_OAUTH_CLIENT_ID` — GitHub OAuth app client ID (public, non-secret)
 - `GITHUB_TEST_TOKEN` — PAT for E2E test suite (optional)
 - `EXPO_PUBLIC_FORCE_ENABLE_PRO_ON_SIMULATOR=false` — show paywalls even on iOS simulator in dev
 
