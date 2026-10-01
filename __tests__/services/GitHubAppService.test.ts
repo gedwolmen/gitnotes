@@ -1,0 +1,342 @@
+/**
+ * Tests for GitHubAppService.
+ *
+ * Covered scenarios:
+ * - buildInstallUrl(): backend unreachable (503) → { ok: false, reason: 'not_configured' }
+ * - buildInstallUrl(): stores pending flow with selectedRepositoryIds, backendUrl, hostId
+ * - buildInstallUrl(): registers pending flow before returning installationUrl
+ * - openInstallationUrl(): calls WebBrowser.openBrowserAsync
+ * - parseCallbackUrl(): callback URL with installation_id+state → { installationId, state }
+ * - parseCallbackUrl(): denied URL → 'denied'
+ * - parseCallbackUrl(): duplicate URL → 'duplicate'
+ * - parseCallbackUrl(): unrecognized URL → null
+ * - handleCallback(): owner_not_allowed (403) → { outcome: 'owner_not_allowed' }
+ * - handleCallback(): backend_unreachable (503) → { outcome: 'backend_error' }
+ * - handleCallback(): network error → { outcome: 'backend_error' }
+ * - pendingAppFlows: entries are consumed and deleted after handleCallback
+ */
+
+import { jest, describe, it, expect } from '@jest/globals';
+
+const TEST_BACKEND = 'https://gitnotes-backend.example.com';
+const TEST_HOST_ID = 'github:user@example.com';
+const TEST_INSTALLATION_URL = 'https://github.com/apps/test-app/installations/new?state=test-state';
+
+/** Loads GitHubAppService fresh each time with mocks in place. */
+const loadService = async () => {
+  const mockPost = jest.fn<() => Promise<unknown>>();
+  const mockSetGitHubAppCredential = jest.fn<() => Promise<void>>();
+  const pendingMap = new Map<string, {
+    selectedRepositoryIds: string[];
+    selectedRepositories: string[];
+    backendUrl: string;
+    hostId: string;
+  }>();
+
+  jest.doMock('expo-web-browser', () => ({
+    openBrowserAsync: jest.fn<() => Promise<{ type: string }>>(),
+  }));
+
+  jest.doMock('axios', () => ({
+    default: {
+      create: () => ({
+        post: mockPost,
+        interceptors: { request: { use: jest.fn() }, response: { use: jest.fn() } },
+      }),
+    },
+  }));
+
+  jest.doMock('@/services/AccountStorage', () => ({
+    AccountStorage: { setGitHubAppCredential: mockSetGitHubAppCredential },
+  }));
+
+  jest.doMock('@/services/git/contracts', () => ({
+    validateGitHubAppCredential: () => ({ valid: true }),
+    isInstallationTokenExpired: () => false,
+    isGrantExpired: () => false,
+    hasEmptyRepositorySelection: () => false,
+  }));
+
+  // Re-require clears the module cache and returns fresh module with mocks active.
+  // Using Function to bypass TS import analysis.
+  const mod = await new Promise<typeof import('../../src/services/GitHubAppService')>((resolve) => {
+    jest.isolateModules(() => {
+      const m = require('../../src/services/GitHubAppService');
+      resolve(m);
+    });
+  });
+
+  return { mod, mockPost, mockSetGitHubAppCredential, pendingMap };
+};
+
+describe('GitHubAppService', () => {
+  describe('buildInstallUrl()', () => {
+    it('returns not_configured when backend responds with 503', async () => {
+      const { mod, mockPost } = await loadService();
+      mockPost.mockRejectedValueOnce({ response: { status: 503 } });
+
+      const result = await mod.GitHubAppService.buildInstallUrl({
+        backendUrl: TEST_BACKEND,
+        hostId: TEST_HOST_ID,
+        selectedRepositoryIds: ['1', '2'],
+      });
+
+      expect(result.ok).toBe(false);
+      expect(result.reason).toBe('not_configured');
+    });
+
+    it('stores pending flow with selectedRepositoryIds and hostId after successful call', async () => {
+      const { mod, mockPost } = await loadService();
+      const fakeState = 'app-install-state-12345';
+      mockPost.mockResolvedValueOnce({
+        data: { installation_url: TEST_INSTALLATION_URL, state: fakeState },
+      });
+
+      const repoIds = ['1', '2', '3'];
+      const result = await mod.GitHubAppService.buildInstallUrl({
+        backendUrl: TEST_BACKEND,
+        hostId: TEST_HOST_ID,
+        selectedRepositoryIds: repoIds,
+      });
+
+      expect(result.ok).toBe(true);
+      expect(result.state).toBe(fakeState);
+
+      const pending = mod.pendingAppFlows.get(fakeState);
+      expect(pending).toBeDefined();
+      expect(pending!.selectedRepositoryIds).toEqual(repoIds);
+      expect(pending!.backendUrl).toBe(TEST_BACKEND);
+      expect(pending!.hostId).toBe(TEST_HOST_ID);
+    });
+
+    it('registers pending flow before returning installationUrl on success', async () => {
+      const { mod, mockPost } = await loadService();
+      const fakeState = 'app-install-state-67890';
+      mockPost.mockResolvedValueOnce({
+        data: { installation_url: TEST_INSTALLATION_URL, state: fakeState },
+      });
+
+      const result = await mod.GitHubAppService.buildInstallUrl({
+        backendUrl: TEST_BACKEND,
+        hostId: TEST_HOST_ID,
+        selectedRepositoryIds: ['1'],
+      });
+
+      expect(result.ok).toBe(true);
+      expect(result.installationUrl).toBe(TEST_INSTALLATION_URL);
+      expect(mod.pendingAppFlows.has(fakeState)).toBe(true);
+    });
+  });
+
+  describe('openInstallationUrl()', () => {
+    it('opens the installation URL in the system browser', async () => {
+      const { mod } = await loadService();
+      const mockOpen = mod.WebBrowser.openBrowserAsync as jest.Mock;
+      mockOpen.mockResolvedValueOnce({ type: 'opened' });
+
+      const result = await mod.GitHubAppService.openInstallationUrl(TEST_INSTALLATION_URL);
+
+      expect(result).toBe(true);
+      expect(mockOpen).toHaveBeenCalledWith(TEST_INSTALLATION_URL);
+    });
+
+    it('returns false when browser fails to open', async () => {
+      const { mod } = await loadService();
+      const mockOpen = mod.WebBrowser.openBrowserAsync as jest.Mock;
+      mockOpen.mockRejectedValueOnce(new Error('Browser not available'));
+
+      const result = await mod.GitHubAppService.openInstallationUrl(TEST_INSTALLATION_URL);
+
+      expect(result).toBe(false);
+    });
+  });
+
+  describe('parseCallbackUrl()', () => {
+    it('parses callback URL with installation_id and state', async () => {
+      const { mod } = await loadService();
+      const result = mod.GitHubAppService.parseCallbackUrl(
+        'gitnotes://app/callback?installation_id=12345&state=abc123'
+      );
+      expect(result).toEqual({ installationId: '12345', state: 'abc123' });
+    });
+
+    it('returns denied when URL path is /app/denied (ignores any query params)', async () => {
+      const { mod } = await loadService();
+      const result = mod.GitHubAppService.parseCallbackUrl(
+        'gitnotes://app/denied?installation_id=12345&state=abc123'
+      );
+      expect(result).toBe('denied');
+    });
+
+    it('returns duplicate when URL path is /app/duplicate (ignores any query params)', async () => {
+      const { mod } = await loadService();
+      const result = mod.GitHubAppService.parseCallbackUrl(
+        'gitnotes://app/duplicate?installation_id=12345&state=abc123'
+      );
+      expect(result).toBe('duplicate');
+    });
+
+    it('returns null for unrecognized URL patterns', async () => {
+      const { mod } = await loadService();
+      const result = mod.GitHubAppService.parseCallbackUrl('gitnotes://app/unknown');
+      expect(result).toBeNull();
+    });
+
+    it('returns null for callback URL missing installation_id', async () => {
+      const { mod } = await loadService();
+      const result = mod.GitHubAppService.parseCallbackUrl(
+        'gitnotes://app/callback?state=abc123'
+      );
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('handleCallback()', () => {
+    it('returns malformed when no pending flow exists for the state', async () => {
+      const { mod } = await loadService();
+      const result = await mod.GitHubAppService.handleCallback({
+        installationId: '12345',
+        state: 'nonexistent',
+      });
+      expect(result.outcome).toBe('malformed');
+    });
+
+    it('consumes and removes pending flow after handleCallback', async () => {
+      const { mod, mockPost } = await loadService();
+      const fakeState = 'callback-state-remove';
+      mod.pendingAppFlows.set(fakeState, {
+        selectedRepositoryIds: ['1'],
+        selectedRepositories: ['owner/repo'],
+        backendUrl: TEST_BACKEND,
+        hostId: TEST_HOST_ID,
+      });
+      mockPost.mockRejectedValueOnce(new Error('network error'));
+
+      await mod.GitHubAppService.handleCallback({ installationId: '12345', state: fakeState });
+
+      expect(mod.pendingAppFlows.has(fakeState)).toBe(false);
+    });
+
+    it('returns owner_not_allowed when backend responds with 403', async () => {
+      const { mod, mockPost } = await loadService();
+      const fakeState = 'callback-state-403';
+      mod.pendingAppFlows.set(fakeState, {
+        selectedRepositoryIds: ['1'],
+        selectedRepositories: ['owner/repo'],
+        backendUrl: TEST_BACKEND,
+        hostId: TEST_HOST_ID,
+      });
+      mockPost.mockRejectedValueOnce({
+        response: { status: 403, data: { message: 'Owner not allowed' } },
+      });
+
+      const result = await mod.GitHubAppService.handleCallback({
+        installationId: '12345',
+        state: fakeState,
+      });
+
+      expect(result.outcome).toBe('owner_not_allowed');
+    });
+
+    it('returns backend_error when backend responds with 503', async () => {
+      const { mod, mockPost } = await loadService();
+      const fakeState = 'callback-state-503';
+      mod.pendingAppFlows.set(fakeState, {
+        selectedRepositoryIds: ['1'],
+        selectedRepositories: ['owner/repo'],
+        backendUrl: TEST_BACKEND,
+        hostId: TEST_HOST_ID,
+      });
+      mockPost.mockRejectedValueOnce({ response: { status: 503 } });
+
+      const result = await mod.GitHubAppService.handleCallback({
+        installationId: '12345',
+        state: fakeState,
+      });
+
+      expect(result.outcome).toBe('backend_error');
+    });
+
+    it('returns backend_error on network error', async () => {
+      const { mod, mockPost } = await loadService();
+      const fakeState = 'callback-state-neterror';
+      mod.pendingAppFlows.set(fakeState, {
+        selectedRepositoryIds: ['1'],
+        selectedRepositories: ['owner/repo'],
+        backendUrl: TEST_BACKEND,
+        hostId: TEST_HOST_ID,
+      });
+      mockPost.mockRejectedValueOnce(new Error('ENOTFOUND'));
+
+      const result = await mod.GitHubAppService.handleCallback({
+        installationId: '12345',
+        state: fakeState,
+      });
+
+      expect(result.outcome).toBe('backend_error');
+    });
+
+    it('stores credential and removes pending flow on successful callback', async () => {
+      const { mod, mockPost, mockSetGitHubAppCredential } = await loadService();
+      const fakeState = 'callback-state-success';
+      mod.pendingAppFlows.set(fakeState, {
+        selectedRepositoryIds: ['1', '2'],
+        selectedRepositories: ['owner/repo1', 'owner/repo2'],
+        backendUrl: TEST_BACKEND,
+        hostId: TEST_HOST_ID,
+      });
+      mockPost.mockResolvedValueOnce({
+        data: {
+          installation_id: 99999,
+          app_id: 123456,
+          app_slug: 'test-app',
+          account_login: 'testuser',
+          account_id: 789,
+          token: 'installation-token-abc',
+          expires_at: Math.floor(Date.now() / 1000) + 3600,
+          renewal_grant_token: 'grant-token-xyz',
+          renewal_grant_expires_at: Math.floor(Date.now() / 1000) + 86400,
+        },
+      });
+
+      const result = await mod.GitHubAppService.handleCallback({
+        installationId: '99999',
+        state: fakeState,
+      });
+
+      expect(result.outcome).toBe('success');
+      expect(result).toHaveProperty('credential');
+      expect(mod.pendingAppFlows.has(fakeState)).toBe(false);
+      expect(mockSetGitHubAppCredential).toHaveBeenCalledTimes(1);
+      const stored = mockSetGitHubAppCredential.mock.calls[0];
+      expect(stored[0]).toBe(TEST_HOST_ID);
+      expect(stored[1].hostId).toBe(TEST_HOST_ID);
+      expect(stored[1].installationId).toBe(99999);
+      expect(stored[1].appId).toBe(123456);
+      expect(stored[1].token).toBe('installation-token-abc');
+    });
+
+    it('removes pending flow and returns duplicate when backend returns 409', async () => {
+      const { mod, mockPost } = await loadService();
+      const fakeState = 'callback-state-dup';
+      mod.pendingAppFlows.set(fakeState, {
+        selectedRepositoryIds: ['1'],
+        selectedRepositories: ['owner/repo'],
+        backendUrl: TEST_BACKEND,
+        hostId: TEST_HOST_ID,
+      });
+      mockPost.mockRejectedValueOnce({
+        response: { status: 400, data: { code: 'duplicate', message: 'already installed' } },
+      });
+
+      const result = await mod.GitHubAppService.handleCallback({
+        installationId: '12345',
+        state: fakeState,
+      });
+
+      expect(result.outcome).toBe('duplicate');
+      expect(result.code).toBe('duplicate');
+      expect(mod.pendingAppFlows.has(fakeState)).toBe(false);
+    });
+  });
+});
