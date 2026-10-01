@@ -25,7 +25,8 @@ module.exports = {
   setupFiles: ['<rootDir>/jest.setup.ts'],
   testPathIgnorePatterns: [
     '/node_modules/',
-    '/.worktrees/',
+    // Ignore the shared .worktrees/ directory at the repo root (not this worktree's tests)
+    '<rootDir>/../.worktrees/',
   ],
   transformIgnorePatterns: [
     'node_modules/(?!(react-native|@react-native|@react-navigation|expo|expo-[^/]+|@expo|react-native-reanimated|@shopify|nativewind|react-native-css|@rn-primitives|class-variance-authority|tailwind-merge|tailwindcss-animate)/)',

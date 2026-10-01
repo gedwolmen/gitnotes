@@ -32,6 +32,10 @@ jest.mock('react-native', () => ({
   Platform: { OS: 'ios' },
 }));
 
+jest.mock('expo-web-browser', () => ({
+  openBrowserAsync: jest.fn(),
+}));
+
 import * as GitEngine from '@/services/git/engine/GitEngine';
 import { AuthService } from '@/services/AuthService';
 import { AccountStorage } from '@/services/AccountStorage';

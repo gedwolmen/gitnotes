@@ -562,6 +562,10 @@ jest.mock('expo-modules-core', () => ({
   requireOptionalNativeModule: jest.fn(),
 }));
 
+jest.mock('expo-web-browser', () => ({
+  openBrowserAsync: jest.fn(async () => ({ type: 'cancel' })),
+}));
+
 // expo-sqlite ships a native module that crashes in Jest because
 // requireNativeModule is a jest.fn() stub rather than a real native getter.
 // Mock the async DB API surface that DocumentIndex (and consumers like
