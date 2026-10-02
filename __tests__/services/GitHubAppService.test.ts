@@ -274,6 +274,31 @@ describe('GitHubAppService', () => {
       expect(result.outcome).toBe('owner_not_allowed');
     });
 
+    it('deduplicates concurrent callback delivery for the same state', async () => {
+      const { mod, mockPost } = await loadService();
+      const fakeState = 'callback-state-duplicate-delivery';
+      mod.pendingAppFlows.set(fakeState, {
+        selectedRepositoryIds: ['1'],
+        selectedRepositories: ['owner/repo'],
+        backendUrl: TEST_BACKEND,
+        hostId: TEST_HOST_ID,
+      });
+      mockPost.mockRejectedValue(new Error('network error'));
+
+      const first = mod.GitHubAppService.handleCallback({
+        installationId: '12345',
+        state: fakeState,
+      });
+      const second = mod.GitHubAppService.handleCallback({
+        installationId: '12345',
+        state: fakeState,
+      });
+      const [firstResult, secondResult] = await Promise.all([first, second]);
+
+      expect(mockPost).toHaveBeenCalledTimes(1);
+      expect(firstResult).toEqual(secondResult);
+    });
+
     it('returns backend_error when backend responds with 503', async () => {
       const { mod, mockPost } = await loadService();
       const fakeState = 'callback-state-503';

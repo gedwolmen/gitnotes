@@ -39,6 +39,10 @@ export type AppCallbackResult =
   | { outcome: 'owner_not_allowed'; message?: string }
   | { outcome: 'backend_error'; code: GitHubAppErrorCode; message: string };
 
+const inFlightCallbacks = new Map<string, Promise<AppCallbackResult>>();
+const completedCallbacks = new Map<string, { result: AppCallbackResult; expiresAt: number }>();
+const CALLBACK_DEDUPE_TTL_MS = 30_000;
+
 export type AppCallbackParsed = {
   installationId: string;
   state: string;
@@ -227,6 +231,35 @@ export class GitHubAppService {
    * Returns the outcome of the callback handling.
    */
   static async handleCallback(params: {
+    installationId: string;
+    state: string;
+    pendingFlow?: PendingAppFlow;
+  }): Promise<AppCallbackResult> {
+    const cached = completedCallbacks.get(params.state);
+    if (cached) {
+      if (cached.expiresAt > Date.now()) return cached.result;
+      completedCallbacks.delete(params.state);
+    }
+
+    const inFlight = inFlightCallbacks.get(params.state);
+    if (inFlight) return inFlight;
+
+    const callback = this.processCallback(params);
+    inFlightCallbacks.set(params.state, callback);
+
+    try {
+      const result = await callback;
+      completedCallbacks.set(params.state, {
+        result,
+        expiresAt: Date.now() + CALLBACK_DEDUPE_TTL_MS,
+      });
+      return result;
+    } finally {
+      inFlightCallbacks.delete(params.state);
+    }
+  }
+
+  private static async processCallback(params: {
     installationId: string;
     state: string;
     pendingFlow?: PendingAppFlow;
