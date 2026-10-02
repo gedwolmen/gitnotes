@@ -1136,16 +1136,28 @@ export default function SettingsScreen() {
         setAppError((prev) => ({ ...prev, [key]: result.reason }));
         return;
       }
-      const opened = await GitHubAppService.openInstallationUrl(result.installationUrl);
-      if (!opened) {
+      const browserResult = await GitHubAppService.openInstallationUrl(result.installationUrl);
+      if (browserResult.outcome === 'failed') {
         setAppError((prev) => ({ ...prev, [key]: 'Could not open browser' }));
+        return;
+      }
+      if (browserResult.outcome === 'callback') {
+        const callback = GitHubAppService.parseCallbackUrl(browserResult.url);
+        if (callback && typeof callback === 'object') {
+          navigation.navigate('AppCallback', {
+            installation_id: callback.installationId,
+            state: callback.state,
+          });
+        } else {
+          navigation.navigate('AppCallback');
+        }
       }
     } catch (err) {
       setAppError((prev) => ({ ...prev, [key]: err instanceof Error ? err.message : 'Unknown error' }));
     } finally {
       setAppLoading((prev) => ({ ...prev, [key]: false }));
     }
-  }, []);
+  }, [navigation]);
 
   const handleDisconnectGitHubApp = useCallback(async (hostId: string) => {
     setAppLoading((prev) => ({ ...prev, [hostId]: true }));

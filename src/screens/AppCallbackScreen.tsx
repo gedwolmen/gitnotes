@@ -22,6 +22,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { SafeAreaView } from '../components/ui/SafeAreaView';
 import { Button } from '../components/ui';
 import { useAccounts } from '../contexts/AccountsContext';
+import { useRepoStore } from '../stores/repoStore';
 import {
   GitHubAppService,
   pendingAppFlows,
@@ -37,6 +38,7 @@ export default function AppCallbackScreen() {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<AppCallbackRoute>();
   const { refreshAccounts, connectGitHubApp } = useAccounts();
+  const refreshRepos = useRepoStore((state) => state.refreshRepos);
 
   const [result, setResult] = useState<AppCallbackResult | null>(null);
 
@@ -72,9 +74,10 @@ export default function AppCallbackScreen() {
     if (result?.outcome === 'success') {
       refreshAccounts()
         .then(() => connectGitHubApp(result.credential.hostId))
+        .then(() => refreshRepos())
         .catch(() => undefined);
     }
-  }, [connectGitHubApp, refreshAccounts, result]);
+  }, [connectGitHubApp, refreshAccounts, refreshRepos, result]);
 
   if (!result) {
     return (
