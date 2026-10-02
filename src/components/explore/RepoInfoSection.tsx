@@ -137,7 +137,7 @@ export function RepoInfoSection({ repo, status, active, onChanged, chromeTopInse
   const confirmRemove = useCallback(() => {
     Alert.alert(
       'Remove repository',
-      `Remove "${repo.name}" from GitNotes? The local clone is deleted from this device. The remote repository is untouched.`,
+      `Remove "${repo.name}" from GitNotēs? The local clone is deleted from this device. The remote repository is untouched.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {

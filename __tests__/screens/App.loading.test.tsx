@@ -54,11 +54,11 @@ describe('AppLoadingView', () => {
     expect(indicators.length).toBeGreaterThan(0);
   });
 
-  it('container has accessibilityLabel="Loading GitNotes"', () => {
+  it('container has accessibilityLabel="Loading GitNotēs"', () => {
     render(<AppLoadingView />);
     const views = screen.UNSAFE_getAllByType(View);
     const withLabel = views.filter(
-      (v) => v.props?.accessibilityLabel === 'Loading GitNotes',
+      (v) => v.props?.accessibilityLabel === 'Loading GitNotēs',
     );
     expect(withLabel.length).toBeGreaterThan(0);
   });
