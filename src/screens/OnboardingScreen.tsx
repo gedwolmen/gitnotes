@@ -291,16 +291,24 @@ export default function OnboardingScreen({
         );
         return;
       }
-      const opened = await GitHubAppService.openInstallationUrl(
+      const browserResult = await GitHubAppService.openInstallationUrl(
         result.installationUrl,
       );
-      if (!opened) {
+      if (browserResult.outcome === 'failed') {
         setGithubAuthError('Could not open browser');
         return;
       }
-      // Advance past the token step while the callback runs in the background.
-      // AppCallbackScreen navigates to MainTabs on completion.
-      setCurrentStep(AI_STEP);
+      if (browserResult.outcome === 'callback') {
+        const callback = GitHubAppService.parseCallbackUrl(browserResult.url);
+        if (callback && typeof callback === 'object') {
+          navigation.navigate('AppCallback', {
+            installation_id: callback.installationId,
+            state: callback.state,
+          });
+        } else {
+          navigation.navigate('AppCallback');
+        }
+      }
     } catch (err) {
       setGithubAuthError(
         err instanceof Error ? err.message : 'Unknown error',
@@ -308,7 +316,7 @@ export default function OnboardingScreen({
     } finally {
       setIsGithubAuthLoading(false);
     }
-  }, [AI_STEP]);
+  }, [navigation]);
 
   const isTokenStep = currentStep === TOKEN_STEP;
   const isAIStep = currentStep === AI_STEP;

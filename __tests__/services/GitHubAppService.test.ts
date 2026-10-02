@@ -5,7 +5,7 @@
  * - buildInstallUrl(): backend unreachable (503) → { ok: false, reason: 'not_configured' }
  * - buildInstallUrl(): stores pending flow with selectedRepositoryIds, backendUrl, hostId
  * - buildInstallUrl(): registers pending flow before returning installationUrl
- * - openInstallationUrl(): calls WebBrowser.openBrowserAsync
+ * - openInstallationUrl(): calls WebBrowser.openAuthSessionAsync with the app callback URL
  * - parseCallbackUrl(): callback URL with installation_id+state → { installationId, state }
  * - parseCallbackUrl(): denied URL → 'denied'
  * - parseCallbackUrl(): duplicate URL → 'duplicate'
@@ -37,7 +37,8 @@ const loadService = async () => {
   mockGetActiveHostId.mockResolvedValue(null);
 
   jest.doMock('expo-web-browser', () => ({
-    openBrowserAsync: jest.fn<() => Promise<{ type: string }>>(),
+    openBrowserAsync: jest.fn(),
+    openAuthSessionAsync: jest.fn(),
   }));
 
   jest.doMock('axios', () => ({
@@ -161,25 +162,28 @@ describe('GitHubAppService', () => {
   });
 
   describe('openInstallationUrl()', () => {
-    it('opens the installation URL in the system browser', async () => {
+    it('opens the installation URL as an auth session with the app callback URL', async () => {
       const { mod } = await loadService();
-      const mockOpen = mod.WebBrowser.openBrowserAsync as jest.Mock;
-      mockOpen.mockResolvedValueOnce({ type: 'opened' });
+      const mockOpen = mod.WebBrowser.openAuthSessionAsync as jest.Mock;
+      mockOpen.mockResolvedValueOnce({ type: 'success', url: 'gitnotes://app/callback?installation_id=1&state=state' });
 
       const result = await mod.GitHubAppService.openInstallationUrl(TEST_INSTALLATION_URL);
 
-      expect(result).toBe(true);
-      expect(mockOpen).toHaveBeenCalledWith(TEST_INSTALLATION_URL);
+      expect(result).toEqual({
+        outcome: 'callback',
+        url: 'gitnotes://app/callback?installation_id=1&state=state',
+      });
+      expect(mockOpen).toHaveBeenCalledWith(TEST_INSTALLATION_URL, 'gitnotes://app/callback');
     });
 
-    it('returns false when browser fails to open', async () => {
+    it('returns failed when the auth session cannot open', async () => {
       const { mod } = await loadService();
-      const mockOpen = mod.WebBrowser.openBrowserAsync as jest.Mock;
+      const mockOpen = mod.WebBrowser.openAuthSessionAsync as jest.Mock;
       mockOpen.mockRejectedValueOnce(new Error('Browser not available'));
 
       const result = await mod.GitHubAppService.openInstallationUrl(TEST_INSTALLATION_URL);
 
-      expect(result).toBe(false);
+      expect(result).toEqual({ outcome: 'failed' });
     });
   });
 
