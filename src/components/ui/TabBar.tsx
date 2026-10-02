@@ -41,6 +41,9 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
   if (parentRouteName === 'Paywall') return null;
 
   if (Platform.OS === 'android') {
+    const isRetrofuturistic = themeStyle === 'retrofuturistic';
+    const isNeoBrutalist = themeStyle === 'neo-brutalist';
+
     return (
       <View
         pointerEvents="box-none"
@@ -55,9 +58,25 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
       >
         <View
           className="flex-row items-center justify-around py-2 px-3 rounded-full overflow-hidden"
-          style={{
-            backgroundColor: colors.surface,
-          }}
+          style={
+            isRetrofuturistic
+              ? {
+                  backgroundColor: colors.surface,
+                  borderWidth: 1.5,
+                  borderColor: colors.border,
+                  elevation: 0,
+                }
+              : isNeoBrutalist
+              ? {
+                  backgroundColor: colors.surface,
+                  borderWidth: 2,
+                  borderColor: colors.border,
+                  elevation: 0,
+                }
+              : {
+                  backgroundColor: colors.surface,
+                }
+          }
         >
           {state.routes.map((route, index) => {
             const isFocused = state.index === index;
@@ -91,13 +110,19 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
                 hitSlop={6}
               >
                 <Surface
-                  elevation={Platform.OS === 'android' ? 'flat' : 'subtle'}
+                  elevation="flat"
                   radius="pill"
-                  inset={Platform.OS !== 'android' && isFocused}
+                  inset={false}
                   style={{
                     width: 48,
                     height: 40,
                     backgroundColor: 'transparent',
+                    ...(isRetrofuturistic
+                      ? {
+                          borderWidth: isFocused ? 2 : 0,
+                          borderColor: isFocused ? colors.accent : 'transparent',
+                        }
+                      : {}),
                   }}
                   className="items-center justify-center"
                 >
