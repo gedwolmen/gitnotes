@@ -177,7 +177,12 @@
     },
     "security": "Sécurité",
     "appearance": "Apparence",
-    "updatedUI": "UI élégante",
+    "style": {
+      "basic": "Basique",
+      "neumorphic": "Neumorphique",
+      "neoBrutalist": "Néo-Brutaliste",
+      "hint": "Basique est gratuit. Neumorphique et Néo-Brutaliste nécessitent GitNotēs Pro."
+    },
     "darkMode": "Mode sombre",
     "accentColor": "Couleur d'accentuation",
     "appIcon": {
@@ -541,7 +546,7 @@
   },
   "hints": {
     "settings": {
-      "updatedUI": "Les ombres Soft-UI donnent une sensation tactile et surélevée. Désactivez pour l'apparence classique plate.",
+      "style": "Basique est gratuit. Neumorphique et Néo-Brutaliste nécessitent GitNotēs Pro. Touchez pour changer de style d'interface.",
       "darkMode": "Basculez entre l'apparence claire et sombre. Pour les paramètres système, utilisez l'option ci-dessous.",
       "accentColor": "Choisissez n'importe quelle couleur hex pour personnaliser l'accent de votre application. S'applique à tous les thèmes et styles.",
       "useSystemTheme": "Correspond automatiquement au mode clair ou sombre de votre appareil.",

@@ -33,6 +33,18 @@ export interface ConnectHostModalProps {
   /** When supplied, attach the new connection to this account instead of creating a new one. */
   accountId?: string;
   colors: ThemeColors;
+  /** GitHub OAuth callback — called with null hostId for fresh-install flows. */
+  onConnectOAuth?: (hostId: string | null) => void;
+  /** GitHub App callback — called with null hostId for fresh-install flows. */
+  onConnectGitHubApp?: (hostId: string | null) => void;
+  /** Maps hostId (or '__fresh__') → true when an OAuth flow is in progress. */
+  oauthLoading?: Record<string, boolean>;
+  /** Maps hostId (or '__fresh__') → error message from the last OAuth attempt. */
+  oauthError?: Record<string, string | null>;
+  /** Maps hostId (or '__fresh__') → true when a GitHub App flow is in progress. */
+  appLoading?: Record<string, boolean>;
+  /** Maps hostId (or '__fresh__') → error message from the last GitHub App attempt. */
+  appError?: Record<string, string | null>;
 }
 
 const ALL_PROVIDERS: { provider: GitHostProvider; helpTextKey: string }[] = [
@@ -77,6 +89,12 @@ export function ConnectHostModal({
   presetProvider,
   accountId,
   colors: colorsProp,
+  onConnectOAuth,
+  onConnectGitHubApp,
+  oauthLoading = {},
+  oauthError = {},
+  appLoading = {},
+  appError = {},
 }: ConnectHostModalProps) {
   const { t } = useTranslation();
   const themeColors = useTheme().colors;
@@ -365,6 +383,78 @@ export function ConnectHostModal({
           </Text>
         ) : null}
 
+        {provider === 'github' && (onConnectOAuth || onConnectGitHubApp) ? (
+          <>
+            <View style={[styles.divider, { marginVertical: spacing[3] }]}>
+              <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+              <Text style={[styles.dividerLabel, { color: colors.textSecondary }]}>
+                {t('connectHost.alternatives.or')}
+              </Text>
+              <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+            </View>
+            {onConnectOAuth ? (
+              <TouchableOpacity
+                onPress={() => { onClose(); onConnectOAuth(null); }}
+                disabled={!!(oauthLoading['__fresh__'])}
+                testID="connect-host-oauth"
+                style={{
+                  paddingVertical: spacing[3],
+                  borderRadius: 12,
+                  alignItems: 'center',
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  backgroundColor: colors.surface,
+                  marginBottom: spacing[2],
+                  opacity: oauthLoading['__fresh__'] ? 0.6 : 1,
+                }}
+              >
+                {oauthLoading['__fresh__'] ? (
+                  <ActivityIndicator size="small" color={colors.text} />
+                ) : (
+                  <Text style={{ color: colors.text, fontSize: 14, fontWeight: '600' }}>
+                    {t('connectHost.alternatives.githubOAuth')}
+                  </Text>
+                )}
+              </TouchableOpacity>
+            ) : null}
+            {oauthError['__fresh__'] ? (
+              <Text style={[styles.errorText, { color: colors.error, marginBottom: spacing[2] }]}>
+                {oauthError['__fresh__']}
+              </Text>
+            ) : null}
+            {onConnectGitHubApp ? (
+              <TouchableOpacity
+                onPress={() => { onClose(); onConnectGitHubApp(null); }}
+                disabled={!!(appLoading['__fresh__'])}
+                testID="connect-host-github-app"
+                style={{
+                  paddingVertical: spacing[3],
+                  borderRadius: 12,
+                  alignItems: 'center',
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  backgroundColor: colors.surface,
+                  marginBottom: spacing[2],
+                  opacity: appLoading['__fresh__'] ? 0.6 : 1,
+                }}
+              >
+                {appLoading['__fresh__'] ? (
+                  <ActivityIndicator size="small" color={colors.text} />
+                ) : (
+                  <Text style={{ color: colors.text, fontSize: 14, fontWeight: '600' }}>
+                    {t('connectHost.alternatives.githubApp')}
+                  </Text>
+                )}
+              </TouchableOpacity>
+            ) : null}
+            {appError['__fresh__'] ? (
+              <Text style={[styles.errorText, { color: colors.error, marginBottom: spacing[2] }]}>
+                {appError['__fresh__']}
+              </Text>
+            ) : null}
+          </>
+        ) : null}
+
         <View style={[styles.row, { marginTop: spacing[2] }]}>
           <TouchableOpacity
             onPress={onClose}
@@ -448,5 +538,21 @@ const styles = StyleSheet.create({
   tokenRow: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+  },
+  dividerLabel: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  errorText: {
+    fontSize: 12,
   },
 });

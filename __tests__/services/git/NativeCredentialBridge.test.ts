@@ -1,0 +1,484 @@
+import {
+  registerGitHubOAuthCredential,
+  registerGitHubAppCredential,
+  registerPatCredential,
+  clearRepoCredential,
+  getRegisteredCredentialKind,
+  enforceAppRepositorySelection,
+  isAppNearExpiry,
+  renewAppTokenIfNeeded,
+  recoverFromApp401,
+  resolveGitHubRepoToken,
+  clearHostCredentials,
+  initNativeCredentialBridge,
+  NativeCredentialBridgeError,
+} from '@/services/git/NativeCredentialBridge';
+import type { GitHubAppCredentialRecord } from '@/services/git/contracts';
+
+function makeAppCred(overrides: Partial<{
+  token: string;
+  expiresAt: number;
+  selectedRepositories: GitHubAppCredentialRecord['selectedRepositories'];
+}> = {}): GitHubAppCredentialRecord {
+  return {
+    installationId: 123,
+    appId: 456,
+    appSlug: 'test-app',
+    accountLogin: 'acme',
+    accountId: 789,
+    token: 'ghs_inst_tok',
+    expiresAt: Date.now() + 3600 * 1000,
+    selectedRepositories: [
+      { owner: 'acme', repo: 'repo-a' },
+      { owner: 'acme', repo: 'repo-b' },
+    ],
+    renewal: {
+      grantToken: 'grntkn',
+      grantExpiresAt: Date.now() + 86400 * 1000,
+      backendUrl: 'https://gitnotes-backend.example.com',
+    },
+    ...overrides,
+  } as GitHubAppCredentialRecord;
+}
+
+function mockSetCredential(_repoId: string, _cred: object): Promise<void> {
+  return Promise.resolve();
+}
+
+function mockClearCredential(_repoId: string): Promise<boolean> {
+  return Promise.resolve(true);
+}
+
+jest.mock('@/services/GitHubAppService', () => ({
+  GitHubAppService: {
+    renewInstallationToken: jest.fn(),
+  },
+}));
+
+jest.mock('@/services/AccountStorage', () => ({
+  AccountStorage: {
+    getGitHubAppCredential: jest.fn(),
+    setGitHubAppCredential: jest.fn(),
+    getOAuthCredential: jest.fn(),
+    deleteOAuthCredential: jest.fn(),
+    deleteGitHubAppCredential: jest.fn(),
+    getHostToken: jest.fn(),
+  },
+}));
+
+beforeEach(() => {
+  jest.clearAllMocks();
+  initNativeCredentialBridge({ setCredential: mockSetCredential, clearCredential: mockClearCredential });
+});
+
+describe('OAuth credential lifecycle', () => {
+  test('registerGitHubOAuthCredential sets oauth kind in memory map', async () => {
+    await registerGitHubOAuthCredential('github.com/acme/repo-a', 'host-1', 'oauth_token');
+    const kind = await getRegisteredCredentialKind('github.com/acme/repo-a', 'host-1');
+    expect(kind).toBe('oauth');
+  });
+
+  test('multiple OAuth repos under same host are independently registered', async () => {
+    await registerGitHubOAuthCredential('github.com/acme/repo-a', 'host-1', 'tok_a');
+    await registerGitHubOAuthCredential('github.com/acme/repo-b', 'host-1', 'tok_b');
+    expect(await getRegisteredCredentialKind('github.com/acme/repo-a', 'host-1')).toBe('oauth');
+    expect(await getRegisteredCredentialKind('github.com/acme/repo-b', 'host-1')).toBe('oauth');
+  });
+
+  test('clearRepoCredential removes the credential kind', async () => {
+    await registerGitHubOAuthCredential('github.com/acme/repo-a', 'host-1', 'tok');
+    await clearRepoCredential('github.com/acme/repo-a');
+    expect(await getRegisteredCredentialKind('github.com/acme/repo-a', 'host-1')).toBeNull();
+  });
+
+  test('switching from OAuth to PAT updates kind', async () => {
+    await registerGitHubOAuthCredential('github.com/acme/repo-a', 'host-1', 'oauth_tok');
+    await registerPatCredential('github.com/acme/repo-a', 'host-1', 'ghp_pat');
+    expect(await getRegisteredCredentialKind('github.com/acme/repo-a', 'host-1')).toBe('token');
+  });
+});
+
+describe('GitHub App credential lifecycle', () => {
+  test('registerGitHubAppCredential sets github_app kind in memory map', async () => {
+    await registerGitHubAppCredential('github.com/acme/repo-a', 'host-1', 'inst_tok');
+    const kind = await getRegisteredCredentialKind('github.com/acme/repo-a', 'host-1');
+    expect(kind).toBe('github_app');
+  });
+
+  test('App credential for repo not in selection throws', () => {
+    const appCred = makeAppCred({ selectedRepositories: [{ owner: 'acme', repo: 'repo-a' }] });
+    expect(() => enforceAppRepositorySelection('github.com/acme/repo-b', appCred)).toThrow(
+      NativeCredentialBridgeError,
+    );
+  });
+
+  test('App credential for repo in selection does not throw', () => {
+    const appCred = makeAppCred({
+      selectedRepositories: [{ owner: 'acme', repo: 'repo-a' }],
+    });
+    expect(() => enforceAppRepositorySelection('github.com/acme/repo-a', appCred)).not.toThrow();
+  });
+
+  test('App case-insensitive repo matching', () => {
+    const appCred = makeAppCred({
+      selectedRepositories: [{ owner: 'Acme', repo: 'Repo-A' }],
+    });
+    expect(() => enforceAppRepositorySelection('github.com/acme/repo-a', appCred)).not.toThrow();
+  });
+
+  test('clearRepoCredential removes App kind', async () => {
+    await registerGitHubAppCredential('github.com/acme/repo-a', 'host-1', 'inst_tok');
+    await clearRepoCredential('github.com/acme/repo-a');
+    expect(await getRegisteredCredentialKind('github.com/acme/repo-a', 'host-1')).toBeNull();
+  });
+});
+
+describe('PAT / SSH regression', () => {
+  test('last credential kind registered wins for same repo', async () => {
+    await registerPatCredential('github.com/acme/repo-a', 'host-1', 'ghp_pat');
+    await registerGitHubOAuthCredential('github.com/acme/repo-a', 'host-1', 'oauth_tok');
+    expect(await getRegisteredCredentialKind('github.com/acme/repo-a', 'host-1')).toBe('oauth');
+  });
+});
+
+describe('clearHostCredentials', () => {
+  test('clears all repos for a given host', async () => {
+    await registerGitHubOAuthCredential('github.com/acme/repo-a', 'host-1', 'tok_a');
+    await registerGitHubOAuthCredential('github.com/acme/repo-b', 'host-1', 'tok_b');
+    await registerGitHubOAuthCredential('github.com/acme/repo-c', 'host-2', 'tok_c');
+    await clearHostCredentials('host-1');
+    expect(await getRegisteredCredentialKind('github.com/acme/repo-a', 'host-1')).toBeNull();
+    expect(await getRegisteredCredentialKind('github.com/acme/repo-b', 'host-1')).toBeNull();
+    expect(await getRegisteredCredentialKind('github.com/acme/repo-c', 'host-2')).toBe('oauth');
+  });
+});
+
+describe('isAppNearExpiry', () => {
+  test('true when token expires within 10 minutes', () => {
+    const cred = makeAppCred({ expiresAt: Date.now() + 3 * 60 * 1000 });
+    expect(isAppNearExpiry(cred)).toBe(true);
+  });
+
+  test('false when token has more than 10 minutes', () => {
+    const cred = makeAppCred({ expiresAt: Date.now() + 20 * 60 * 1000 });
+    expect(isAppNearExpiry(cred)).toBe(false);
+  });
+
+  test('true for already-expired token', () => {
+    const cred = makeAppCred({ expiresAt: Date.now() - 10 * 1000 });
+    expect(isAppNearExpiry(cred)).toBe(true);
+  });
+});
+
+describe('renewAppTokenIfNeeded', () => {
+  let mockRenew: jest.Mock;
+
+  beforeEach(() => {
+    mockRenew = jest.fn();
+    const { GitHubAppService } = require('@/services/GitHubAppService');
+    (GitHubAppService.renewInstallationToken as jest.Mock) = mockRenew;
+  });
+
+  test('returns null when no credential exists for host', async () => {
+    const { AccountStorage } = require('@/services/AccountStorage');
+    (AccountStorage.getGitHubAppCredential as jest.Mock).mockResolvedValue(null);
+    const result = await renewAppTokenIfNeeded('github.com', 'nonexistent-host');
+    expect(result).toBeNull();
+    expect(mockRenew).not.toHaveBeenCalled();
+  });
+
+  test('returns null when token is not near expiry', async () => {
+    const cred = makeAppCred({ expiresAt: Date.now() + 3600 * 1000 });
+    const { AccountStorage } = require('@/services/AccountStorage');
+    (AccountStorage.getGitHubAppCredential as jest.Mock).mockResolvedValue(cred);
+    const result = await renewAppTokenIfNeeded('host-1', cred);
+    expect(result).toBeNull();
+    expect(mockRenew).not.toHaveBeenCalled();
+  });
+
+  test('calls renew when token is near expiry', async () => {
+    const oldCred = makeAppCred({ token: 'old_tok', expiresAt: Date.now() + 2 * 60 * 1000 });
+    const newCred = makeAppCred({ token: 'new_tok', expiresAt: Date.now() + 3600 * 1000 });
+    const { AccountStorage } = require('@/services/AccountStorage');
+    (AccountStorage.getGitHubAppCredential as jest.Mock).mockResolvedValue(oldCred);
+    mockRenew.mockResolvedValue({ ok: true, credential: newCred });
+
+    const result = await renewAppTokenIfNeeded('host-1', oldCred);
+
+    expect(mockRenew).toHaveBeenCalledWith({ credential: oldCred });
+    expect(result?.token).toBe('new_tok');
+  });
+
+  test('returns null without calling renew when not near expiry', async () => {
+    const cred = makeAppCred({ expiresAt: Date.now() + 3600 * 1000 });
+    const { AccountStorage } = require('@/services/AccountStorage');
+    (AccountStorage.getGitHubAppCredential as jest.Mock).mockResolvedValue(cred);
+    const result = await renewAppTokenIfNeeded('github.com', 'host-1');
+    expect(result).toBeNull();
+    expect(mockRenew).not.toHaveBeenCalled();
+  });
+
+  test('returns null when renewal fails', async () => {
+    const cred = makeAppCred({ expiresAt: Date.now() + 2 * 60 * 1000 });
+    const { AccountStorage } = require('@/services/AccountStorage');
+    (AccountStorage.getGitHubAppCredential as jest.Mock).mockResolvedValue(cred);
+    mockRenew.mockResolvedValue({ ok: false });
+
+    await expect(renewAppTokenIfNeeded('host-1', cred)).rejects.toThrow(
+      NativeCredentialBridgeError,
+    );
+  });
+});
+
+describe('recoverFromApp401', () => {
+  let mockRenew: jest.Mock;
+
+  beforeEach(() => {
+    mockRenew = jest.fn();
+    const { GitHubAppService } = require('@/services/GitHubAppService');
+    (GitHubAppService.renewInstallationToken as jest.Mock) = mockRenew;
+  });
+
+  test('returns null when repo is not registered as App credential', async () => {
+    const cred = makeAppCred();
+    await registerGitHubOAuthCredential('github.com/acme/repo-a', 'github.com', 'tok');
+    const result = await recoverFromApp401('github.com/acme/repo-a', 'github.com', cred);
+    expect(result).toBeNull();
+  });
+
+  test('returns renewed token on success', async () => {
+    const oldCred = makeAppCred({ token: 'expired_tok' });
+    const newCred = makeAppCred({ token: 'renewed_tok' });
+    mockRenew.mockResolvedValue({ ok: true, credential: newCred });
+    await registerGitHubAppCredential('github.com/acme/repo-a', 'github.com', 'expired_tok');
+
+    const result = await recoverFromApp401('github.com/acme/repo-a', 'github.com', oldCred);
+
+    expect(result?.token).toBe('renewed_tok');
+  });
+
+  test('returns null when renewal fails after 401', async () => {
+    const cred = makeAppCred({ token: 'expired_tok' });
+    mockRenew.mockResolvedValue({ ok: false });
+    await registerGitHubAppCredential('github.com/acme/repo-a', 'github.com', 'expired_tok');
+
+    const result = await recoverFromApp401('github.com/acme/repo-a', 'github.com', cred);
+
+    expect(result).toBeNull();
+  });
+});
+
+describe('account isolation', () => {
+  test('same repo on different hosts has independent credential kinds', async () => {
+    await registerGitHubOAuthCredential('github.com/acme/repo-a', 'host-1', 'tok_h1');
+    await registerGitHubAppCredential('github.com/acme/repo-a', 'host-2', 'tok_h2');
+    expect(await getRegisteredCredentialKind('github.com/acme/repo-a', 'host-1')).toBe('oauth');
+    expect(await getRegisteredCredentialKind('github.com/acme/repo-a', 'host-2')).toBe('github_app');
+  });
+
+  test('switching host credential kind does not affect other host', async () => {
+    await registerGitHubOAuthCredential('github.com/acme/repo-a', 'host-1', 'tok');
+    await registerPatCredential('github.com/acme/repo-a', 'host-2', 'pat');
+    await registerPatCredential('github.com/acme/repo-a', 'host-1', 'new_pat');
+    expect(await getRegisteredCredentialKind('github.com/acme/repo-a', 'host-1')).toBe('token');
+    expect(await getRegisteredCredentialKind('github.com/acme/repo-a', 'host-2')).toBe('token');
+  });
+});
+
+describe('provider independence', () => {
+  test('GitHub App and OAuth coexist for different repos on same host', async () => {
+    await registerGitHubOAuthCredential('github.com/acme/repo-a', 'host-1', 'oauth_tok');
+    await registerGitHubAppCredential('github.com/acme/repo-b', 'host-1', 'app_tok');
+    expect(await getRegisteredCredentialKind('github.com/acme/repo-a', 'host-1')).toBe('oauth');
+    expect(await getRegisteredCredentialKind('github.com/acme/repo-b', 'host-1')).toBe('github_app');
+  });
+
+  test('clearing App credential does not affect OAuth credential', async () => {
+    await registerGitHubOAuthCredential('github.com/acme/repo-a', 'host-1', 'oauth_tok');
+    await registerGitHubAppCredential('github.com/acme/repo-b', 'host-1', 'app_tok');
+    await clearRepoCredential('github.com/acme/repo-b');
+    expect(await getRegisteredCredentialKind('github.com/acme/repo-a', 'host-1')).toBe('oauth');
+    expect(await getRegisteredCredentialKind('github.com/acme/repo-b', 'host-1')).toBeNull();
+  });
+});
+
+describe('resolveGitHubRepoToken', () => {
+  let mockRenew: jest.Mock;
+
+  beforeEach(() => {
+    mockRenew = jest.fn();
+    const { GitHubAppService } = require('@/services/GitHubAppService');
+    (GitHubAppService.renewInstallationToken as jest.Mock) = mockRenew;
+  });
+
+  test('throws when no credential available', async () => {
+    const { AccountStorage } = require('@/services/AccountStorage');
+    (AccountStorage.getGitHubAppCredential as jest.Mock).mockResolvedValue(null);
+    (AccountStorage.getOAuthCredential as jest.Mock).mockResolvedValue(null);
+    (AccountStorage.getHostToken as jest.Mock).mockResolvedValue(null);
+
+    await expect(
+      resolveGitHubRepoToken({ repoId: 'github.com/acme/repo-a', hostId: 'github.com' }),
+    ).rejects.toThrow(NativeCredentialBridgeError);
+  });
+
+  test('OAuth repo returns oauth kind with null token', async () => {
+    const { AccountStorage } = require('@/services/AccountStorage');
+    (AccountStorage.getGitHubAppCredential as jest.Mock).mockResolvedValue(null);
+    (AccountStorage.getOAuthCredential as jest.Mock).mockResolvedValue({
+      accessToken: 'oauth_tok',
+      expiresAt: '2099-01-01',
+      refreshToken: 'refresh',
+    });
+    (AccountStorage.getHostToken as jest.Mock).mockResolvedValue(null);
+
+    const result = await resolveGitHubRepoToken({
+      repoId: 'github.com/acme/repo-a',
+      hostId: 'github.com',
+    });
+    expect(result).toEqual({ kind: 'oauth', token: 'oauth_tok' });
+  });
+
+  test('App repo with valid token returns app kind and token', async () => {
+    const cred = makeAppCred({ token: 'inst_tok', expiresAt: Date.now() + 3600 * 1000 });
+    const { AccountStorage } = require('@/services/AccountStorage');
+    (AccountStorage.getGitHubAppCredential as jest.Mock).mockResolvedValue(cred);
+    (AccountStorage.getOAuthCredential as jest.Mock).mockResolvedValue(null);
+    (AccountStorage.getHostToken as jest.Mock).mockResolvedValue(null);
+
+    const result = await resolveGitHubRepoToken({
+      repoId: 'github.com/acme/repo-a',
+      hostId: 'github.com',
+    });
+    expect(result).toEqual({ kind: 'github_app', token: 'inst_tok' });
+  });
+
+  test('App repo near expiry triggers renewal', async () => {
+    const cred = makeAppCred({ token: 'old_tok', expiresAt: Date.now() + 2 * 60 * 1000 });
+    const renewed = makeAppCred({ token: 'new_tok', expiresAt: Date.now() + 3600 * 1000 });
+    const { AccountStorage } = require('@/services/AccountStorage');
+    (AccountStorage.getGitHubAppCredential as jest.Mock).mockResolvedValue(cred);
+    (AccountStorage.getOAuthCredential as jest.Mock).mockResolvedValue(null);
+    (AccountStorage.getHostToken as jest.Mock).mockResolvedValue(null);
+    mockRenew.mockResolvedValue({ ok: true, credential: renewed });
+
+    const result = await resolveGitHubRepoToken({
+      repoId: 'github.com/acme/repo-a',
+      hostId: 'github.com',
+    });
+
+    expect(mockRenew).toHaveBeenCalled();
+    expect(result?.token).toBe('new_tok');
+    expect(result?.kind).toBe('github_app');
+  });
+
+  test('PAT returns token kind', async () => {
+    const { AccountStorage } = require('@/services/AccountStorage');
+    (AccountStorage.getGitHubAppCredential as jest.Mock).mockResolvedValue(null);
+    (AccountStorage.getOAuthCredential as jest.Mock).mockResolvedValue(null);
+    (AccountStorage.getHostToken as jest.Mock).mockResolvedValue('ghp_pat');
+
+    const result = await resolveGitHubRepoToken({
+      repoId: 'github.com/acme/repo-a',
+      hostId: 'github.com',
+    });
+    expect(result).toEqual({ kind: 'token', token: 'ghp_pat' });
+  });
+
+  test('SECURITY: expired App with failed renewal throws — does NOT fall back to OAuth', async () => {
+    const expiredCred = makeAppCred({ token: 'expired_tok', expiresAt: Date.now() - 1000 });
+    const { AccountStorage } = require('@/services/AccountStorage');
+    (AccountStorage.getGitHubAppCredential as jest.Mock).mockResolvedValue(expiredCred);
+    (AccountStorage.getOAuthCredential as jest.Mock).mockResolvedValue({
+      accessToken: 'oauth_tok',
+      expiresAt: '2099-01-01',
+      refreshToken: 'refresh',
+    });
+    (AccountStorage.getHostToken as jest.Mock).mockResolvedValue(null);
+    mockRenew.mockResolvedValue({ ok: false, code: 'renewal_denied', message: 'Renewal denied' });
+
+    // Must throw, not return OAuth token
+    await expect(
+      resolveGitHubRepoToken({ repoId: 'github.com/acme/repo-a', hostId: 'github.com' }),
+    ).rejects.toThrow(NativeCredentialBridgeError);
+  });
+
+  test('SECURITY: expired App with failed renewal throws — does NOT fall back to PAT', async () => {
+    const expiredCred = makeAppCred({ token: 'expired_tok', expiresAt: Date.now() - 1000 });
+    const { AccountStorage } = require('@/services/AccountStorage');
+    (AccountStorage.getGitHubAppCredential as jest.Mock).mockResolvedValue(expiredCred);
+    (AccountStorage.getOAuthCredential as jest.Mock).mockResolvedValue(null);
+    (AccountStorage.getHostToken as jest.Mock).mockResolvedValue('ghp_pat');
+    mockRenew.mockResolvedValue({ ok: false, code: 'renewal_denied', message: 'Renewal denied' });
+
+    // Must throw, not return PAT token
+    await expect(
+      resolveGitHubRepoToken({ repoId: 'github.com/acme/repo-a', hostId: 'github.com' }),
+    ).rejects.toThrow(NativeCredentialBridgeError);
+  });
+
+  test('SECURITY: repo not in App selection throws — does NOT fall back to OAuth', async () => {
+    const cred = makeAppCred({
+      token: 'inst_tok',
+      expiresAt: Date.now() + 3600 * 1000,
+      selectedRepositories: [{ owner: 'acme', repo: 'repo-a' }],
+    });
+    const { AccountStorage } = require('@/services/AccountStorage');
+    (AccountStorage.getGitHubAppCredential as jest.Mock).mockResolvedValue(cred);
+    (AccountStorage.getOAuthCredential as jest.Mock).mockResolvedValue({
+      accessToken: 'oauth_tok',
+      expiresAt: '2099-01-01',
+      refreshToken: 'refresh',
+    });
+    (AccountStorage.getHostToken as jest.Mock).mockResolvedValue(null);
+
+    // Must throw repo_not_in_selection, not return OAuth token
+    await expect(
+      resolveGitHubRepoToken({ repoId: 'github.com/acme/repo-b', hostId: 'github.com' }),
+    ).rejects.toThrow(NativeCredentialBridgeError);
+  });
+
+  test('SECURITY: repo not in App selection throws — does NOT fall back to PAT', async () => {
+    const cred = makeAppCred({
+      token: 'inst_tok',
+      expiresAt: Date.now() + 3600 * 1000,
+      selectedRepositories: [{ owner: 'acme', repo: 'repo-a' }],
+    });
+    const { AccountStorage } = require('@/services/AccountStorage');
+    (AccountStorage.getGitHubAppCredential as jest.Mock).mockResolvedValue(cred);
+    (AccountStorage.getOAuthCredential as jest.Mock).mockResolvedValue(null);
+    (AccountStorage.getHostToken as jest.Mock).mockResolvedValue('ghp_pat');
+
+    // Must throw repo_not_in_selection, not return PAT token
+    await expect(
+      resolveGitHubRepoToken({ repoId: 'github.com/acme/repo-b', hostId: 'github.com' }),
+    ).rejects.toThrow(NativeCredentialBridgeError);
+  });
+
+  test('OAuth is only consulted when no App credential exists', async () => {
+    const { AccountStorage } = require('@/services/AccountStorage');
+    (AccountStorage.getGitHubAppCredential as jest.Mock).mockResolvedValue(null);
+    (AccountStorage.getOAuthCredential as jest.Mock).mockResolvedValue({
+      accessToken: 'oauth_tok',
+      expiresAt: '2099-01-01',
+      refreshToken: 'refresh',
+    });
+    (AccountStorage.getHostToken as jest.Mock).mockResolvedValue('ghp_pat');
+
+    const result = await resolveGitHubRepoToken({
+      repoId: 'github.com/acme/repo-a',
+      hostId: 'github.com',
+    });
+    // OAuth should be returned since no App exists
+    expect(result).toEqual({ kind: 'oauth', token: 'oauth_tok' });
+  });
+});
+
+describe('initNativeCredentialBridge', () => {
+  test('idempotent: calling init twice does not throw', () => {
+    expect(() => {
+      initNativeCredentialBridge({ setCredential: mockSetCredential, clearCredential: mockClearCredential });
+      initNativeCredentialBridge({ setCredential: mockSetCredential, clearCredential: mockClearCredential });
+    }).not.toThrow();
+  });
+});

@@ -254,6 +254,18 @@ The canonical route param types are in `src/navigation/types.ts`:
 - Biometric lock toggle (`BiometricLockContext`)
 - Language (i18n)
 
+**Appearance (UI Style) selector:**
+
+`SettingsContent.tsx` exposes a three-way UI style picker under the Appearance section. Users choose one of:
+
+| Option | Style key | Access |
+|--------|-----------|--------|
+| Basic | `flat` | Free |
+| Neumorphic | `neumorphic` | Pro only (locked with paywall) |
+| Neo-Brutalist | `neo-brutalist` | Free (no paywall) |
+
+When a non-Pro user taps a Pro-locked style, `promptProUpgrade()` is called which opens the paywall. A lock icon is shown next to each Pro option when `isPro === false`. The selected style is persisted to `@gitnotes:style` via `ThemeContext.setStyle()`.
+
 ---
 
 ### SyncStatusScreen

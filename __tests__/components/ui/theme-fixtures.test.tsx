@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text, View } from 'react-native';
+import { Text, View, StyleSheet } from 'react-native';
 import { render } from '@testing-library/react-native';
 import { Surface } from '../../../src/components/ui/Surface';
 import { Card } from '../../../src/components/ui/Card';
@@ -10,11 +10,14 @@ import { Toggle } from '../../../src/components/ui/Toggle';
 import { EmptyState } from '../../../src/components/ui/EmptyState';
 import { Input } from '../../../src/components/ui/Input';
 import BaseNoteCard from '../../../src/components/NoteCard';
+import { buildElevation } from '../../../src/theme/elevation';
 import {
   FLAT_LIGHT,
   FLAT_DARK,
   NEUMORPHIC_LIGHT,
   NEUMORPHIC_DARK,
+  NEUTRAL_BRUTALIST_LIGHT,
+  NEUTRAL_BRUTALIST_DARK,
   RADII,
   SPACING,
   TYPE,
@@ -55,6 +58,8 @@ const FIXTURES: ThemeFixture[] = [
   { label: 'flat-dark', palette: FLAT_DARK, style: 'flat', isDark: true },
   { label: 'neumorphic-light', palette: NEUMORPHIC_LIGHT, style: 'neumorphic', isDark: false },
   { label: 'neumorphic-dark', palette: NEUMORPHIC_DARK, style: 'neumorphic', isDark: true },
+  { label: 'neo-brutalist-light', palette: NEUTRAL_BRUTALIST_LIGHT, style: 'neo-brutalist', isDark: false },
+  { label: 'neo-brutalist-dark', palette: NEUTRAL_BRUTALIST_DARK, style: 'neo-brutalist', isDark: true },
 ];
 
 // ---------------------------------------------------------------------------
@@ -641,5 +646,227 @@ describe('Token invariants', () => {
     for (const palette of [FLAT_DARK, NEUMORPHIC_LIGHT, NEUMORPHIC_DARK]) {
       expect(new Set(Object.keys(palette))).toEqual(keys);
     }
+  });
+
+  it('neo-brutalist palettes have same keys as flat/neumorphic', () => {
+    const keys = new Set(Object.keys(FLAT_LIGHT));
+    expect(new Set(Object.keys(NEUTRAL_BRUTALIST_LIGHT))).toEqual(keys);
+    expect(new Set(Object.keys(NEUTRAL_BRUTALIST_DARK))).toEqual(keys);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Neo-Brutalist style assertions
+// ---------------------------------------------------------------------------
+
+describe('Neo-Brutalist Surface rendering (integration)', () => {
+  const neoBrutalistLightFixture = { label: 'neo-brutalist-light', palette: NEUTRAL_BRUTALIST_LIGHT, style: 'neo-brutalist' as ThemeStyle, isDark: false };
+  const neoBrutalistDarkFixture = { label: 'neo-brutalist-dark', palette: NEUTRAL_BRUTALIST_DARK, style: 'neo-brutalist' as ThemeStyle, isDark: true };
+
+  for (const fixture of [neoBrutalistLightFixture, neoBrutalistDarkFixture]) {
+    describe(fixture.label, () => {
+      beforeEach(() => {
+        const { __overrideTheme } = jest.requireMock('../../../src/contexts/ThemeContext');
+        __overrideTheme(fixture.palette, fixture.style, fixture.isDark);
+      });
+
+      afterEach(() => {
+        const { __resetTheme } = jest.requireMock('../../../src/contexts/ThemeContext');
+        __resetTheme();
+      });
+
+      it('Surface with neo-brutalist renders without crashing', () => {
+        const { root } = render(
+          <Surface elevation="raised" testID={`surface-${fixture.label}`}>
+            <Text>Neo-Brutalist content</Text>
+          </Surface>
+        );
+        expect(root).toBeTruthy();
+      });
+
+      it('Surface with flat elevation renders without crashing', () => {
+        const { root } = render(
+          <Surface elevation="flat" testID={`surface-flat-${fixture.label}`}>
+            <Text>Neo-Brutalist flat</Text>
+          </Surface>
+        );
+        expect(root).toBeTruthy();
+      });
+
+      it('Button with neo-brutalist theme renders primary variant', () => {
+        const { root } = render(
+          <Button label="Neo Button" variant="primary" testID={`button-primary-${fixture.label}`} />
+        );
+        expect(root).toBeTruthy();
+      });
+
+      it('Button with neo-brutalist theme renders secondary variant', () => {
+        const { root } = render(
+          <Button label="Neo Button" variant="secondary" testID={`button-secondary-${fixture.label}`} />
+        );
+        expect(root).toBeTruthy();
+      });
+    });
+  }
+});
+
+describe('buildElevation neo-brutalist unit tests', () => {
+  for (const tier of ['subtle', 'raised', 'floating'] as const) {
+    for (const platform of ['ios', 'web'] as const) {
+      it(`neo-brutalist ${platform} ${tier} returns crisp border and solid offset shadow`, () => {
+        const result = buildElevation({
+          tier,
+          inset: false,
+          style: 'neo-brutalist',
+          colors: NEUTRAL_BRUTALIST_LIGHT,
+          platform,
+        });
+        expect(result.outer).toBeDefined();
+        const outer = result.outer as Record<string, unknown>;
+        expect(outer.borderWidth).toBe(2);
+        expect(outer.borderColor).toBe(NEUTRAL_BRUTALIST_LIGHT.border);
+        expect(outer.shadowRadius).toBe(0);
+        expect(outer.shadowOpacity).toBe(1);
+        expect(outer.shadowOffset).toEqual({ width: tier === 'subtle' ? 2 : tier === 'raised' ? 3 : 4, height: tier === 'subtle' ? 2 : tier === 'raised' ? 3 : 4 });
+      });
+
+      it(`neo-brutalist ${platform} ${tier} inset returns same crisp border`, () => {
+        const result = buildElevation({
+          tier,
+          inset: true,
+          style: 'neo-brutalist',
+          colors: NEUTRAL_BRUTALIST_LIGHT,
+          platform,
+        });
+        expect(result.outer).toBeDefined();
+        const outer = result.outer as Record<string, unknown>;
+        expect(outer.borderWidth).toBe(2);
+        expect(outer.shadowRadius).toBe(0);
+      });
+    }
+
+    it(`neo-brutalist android ${tier} returns border-first with elevation 0`, () => {
+      const result = buildElevation({
+        tier,
+        inset: false,
+        style: 'neo-brutalist',
+        colors: NEUTRAL_BRUTALIST_LIGHT,
+        platform: 'android',
+      });
+      expect(result.outer).toBeDefined();
+      const outer = result.outer as Record<string, unknown>;
+      expect(outer.borderWidth).toBe(2);
+      expect(outer.borderColor).toBe(NEUTRAL_BRUTALIST_LIGHT.border);
+      expect(outer.elevation).toBe(0);
+      expect(result.androidOverlays).toBeUndefined();
+    });
+  }
+
+  it('neo-brutalist returns empty inner object', () => {
+    const result = buildElevation({
+      tier: 'raised',
+      inset: false,
+      style: 'neo-brutalist',
+      colors: NEUTRAL_BRUTALIST_LIGHT,
+      platform: 'ios',
+    });
+    expect(result.inner).toEqual({});
+  });
+
+  it('flat still returns empty outer/inner', () => {
+    const result = buildElevation({
+      tier: 'raised',
+      inset: false,
+      style: 'flat',
+      colors: FLAT_LIGHT,
+      platform: 'ios',
+    });
+    expect(result.outer).toEqual({});
+    expect(result.inner).toEqual({});
+  });
+
+  it('neumorphic still returns shadow blur properties', () => {
+    const result = buildElevation({
+      tier: 'raised',
+      inset: false,
+      style: 'neumorphic',
+      colors: NEUMORPHIC_LIGHT,
+      platform: 'ios',
+    });
+    const outer = result.outer as Record<string, unknown>;
+    expect(outer.shadowRadius).toBeGreaterThan(0);
+    expect(outer.shadowOpacity).toBe(1);
+  });
+
+  it('neo-brutalist dark mode uses dark palette border', () => {
+    const result = buildElevation({
+      tier: 'raised',
+      inset: false,
+      style: 'neo-brutalist',
+      colors: NEUTRAL_BRUTALIST_DARK,
+      platform: 'ios',
+    });
+    const outer = result.outer as Record<string, unknown>;
+    expect(outer.borderWidth).toBe(2);
+    expect(outer.borderColor).toBe(NEUTRAL_BRUTALIST_DARK.border);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Raw-shadow regression — no-soft-shadow for neo-brutalist components
+//
+// NATIVE RENDER ASSERTION IMPOSSIBLE IN JEST:
+// NativeWind className props (e.g., "bg-surface rounded-md") are not processed
+// in the Jest test environment. Components that use NativeWind (NoteCard,
+// CanvasCard, BulkActionBar, GitButtonHalo, TabBar) cannot have their rendered
+// shadow styles verified via integration tests.
+//
+// WORKAROUND:
+// The neo-brutalist "no soft shadow" contract is proven via buildElevation unit
+// tests (shadowRadius=0, shadowOpacity=1 for neo-brutalist across all tiers).
+// Components consume buildElevation or apply inline shadow normalization with the
+// same contract. If buildElevation passes, the shadow styles applied by
+// components are correct.
+//
+// IMPOSSIBLE TO TEST IN JEST (documented):
+// - NoteCard native shadow rendering with NativeWind className
+// - CanvasCard native shadow rendering with NativeWind className
+// - BulkActionBar native shadow rendering with NativeWind className
+// - GitButtonHalo animated style with NativeWind className
+// - TabBar native shadow with NativeWind className
+// ---------------------------------------------------------------------------
+describe('Raw-shadow neo-brutalist regression', () => {
+  describe('neo-brutalist buildElevation no-soft-shadow contract', () => {
+    it('neo-brutalist always returns shadowRadius=0 across all tiers', () => {
+      for (const tier of ['subtle', 'raised', 'floating'] as const) {
+        const result = buildElevation({ tier, inset: false, style: 'neo-brutalist', colors: NEUTRAL_BRUTALIST_LIGHT, platform: 'ios' });
+        const outer = result.outer as Record<string, unknown>;
+        expect(outer.shadowRadius).toBe(0);
+        expect(outer.shadowOpacity).toBe(1);
+      }
+    });
+
+    it('neo-brutalist android has elevation=0 (no Material shadow)', () => {
+      for (const tier of ['subtle', 'raised', 'floating'] as const) {
+        const result = buildElevation({ tier, inset: false, style: 'neo-brutalist', colors: NEUTRAL_BRUTALIST_LIGHT, platform: 'android' });
+        const outer = result.outer as Record<string, unknown>;
+        expect(outer.elevation).toBe(0);
+      }
+    });
+
+    it('non-neo-brutalist styles have positive shadowRadius (soft shadow)', () => {
+      const result = buildElevation({ tier: 'raised', inset: false, style: 'neumorphic', colors: NEUMORPHIC_LIGHT, platform: 'ios' });
+      const outer = result.outer as Record<string, unknown>;
+      expect(outer.shadowRadius).toBeGreaterThan(0);
+      expect(outer.shadowOpacity).toBe(1);
+    });
+
+    it('neo-brutalist borderWidth is always 2 (crisp border, no blur)', () => {
+      for (const tier of ['subtle', 'raised', 'floating'] as const) {
+        const result = buildElevation({ tier, inset: false, style: 'neo-brutalist', colors: NEUTRAL_BRUTALIST_LIGHT, platform: 'ios' });
+        const outer = result.outer as Record<string, unknown>;
+        expect(outer.borderWidth).toBe(2);
+      }
+    });
   });
 });

@@ -297,7 +297,12 @@
     },
     "security": "Security",
     "appearance": "Appearance",
-    "updatedUI": "Neumorphic UI",
+    "style": {
+      "basic": "Basic",
+      "neumorphic": "Neumorphic",
+      "neoBrutalist": "Neo-Brutalist",
+      "hint": "Basic is free. Neumorphic and Neo-Brutalist require GitNotēs Pro."
+    },
     "darkMode": "Dark Mode",
     "accentColor": "Accent Color",
     "appIcon": {
@@ -324,6 +329,8 @@
     "githubAccount": "GitHub Account",
     "githubAccounts": "GitHub Accounts",
     "connectGithub": "Connect GitHub",
+    "connectWithGitHub": "Connect with GitHub",
+    "installGithubApp": "Install GitHub App",
     "changeToken": "Change Token",
     "replaceActiveToken": "Replace Active Token",
     "addAnotherAccount": "Add another account",
@@ -565,6 +572,11 @@
       "invalidTokenBody": "The token was rejected. It may be invalid, expired, or revoked — or lack the required repository permissions. Check the token in your provider's settings and update or regenerate it if needed.",
       "networkTitle": "Connection failed",
       "networkBody": "Could not reach the host. Check your network and try again."
+    },
+    "alternatives": {
+      "or": "or",
+      "githubOAuth": "Continue with GitHub OAuth",
+      "githubApp": "Continue with GitHub App"
     }
   },
   "ai": {
@@ -881,7 +893,7 @@
   },
   "hints": {
     "settings": {
-      "updatedUI": "Soft-UI shadows give a tactile, elevated feel. Toggle off for the classic flat look.",
+      "style": "Basic is free. Neumorphic and Neo-Brutalist require GitNotēs Pro. Tap to change your UI style.",
       "darkMode": "Switch between light and dark appearance. For system settings, use the option below.",
       "accentColor": "Choose any hex color to personalize your app's accent. Applies across all themes and styles.",
       "useSystemTheme": "Automatically match your device's light or dark mode setting.",

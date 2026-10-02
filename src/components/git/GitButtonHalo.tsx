@@ -10,6 +10,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { GIT_BUTTON_SIZE, HALO_COLOR, HALO_RING_SIZE } from './gitButtonGeometry';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface GitButtonHaloProps {
   /** Whether the halo should pulse (true when the repo has unpushed commits). */
@@ -26,6 +27,8 @@ interface GitButtonHaloProps {
  * instead of unmounting it, so state transitions stay smooth.
  */
 export default function GitButtonHalo({ active, color = HALO_COLOR, testID }: GitButtonHaloProps) {
+  const { style: themeStyle } = useTheme();
+  const isNeoBrutalist = themeStyle === 'neo-brutalist';
   const pulse = useSharedValue(0);
 
   useEffect(() => {
@@ -43,15 +46,23 @@ export default function GitButtonHalo({ active, color = HALO_COLOR, testID }: Gi
     }
   }, [active, pulse]);
 
-  const innerRingStyle = useAnimatedStyle(() => ({
-    opacity: active ? interpolate(pulse.value, [0, 0.5, 1], [0.85, 0.35, 0.85]) : 0,
-    transform: [{ scale: interpolate(pulse.value, [0, 0.5, 1], [0.94, 1.04, 0.94]) }],
-  }));
+  const innerRingStyle = useAnimatedStyle(() => {
+    const baseOpacity = active ? interpolate(pulse.value, [0, 0.5, 1], [0.85, 0.35, 0.85]) : 0;
+    const scale = interpolate(pulse.value, [0, 0.5, 1], [0.94, 1.04, 0.94]);
+    if (isNeoBrutalist) {
+      return { opacity: baseOpacity, transform: [{ scale }], borderWidth: 2 };
+    }
+    return { opacity: baseOpacity, transform: [{ scale }] };
+  });
 
-  const outerRingStyle = useAnimatedStyle(() => ({
-    opacity: active ? interpolate(pulse.value, [0, 0.5, 1], [0.35, 0.12, 0.35]) : 0,
-    transform: [{ scale: interpolate(pulse.value, [0, 0.5, 1], [0.98, 1.12, 0.98]) }],
-  }));
+  const outerRingStyle = useAnimatedStyle(() => {
+    const baseOpacity = active ? interpolate(pulse.value, [0, 0.5, 1], [0.35, 0.12, 0.35]) : 0;
+    const scale = interpolate(pulse.value, [0, 0.5, 1], [0.98, 1.12, 0.98]);
+    if (isNeoBrutalist) {
+      return { opacity: baseOpacity, transform: [{ scale }], borderWidth: 1 };
+    }
+    return { opacity: baseOpacity, transform: [{ scale }] };
+  });
 
   return (
     <View
@@ -62,6 +73,7 @@ export default function GitButtonHalo({ active, color = HALO_COLOR, testID }: Gi
       <Animated.View
         style={[
           styles.outerRing,
+          isNeoBrutalist ? neoBrutalistStyles.outerRing : null,
           { borderColor: color, shadowColor: color },
           outerRingStyle,
         ]}
@@ -69,6 +81,7 @@ export default function GitButtonHalo({ active, color = HALO_COLOR, testID }: Gi
       <Animated.View
         style={[
           styles.innerRing,
+          isNeoBrutalist ? neoBrutalistStyles.innerRing : null,
           { borderColor: color, shadowColor: color },
           innerRingStyle,
         ]}
@@ -103,5 +116,18 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.6,
     shadowRadius: 10,
     elevation: 3,
+  },
+});
+
+const neoBrutalistStyles = StyleSheet.create({
+  innerRing: {
+    shadowRadius: 0,
+    shadowOpacity: 1,
+    elevation: 0,
+  },
+  outerRing: {
+    shadowRadius: 0,
+    shadowOpacity: 1,
+    elevation: 0,
   },
 });

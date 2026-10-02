@@ -71,7 +71,7 @@ type SettingsContentProps = {
   headerHeight: number;
   tabBarHeight: number;
   theme: 'light' | 'dark' | 'system';
-  uiStyle: 'flat' | 'neumorphic';
+  uiStyle: 'flat' | 'neumorphic' | 'neo-brutalist';
   accounts: Account[];
   activeAccountId: string | null;
   authState: AuthState;
@@ -86,7 +86,7 @@ type SettingsContentProps = {
   chatStorageLabel: string;
   providers: AIProviderConfig[];
   setTheme: (theme: 'light' | 'dark' | 'system') => void;
-  setStyle: (style: 'flat' | 'neumorphic') => void;
+  setStyle: (style: 'flat' | 'neumorphic' | 'neo-brutalist') => void;
   onOpenConnectToken: () => void;
   onOpenAddAccount: () => void;
   onSwitchAccount: (id: string) => void | Promise<void>;
@@ -162,6 +162,16 @@ onRemoveAccount: (id: string, login: string) => void;
   appIconSupported: boolean;
   appIconLoading: boolean;
   onOpenAppIconPicker: () => void;
+  // GitHub OAuth
+  onConnectOAuth: (hostId: string | null) => void;
+  onDisconnectOAuth: (hostId: string) => void;
+  oauthLoading: Record<string, boolean>;
+  oauthError: Record<string, string | null>;
+  // GitHub App
+  onConnectGitHubApp: (hostId: string | null) => void;
+  onDisconnectGitHubApp: (hostId: string) => void;
+  appLoading: Record<string, boolean>;
+  appError: Record<string, string | null>;
 };
 
 function formatLfsBytes(bytes: number): string {
@@ -261,6 +271,12 @@ export function SettingsContent(props: SettingsContentProps) {
     appIconSupported,
     appIconLoading,
     onOpenAppIconPicker,
+    onConnectOAuth,
+    oauthLoading,
+    oauthError,
+    onConnectGitHubApp,
+    appLoading,
+    appError,
   } = props;
   // Tokens hook gives us spacing/radii/type so the styled disconnect
   // button matches the rest of the app without hardcoded values.
@@ -349,24 +365,49 @@ export function SettingsContent(props: SettingsContentProps) {
         title={t('settings.appearance')}
       >
         <GroupRow
-          testID="settings.row.updated-ui"
-          onPress={() => { if (!isPro) onOpenPaywall(); }}
+          testID="settings.option.style.basic"
+          onPress={() => { HapticService.selection(); setStyle('flat'); }}
+          accessibilityRole="button"
+          accessibilityLabel={t('settings.style.basic')}
           trailing={
-            isPro ? (
-              <View className="flex-row items-center gap-2">
-                <Toggle
-                  testID="settings.toggle.neu"
-                  value={uiStyle === 'neumorphic'}
-                  onValueChange={(value) => setStyle(value ? 'neumorphic' : 'flat')}
-                />
-                <HintIcon hintKey="hints.settings.updatedUI" testID="hint.updated-ui" />
-              </View>
-            ) : (
-              <Ionicons name="lock-closed" size={18} color={colors.textSecondary} />
-            )
+            uiStyle === 'flat' ? (
+              <Ionicons name="checkmark" size={18} color={colors.accent} />
+            ) : null
           }
         >
-          <Text style={[styles.settingLabel, { color: colors.text }]}>{t('settings.updatedUI')}</Text>
+          <Text style={[styles.settingLabel, { color: colors.text }]}>{t('settings.style.basic')}</Text>
+        </GroupRow>
+        <GroupRow
+          testID="settings.option.style.neumorphic"
+          onPress={isPro ? () => { HapticService.selection(); setStyle('neumorphic'); } : () => promptProUpgrade(t, onOpenPaywall)}
+          accessibilityRole="button"
+          accessibilityLabel={t('settings.style.neumorphic')}
+          trailing={
+            <View className="flex-row items-center gap-2">
+              {uiStyle === 'neumorphic' ? (
+                <Ionicons name="checkmark" size={18} color={colors.accent} />
+              ) : !isPro ? (
+                <Ionicons name="lock-closed" size={16} color={colors.textSecondary} />
+              ) : null}
+            </View>
+          }
+        >
+          <Text style={[styles.settingLabel, { color: colors.text }]}>{t('settings.style.neumorphic')}</Text>
+        </GroupRow>
+        <GroupRow
+          testID="settings.option.style.neo-brutalist"
+          onPress={() => { HapticService.selection(); setStyle('neo-brutalist'); }}
+          accessibilityRole="button"
+          accessibilityLabel={t('settings.style.neoBrutalist')}
+          trailing={
+            <View className="flex-row items-center gap-2">
+              {uiStyle === 'neo-brutalist' ? (
+                <Ionicons name="checkmark" size={18} color={colors.accent} />
+              ) : null}
+            </View>
+          }
+        >
+          <Text style={[styles.settingLabel, { color: colors.text }]}>{t('settings.style.neoBrutalist')}</Text>
         </GroupRow>
         <GroupRow
           trailing={
@@ -506,18 +547,57 @@ export function SettingsContent(props: SettingsContentProps) {
 
       <Group title={t('accounts.title')}>
         {accountSummaries.length === 0 ? (
-          // No accounts AND no legacy authState: show the unified host picker
-          // entry. This is the new first-run path — any host works.
-          <GroupRow
-            testID="settings.button.connect-host"
-            onPress={() => onAddHost()}
-            leading={<Ionicons name="add-circle-outline" size={20} color={colors.primary} />}
-            trailing={<Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />}
-          >
-            <Text style={[styles.settingLabel, { color: colors.primary }]}>
-              {t('connectHost.connectHost')}
-            </Text>
-          </GroupRow>
+          <>
+            {/* PAT-based Connect Host */}
+            <GroupRow
+              testID="settings.button.connect-host"
+              onPress={() => onAddHost()}
+              leading={<Ionicons name="add-circle-outline" size={20} color={colors.primary} />}
+              trailing={<Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />}
+            >
+              <Text style={[styles.settingLabel, { color: colors.primary }]}>
+                {t('connectHost.connectHost')}
+              </Text>
+            </GroupRow>
+            {/* OAuth-based GitHub connect — fresh install path */}
+            <GroupRow
+              testID="settings.button.connect-github-oauth"
+              onPress={() => onConnectOAuth(null)}
+              leading={<Ionicons name="logo-github" size={20} color={colors.primary} />}
+              trailing={
+                oauthLoading['__fresh__'] ? (
+                  <ActivityIndicator size="small" color={colors.primary} />
+                ) : oauthError['__fresh__'] ? (
+                  <Text style={{ fontSize: type.xs, color: colors.error }}>{oauthError['__fresh__']}</Text>
+                ) : (
+                  <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+                )
+              }
+            >
+              <Text style={[styles.settingLabel, { color: colors.primary }]}>
+                {t('settings.connectWithGitHub')}
+              </Text>
+            </GroupRow>
+            {/* GitHub App install — fresh install path */}
+            <GroupRow
+              testID="settings.button.install-github-app"
+              onPress={() => onConnectGitHubApp(null)}
+              leading={<Ionicons name="cube-outline" size={20} color={colors.primary} />}
+              trailing={
+                appLoading['__fresh__'] ? (
+                  <ActivityIndicator size="small" color={colors.primary} />
+                ) : appError['__fresh__'] ? (
+                  <Text style={{ fontSize: type.xs, color: colors.error }}>{appError['__fresh__']}</Text>
+                ) : (
+                  <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+                )
+              }
+            >
+              <Text style={[styles.settingLabel, { color: colors.primary }]}>
+                {t('settings.installGithubApp')}
+              </Text>
+            </GroupRow>
+          </>
         ) : (
           <>
             {accountSummaries.map((summary) => {
@@ -608,6 +688,39 @@ export function SettingsContent(props: SettingsContentProps) {
                               onValueChange={() => onToggleSSH(host.id)}
                             />
                           </View>
+                          {host.provider === 'github' ? (
+                            <>
+                              <View className="flex-row items-center gap-1.5">
+                                <Text style={{ fontSize: type.xs, color: colors.textSecondary }}>OAuth</Text>
+                                <ActivityIndicator
+                                  size="small"
+                                  color={colors.primary}
+                                  testID={`settings.spinner.oauth.${host.id}`}
+                                />
+                                <TouchableOpacity
+                                  testID={`settings.button.connect-oauth.${host.id}`}
+                                  onPress={() => onConnectOAuth(host.id)}
+                                  disabled={oauthLoading[host.id]}
+                                  accessibilityRole="button"
+                                >
+                                  <Text style={{ fontSize: type.xs, color: oauthError[host.id] ? colors.error : colors.primary }}>Connect</Text>
+                                </TouchableOpacity>
+                              </View>
+                              <View className="flex-row items-center gap-1.5">
+                                <Text style={{ fontSize: type.xs, color: colors.textSecondary }}>App</Text>
+                                <TouchableOpacity
+                                  testID={`settings.button.connect-github-app.${host.id}`}
+                                  onPress={() => onConnectGitHubApp(host.id)}
+                                  disabled={appLoading[host.id]}
+                                  accessibilityRole="button"
+                                >
+                                  <Text style={{ fontSize: type.xs, color: appError[host.id] ? colors.error : colors.primary }}>
+                                    {appLoading[host.id] ? '…' : 'Install'}
+                                  </Text>
+                                </TouchableOpacity>
+                              </View>
+                            </>
+                          ) : null}
                           <TouchableOpacity
                             onPress={() => onDisconnectHost(host.id)}
                             testID={`settings.button.disconnect-host.${host.id}`}

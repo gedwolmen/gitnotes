@@ -32,6 +32,8 @@ import { CloneMigrationService } from '../services/git/CloneMigrationService';
 import { getActiveBranch } from '../services/git/activeBranchStore';
 import { LfsService } from '../services/git/lfs';
 import { AuthService, type HostConnectionSummary } from '../services/AuthService';
+import { GitHubOAuthService } from '../services/GitHubOAuthService';
+import { GitHubAppService } from '../services/GitHubAppService';
 import { OnboardingService } from '../services/OnboardingService';
 import { HapticService } from '../utils/haptics';
 import { createThrottledEmitter } from '../utils/progressThrottle';
@@ -182,6 +184,10 @@ export default function SettingsScreen() {
   const [appIconSupported, setAppIconSupported] = useState(false);
   const [showAppIconPicker, setShowAppIconPicker] = useState(false);
   const [appIconLoading, setAppIconLoading] = useState(false);
+  const [oauthLoading, setOauthLoading] = useState<Record<string, boolean>>({});
+  const [oauthError, setOauthError] = useState<Record<string, string | null>>({});
+  const [appLoading, setAppLoading] = useState<Record<string, boolean>>({});
+  const [appError, setAppError] = useState<Record<string, string | null>>({});
   const pendingConfirmationRef = useRef(false);
 
   const loadHostUseSsh = useCallback(async (hosts: Array<{ id: string }>) => {
@@ -1058,6 +1064,85 @@ export default function SettingsScreen() {
       setAppIconLoading(false);
     }
   }, [t]);
+  const handleConnectOAuth = useCallback(async (hostId: string | null) => {
+    const key = hostId ?? '__fresh__';
+    setOauthLoading((prev) => ({ ...prev, [key]: true }));
+    setOauthError((prev) => ({ ...prev, [key]: null }));
+    try {
+      const backendUrl = process.env.EXPO_PUBLIC_GITNOTES_BACKEND_URL;
+      const clientId = process.env.EXPO_PUBLIC_GITHUB_OAUTH_CLIENT_ID;
+      if (!backendUrl || !clientId) {
+        setOauthError((prev) => ({ ...prev, [key]: 'OAuth not configured on this device' }));
+        return;
+      }
+      const redirectUri = 'gitnotes://oauth/callback';
+      const result = await GitHubOAuthService.initiate({ backendUrl, redirectUri, clientId, hostId });
+      if (!result.ok) {
+        setOauthError((prev) => ({ ...prev, [key]: result.reason }));
+        return;
+      }
+      const opened = await GitHubOAuthService.openAuthorizationUrl(result.authorizationUrl);
+      if (!opened) {
+        setOauthError((prev) => ({ ...prev, [key]: 'Could not open browser' }));
+      }
+    } catch (err) {
+      setOauthError((prev) => ({ ...prev, [key]: err instanceof Error ? err.message : 'Unknown error' }));
+    } finally {
+      setOauthLoading((prev) => ({ ...prev, [key]: false }));
+    }
+  }, []);
+
+  const handleDisconnectOAuth = useCallback(async (hostId: string) => {
+    setOauthLoading((prev) => ({ ...prev, [hostId]: true }));
+    setOauthError((prev) => ({ ...prev, [hostId]: null }));
+    try {
+      await AuthService.removeGitHubOAuthCredential(hostId);
+      HapticService.success();
+    } catch (err) {
+      setOauthError((prev) => ({ ...prev, [hostId]: err instanceof Error ? err.message : 'Unknown error' }));
+    } finally {
+      setOauthLoading((prev) => ({ ...prev, [hostId]: false }));
+    }
+  }, []);
+
+  const handleConnectGitHubApp = useCallback(async (hostId: string | null) => {
+    const key = hostId ?? '__fresh__';
+    setAppLoading((prev) => ({ ...prev, [key]: true }));
+    setAppError((prev) => ({ ...prev, [key]: null }));
+    try {
+      const backendUrl = process.env.EXPO_PUBLIC_GITNOTES_BACKEND_URL;
+      if (!backendUrl) {
+        setAppError((prev) => ({ ...prev, [key]: 'Backend URL not set on this device' }));
+        return;
+      }
+      const result = await GitHubAppService.buildInstallUrl({ backendUrl, hostId, selectedRepositoryIds: [] });
+      if (!result.ok) {
+        setAppError((prev) => ({ ...prev, [key]: result.reason }));
+        return;
+      }
+      const opened = await GitHubAppService.openInstallationUrl(result.installationUrl);
+      if (!opened) {
+        setAppError((prev) => ({ ...prev, [key]: 'Could not open browser' }));
+      }
+    } catch (err) {
+      setAppError((prev) => ({ ...prev, [key]: err instanceof Error ? err.message : 'Unknown error' }));
+    } finally {
+      setAppLoading((prev) => ({ ...prev, [key]: false }));
+    }
+  }, []);
+
+  const handleDisconnectGitHubApp = useCallback(async (hostId: string) => {
+    setAppLoading((prev) => ({ ...prev, [hostId]: true }));
+    setAppError((prev) => ({ ...prev, [hostId]: null }));
+    try {
+      await AuthService.removeGitHubAppCredential(hostId);
+      HapticService.success();
+    } catch (err) {
+      setAppError((prev) => ({ ...prev, [hostId]: err instanceof Error ? err.message : 'Unknown error' }));
+    } finally {
+      setAppLoading((prev) => ({ ...prev, [hostId]: false }));
+    }
+  }, []);
 
   const handleResetOnboarding = useCallback(() => {
     HapticService.warning();
@@ -1139,6 +1224,14 @@ export default function SettingsScreen() {
         onRemoveAccount={handleRemoveAccount}
         onRemoveToken={handleRemoveToken}
         onDisconnectHost={handleDisconnectHost}
+        onConnectOAuth={handleConnectOAuth}
+        onDisconnectOAuth={handleDisconnectOAuth}
+        oauthLoading={oauthLoading}
+        oauthError={oauthError}
+        onConnectGitHubApp={handleConnectGitHubApp}
+        onDisconnectGitHubApp={handleDisconnectGitHubApp}
+        appLoading={appLoading}
+        appError={appError}
         onAddHost={(preset) => {
           setConnectHostPreset(preset);
           setShowConnectHostModal(true);
@@ -1286,6 +1379,12 @@ export default function SettingsScreen() {
         onClose={() => { setShowConnectHostModal(false); setConnectHostPreset(undefined); }}
         presetProvider={connectHostPreset}
         colors={colors}
+        onConnectOAuth={handleConnectOAuth}
+        onConnectGitHubApp={handleConnectGitHubApp}
+        oauthLoading={oauthLoading}
+        oauthError={oauthError}
+        appLoading={appLoading}
+        appError={appError}
       />
       <HexColorPickerModal
         visible={showAccentColorPicker}

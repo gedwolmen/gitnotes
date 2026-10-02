@@ -164,6 +164,29 @@ GitNotēs uses a **centralized branch model** for clone-mode repositories:
 | `FeatureFlags.ts` | Feature flag provider — enables/disables features per user, cohort, or experiment. |
 | `http.ts` | GitHub API axios instance — handles auth headers (Bearer token), timeouts (120s), and request auth overrides for the GitHub API. |
 
+## Worker API — OAuth/App Boundary (`src/services/`)
+
+> **Current mobile authentication is PAT-based (Personal Access Token).** The services below define the typed boundary for future GitHub OAuth PKCE and GitHub App installation flows. No OAuth UI is shipped in the current release.
+
+| File | Purpose |
+|------|---------|
+| `workerApi.ts` | Typed HTTP client for the Cloudflare Worker backend. Uses `EXPO_PUBLIC_GITNOTES_BACKEND_URL` with production fallback `https://worker.gitnotes.org/api/v1`. |
+| `GitHubOAuthService.ts` | GitHub OAuth PKCE flow — initiates, exchanges codes, revokes tokens. Uses `EXPO_PUBLIC_GITHUB_OAUTH_CLIENT_ID` for the public client ID. |
+| `GitHubAppService.ts` | GitHub App installation flow — generates signed JWS handoffs, exchanges installation tokens, renews via one-time grant tokens. |
+
+**Environment variables (from `.env.example`):**
+
+| Variable | Purpose | Default |
+|----------|---------|---------|
+| `EXPO_PUBLIC_GITNOTES_BACKEND_URL` | Worker API base URL | `https://worker.gitnotes.org/api/v1` |
+| `EXPO_PUBLIC_GITHUB_OAUTH_CLIENT_ID` | GitHub OAuth app client ID (public, non-secret) | — |
+
+**Callbacks (fixed deep links):**
+- OAuth: `gitnotes://oauth/callback`
+- App: `gitnotes://app/callback`
+
+**Existing auth (unchanged):** Host connections (`AccountsContext`, `HostAuthContext`) use PAT-based `GitHubService.setToken()` / `AuthService.connectHost()`. SSH key and credential management is unchanged.
+
 ## See Also
 
 - [Architecture](./architecture.md) — How these services fit together

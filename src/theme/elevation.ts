@@ -43,6 +43,34 @@ export function buildElevation(args: BuildElevationArgs): ElevationStyles {
     return { outer: {}, inner: {} };
   }
 
+  if (style === 'neo-brutalist') {
+    const borderColor = colors.border;
+    const offset = tier === 'subtle' ? 2 : tier === 'raised' ? 3 : 4;
+    if (platform === 'android') {
+      return {
+        outer: {
+          borderWidth: 2,
+          borderColor,
+          elevation: 0,
+        },
+        inner: {},
+        androidOverlays: undefined,
+      };
+    }
+    return {
+      outer: {
+        shadowColor: borderColor,
+        shadowOffset: { width: offset, height: offset },
+        shadowOpacity: 1,
+        shadowRadius: 0,
+        borderWidth: 2,
+        borderColor,
+      },
+      inner: {},
+      androidOverlays: undefined,
+    };
+  }
+
   const { offset, blur } = TIERS[tier];
   const darkColor = colors.shadow;
   const lightColor = colors.highlight;

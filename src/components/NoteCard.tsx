@@ -34,8 +34,9 @@ function NoteCardImpl({
   isCached = true,
   onTagPress,
 }: NoteCardProps) {
-  const { colors, isDark } = useTheme();
+  const { colors, isDark, style: themeStyle } = useTheme();
   const { isTablet } = useResponsive();
+  const isNeoBrutalist = themeStyle === 'neo-brutalist';
   const isCard = variant === 'card';
   const showCompact = isCard ? false : compact;
   const isOfflineUncached = isOffline && !isCached;
@@ -72,8 +73,19 @@ function NoteCardImpl({
         styles.card,
         {
           backgroundColor: colors.card,
-          shadowColor: colors.shadow,
-          shadowOpacity: isDark ? 0 : 0.1,
+          ...(isNeoBrutalist
+            ? {
+                borderWidth: 2,
+                borderColor: colors.border,
+                shadowColor: colors.border,
+                shadowOpacity: 1,
+                shadowRadius: 0,
+                shadowOffset: { width: 3, height: 3 },
+              }
+            : {
+                shadowColor: colors.shadow,
+                shadowOpacity: isDark ? 0 : 0.1,
+              }),
           opacity: isOfflineUncached ? 0.5 : 1,
         },
         showCompact && styles.cardCompact,
@@ -176,16 +188,6 @@ const styles = StyleSheet.create({
     padding: 16,
     marginVertical: 8,
     marginHorizontal: 16,
-    ...Platform.select({
-      ios: {
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 3,
-      },
-    }),
   },
   cardCompact: {
     padding: 12,
