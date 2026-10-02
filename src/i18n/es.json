@@ -177,7 +177,12 @@
     },
     "security": "Seguridad",
     "appearance": "Apariencia",
-    "updatedUI": "UI elegante",
+    "style": {
+      "basic": "Básico",
+      "neumorphic": "Neumórfico",
+      "neoBrutalist": "Neo-Brutalista",
+      "hint": "Básico es gratis. Neumórfico y Neo-Brutalista requieren GitNotēs Pro."
+    },
     "darkMode": "Modo oscuro",
     "accentColor": "Color de acento",
     "useSystemTheme": "Usar tema del sistema",
@@ -533,7 +538,7 @@
   },
   "hints": {
     "settings": {
-      "updatedUI": "Las sombras Soft-UI dan una sensación táctil y elevada. Desactiva para el aspecto clásico plano.",
+      "style": "Básico es gratis. Neumórfico y Neo-Brutalista requieren GitNotēs Pro. Toca para cambiar tu estilo de interfaz.",
       "darkMode": "Cambia entre apariencia clara y oscura. Para ajustes del sistema, usa la opción siguiente.",
       "accentColor": "Elige cualquier color hexadecimal para personalizar el acento de tu app. Se aplica en todos los temas y estilos.",
       "useSystemTheme": "Coincide automáticamente con el modo claro u oscuro de tu dispositivo.",

@@ -1,4 +1,4 @@
-export type ThemeStyle = 'neumorphic' | 'flat';
+export type ThemeStyle = 'neumorphic' | 'flat' | 'neo-brutalist';
 
 export interface Palette {
   bg: string;
@@ -103,6 +103,49 @@ export const FLAT_DARK: Palette = {
   border: '#38383a',
   card: '#2c2c2e',
   elevated: '#2c2c2e',
+};
+
+// Neo-Brutalist: bold flat colors, thick borders, high contrast, no gradients.
+// Light: warm cream base with bold saturated accents.
+// Dark: near-black base with vivid saturated neon accents.
+export const NEUTRAL_BRUTALIST_LIGHT: Palette = {
+  bg: '#F5F0E8',
+  surface: '#FFFEF9',
+  highlight: '#FFFEF9',
+  shadow: '#000000',
+  text: '#1A1A1A',
+  textSecondary: '#5C5C5C',
+  accent: '#FF5C00',
+  accentMuted: '#FF8533',
+  error: '#D93025',
+  success: '#1E7D3A',
+  warning: '#B45309',
+  background: '#F5F0E8',
+  surfaceSecondary: '#EAE5D9',
+  primary: '#FF5C00',
+  border: '#000000',
+  card: '#FFFEF9',
+  elevated: '#FFFEF9',
+};
+
+export const NEUTRAL_BRUTALIST_DARK: Palette = {
+  bg: '#0D0D0D',
+  surface: '#1A1A1A',
+  highlight: '#2A2A2A',
+  shadow: '#000000',
+  text: '#F5F5F5',
+  textSecondary: '#D8D8D8',
+  accent: '#00E5FF',
+  accentMuted: '#00C4CC',
+  error: '#FF6B6B',
+  success: '#4ADE80',
+  warning: '#FBBF24',
+  background: '#0D0D0D',
+  surfaceSecondary: '#262626',
+  primary: '#FF5C00',
+  border: '#FFFFFF',
+  card: '#1A1A1A',
+  elevated: '#2A2A2A',
 };
 
 // Note color-coding palette. Keys must match `NoteColor` in models/Note.
@@ -223,5 +266,7 @@ export function deriveAccentMuted(accent: string, isDark: boolean): string {
 
 export function resolveColors(style: ThemeStyle, isDark: boolean): Palette {
   if (style === 'flat') return isDark ? FLAT_DARK : FLAT_LIGHT;
-  return isDark ? NEUMORPHIC_DARK : NEUMORPHIC_LIGHT;
+  if (style === 'neumorphic') return isDark ? NEUMORPHIC_DARK : NEUMORPHIC_LIGHT;
+  if (style === 'neo-brutalist') return isDark ? NEUTRAL_BRUTALIST_DARK : NEUTRAL_BRUTALIST_LIGHT;
+  return isDark ? FLAT_DARK : FLAT_LIGHT;
 }

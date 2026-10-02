@@ -297,7 +297,12 @@
     },
     "security": "Security",
     "appearance": "Appearance",
-    "updatedUI": "Fancy UI",
+    "style": {
+      "basic": "Basic",
+      "neumorphic": "Neumorphic",
+      "neoBrutalist": "Neo-Brutalist",
+      "hint": "Basic is free. Neumorphic and Neo-Brutalist require GitNotēs Pro."
+    },
     "darkMode": "Dark Mode",
     "accentColor": "Accent Color",
     "useSystemTheme": "Use System Theme",
@@ -876,7 +881,7 @@
   },
   "hints": {
     "settings": {
-      "updatedUI": "Soft-UI shadows give a tactile, elevated feel. Toggle off for the classic flat look.",
+      "style": "Basic is free. Neumorphic and Neo-Brutalist require GitNotēs Pro. Tap to change your UI style.",
       "darkMode": "Switch between light and dark appearance. For system settings, use the option below.",
       "accentColor": "Choose any hex color to personalize your app's accent. Applies across all themes and styles.",
       "useSystemTheme": "Automatically match your device's light or dark mode setting.",

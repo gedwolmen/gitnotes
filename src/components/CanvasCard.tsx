@@ -22,7 +22,8 @@ function CanvasCardImpl({
   onTagPress,
   compact = false,
 }: CanvasCardProps) {
-  const { colors, isDark } = useTheme();
+  const { colors, isDark, style: themeStyle } = useTheme();
+  const isNeoBrutalist = themeStyle === 'neo-brutalist';
   const elementCount = canvas.scene?.elements?.length ?? 0;
   const sceneWidth = canvas.scene?.width ?? 800;
   const sceneHeight = canvas.scene?.height ?? 600;
@@ -38,8 +39,19 @@ function CanvasCardImpl({
         styles.card,
         {
           backgroundColor: colors.card,
-          shadowColor: colors.shadow,
-          shadowOpacity: isDark ? 0 : 0.1,
+          ...(isNeoBrutalist
+            ? {
+                borderWidth: 2,
+                borderColor: colors.border,
+                shadowColor: colors.border,
+                shadowOpacity: 1,
+                shadowRadius: 0,
+                shadowOffset: { width: 3, height: 3 },
+              }
+            : {
+                shadowColor: colors.shadow,
+                shadowOpacity: isDark ? 0 : 0.1,
+              }),
         },
         compact && styles.cardCompact,
       ]}
@@ -137,16 +149,6 @@ const styles = StyleSheet.create({
     padding: 16,
     marginVertical: 8,
     marginHorizontal: 16,
-    ...Platform.select({
-      ios: {
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 3,
-      },
-    }),
   },
   cardCompact: {
     padding: 12,

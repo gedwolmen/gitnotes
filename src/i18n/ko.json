@@ -177,7 +177,12 @@
     },
     "security": "보안",
     "appearance": "모양",
-    "updatedUI": "팬시 UI",
+    "style": {
+      "basic": "기본",
+      "neumorphic": "뉴모피즘",
+      "neoBrutalist": "네오브루탈리즘",
+      "hint": "기본은 무료입니다. 뉴모피즘과 네오브루탈리즘은 GitNotēs Pro가 필요합니다."
+    },
     "darkMode": "다크 모드",
     "accentColor": "강조 색상",
     "useSystemTheme": "시스템 테마 사용",
@@ -533,7 +538,7 @@
   },
   "hints": {
     "settings": {
-      "updatedUI": "Soft-UI 그림자가 촉각적이고 올라온 느낌을줍니다. 클래식한 플랫 모양을 원하면 끄세요.",
+      "style": "기본은 무료입니다. 뉴모피즘과 네오브루탈리즘은 GitNotēs Pro가 필요합니다. 탭하여 UI 스타일을 변경하세요.",
       "darkMode": "밝고 어두운 외관 사이를 전환합니다. 시스템 설정의 경우 아래 옵션을 사용하세요.",
       "accentColor": "어떤 16진수 색상이든 선택하여 앱의 강조 색상을 개인화할 수 있습니다. 모든 테마와 스타일에 적용됩니다.",
       "useSystemTheme": "장치의 밝은 또는 어두운 모드 설정에 자동으로 일치합니다.",
