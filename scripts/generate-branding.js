@@ -107,9 +107,9 @@ function hsvToRgb(h, s, v) {
   else if (h < 300) { r1 = x; g1 = 0; b1 = c; }
   else { r1 = c; g1 = 0; b1 = x; }
   return {
-    r: linearToSrgb(srgbToLinear(r1) + m),
-    g: linearToSrgb(srgbToLinear(g1) + m),
-    b: linearToSrgb(srgbToLinear(b1) + m),
+    r: linearToSrgb(r1 + m),
+    g: linearToSrgb(g1 + m),
+    b: linearToSrgb(b1 + m),
   };
 }
 
