@@ -16,6 +16,12 @@ All notable fixes and feature changes to GitNotēs are documented here.
 
 **Fix:** Align Expo/iOS display names, AI locale labels, loading accessibility text, and repository removal copy with `GitNotēs` while preserving ASCII internal identifiers.
 
+### feat(onboarding): add GitHub OAuth and App sign-in choices
+
+**What:** GitHub onboarding only offered a personal access token, and the clipboard action was left-aligned.
+
+**Fix:** Add GitHub PAT, OAuth, and GitHub App choices using the existing auth services and callback routes, while keeping other providers on their current token flow. Center the Paste from Clipboard action.
+
 ## 2026-10-01
 
 ### fix(graph): keep top nodes below the screen header
