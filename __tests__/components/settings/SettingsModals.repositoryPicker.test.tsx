@@ -1,5 +1,5 @@
 import React from 'react';
-import { render } from '@testing-library/react-native';
+import { fireEvent, render } from '@testing-library/react-native';
 import { SettingsModals } from '../../../src/components/settings/SettingsModals';
 import type { GitHostRepository, GitHostRepositoryResult, GitHostRepositoryUnavailable } from '../../../src/services/git/GitHost';
 import type { GitRepository } from '../../../src/services/GitService';
@@ -199,16 +199,76 @@ describe('RepoPickerList (via SettingsModals)', () => {
     expect(queryByText('me/my-gitlab-repo')).toBeTruthy();
   });
 
+  it('groups repositories by provider', () => {
+    const { getByText } = render(
+      <SettingsModals
+        {...defaultProps}
+        discoverableRepos={[availableGitHubRepo, availableGitLabRepo]}
+      />,
+    );
+
+    expect(getByText('GitHub (1)')).toBeTruthy();
+    expect(getByText('GitLab (1)')).toBeTruthy();
+  });
+
+  it('filters repositories by the selected provider', () => {
+    const { getByTestId, getByText, queryByText } = render(
+      <SettingsModals
+        {...defaultProps}
+        discoverableRepos={[availableGitHubRepo, availableGitLabRepo]}
+      />,
+    );
+
+    fireEvent.press(getByTestId('settings.repo-filter.dropdown'));
+    fireEvent.press(getByTestId('settings.repo-filter.github'));
+
+    expect(getByText('me/my-repo')).toBeTruthy();
+    expect(queryByText('me/my-gitlab-repo')).toBeNull();
+  });
+
+  it('filters repositories by the selected host', () => {
+    const hostId = 'github-host-1';
+    const { getByTestId, getByText, queryByText } = render(
+      <SettingsModals
+        {...defaultProps}
+        discoverableRepos={[
+          { ...availableGitHubRepo, hostId },
+          { ...availableGitLabRepo, hostId: 'gitlab-host-1' },
+        ]}
+        accountSummaries={[{
+          account: { id: 'account-1', login: 'me', name: 'Me', avatarUrl: null },
+          hosts: [{
+            id: hostId,
+            accountId: 'account-1',
+            provider: 'github',
+            hostLogin: 'me',
+            hostUserId: 1,
+            name: 'Me',
+            email: null,
+            avatarUrl: null,
+            instanceBaseUrl: null,
+            addedAt: 1,
+          }],
+          activeHostId: hostId,
+        }]}
+      />,
+    );
+
+    fireEvent.press(getByTestId('settings.repo-filter.host-dropdown'));
+    fireEvent.press(getByTestId(`settings.repo-filter.host.${hostId}`));
+
+    expect(getByText('me/my-repo')).toBeTruthy();
+    expect(queryByText('me/my-gitlab-repo')).toBeNull();
+  });
+
   it('unavailable repos render with provider badge and reason', () => {
-    const { getAllByText, getByText } = render(
+    const { getByText } = render(
       <SettingsModals
         {...defaultProps}
         discoverableRepos={[unavailableGitea]}
       />,
     );
 
-    // Provider label for gitea is shown once (in the unavailable repo row)
-    expect(getAllByText('Gitea')).toHaveLength(1);
     expect(
       getByText('Repository listing is not supported for Gitea and Forgejo. You can add a repository manually.'),
     ).toBeTruthy();

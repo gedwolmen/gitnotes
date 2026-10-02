@@ -5,8 +5,9 @@ import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import SearchBar from '../SearchBar';
 import { Modal, Input, Button } from '../ui';
+import { ProviderSelector, type ProviderSelection } from '../ProviderSelector';
 import type { GitRepository } from '../../services/GitService';
-import { GIT_HOST_LABELS, type GitHostRepository, type GitHostRepositoryResult, type GitHostRepositoryUnavailable } from '../../services/git/GitHost';
+import { GIT_HOST_LABELS, type GitHostProvider, type GitHostRepository, type GitHostRepositoryResult, type GitHostRepositoryUnavailable } from '../../services/git/GitHost';
 import type { TemplateRepoPreference } from '../../services/TemplateRepoPreferenceService';
 import { CloneProgressContent, type CloneProgress } from './CloneProgressModal';
 import type { AccountSummary } from '../../services/AuthService';
@@ -155,6 +156,7 @@ type SettingsModalsProps = {
 type RepoPickerListProps = {
   discoverableRepos: GitHostRepositoryResult[];
   repositories: GitRepository[];
+  accountSummaries: AccountSummary[];
   searchQuery: string;
   isLoading: boolean;
   isAddingRepoPath: string | null;
@@ -165,9 +167,89 @@ type RepoPickerListProps = {
   __onRender?: () => void;
 };
 
+const PROVIDER_ORDER: GitHostProvider[] = ['github', 'gitlab', 'gitea', 'forgejo'];
+
+type HostFilterSelectorProps = {
+  value: string | 'all';
+  hosts: AccountSummary['hosts'];
+  onChange: (hostId: string | 'all') => void;
+  colors: ThemeColors;
+  allLabel: string;
+  title: string;
+};
+
+const HostFilterSelector = memo(function HostFilterSelector({
+  value,
+  hosts,
+  onChange,
+  colors,
+  allLabel,
+  title,
+}: HostFilterSelectorProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const selectedHost = hosts.find((host) => host.id === value);
+  const selectedLabel = selectedHost
+    ? `${GIT_HOST_LABELS[selectedHost.provider]} · ${selectedHost.hostLogin}`
+    : allLabel;
+
+  return (
+    <>
+      <TouchableOpacity
+        testID="settings.repo-filter.host-dropdown"
+        className="flex-row items-center gap-2 px-3 py-2.5 rounded-lg border"
+        style={{ borderColor: colors.border, backgroundColor: colors.surface }}
+        onPress={() => setIsOpen(true)}
+      >
+        <Ionicons name="server-outline" size={18} color={colors.primary} />
+        <Text className="flex-1" style={{ color: colors.text, fontSize: 14, fontWeight: '500' }} numberOfLines={1}>
+          {selectedLabel}
+        </Text>
+        <Ionicons name="chevron-down" size={16} color={colors.textSecondary} />
+      </TouchableOpacity>
+      <Modal visible={isOpen} onRequestClose={() => setIsOpen(false)} bottomSheet accessibilityLabel={title}>
+        <View className="flex-row justify-between items-center px-4 py-3 border-b" style={{ borderColor: colors.border }}>
+          <Text style={{ color: colors.text, fontSize: 17, fontWeight: '600' }}>{title}</Text>
+          <TouchableOpacity onPress={() => setIsOpen(false)}>
+            <Ionicons name="close" size={24} color={colors.textSecondary} />
+          </TouchableOpacity>
+        </View>
+        <TouchableOpacity
+          testID="settings.repo-filter.host-all"
+          className="flex-row items-center gap-3 px-4 py-3 border-b"
+          style={{ borderColor: colors.border, backgroundColor: value === 'all' ? `${colors.primary}15` : undefined }}
+          onPress={() => { onChange('all'); setIsOpen(false); }}
+        >
+          <Ionicons name="server-outline" size={20} color={colors.primary} />
+          <Text className="flex-1" style={{ color: colors.text }}>{allLabel}</Text>
+          {value === 'all' ? <Ionicons name="checkmark" size={18} color={colors.primary} /> : null}
+        </TouchableOpacity>
+        {hosts.map((host) => {
+          const isSelected = host.id === value;
+          return (
+            <TouchableOpacity
+              key={host.id}
+              testID={`settings.repo-filter.host.${host.id}`}
+              className="flex-row items-center gap-3 px-4 py-3 border-b"
+              style={{ borderColor: colors.border, backgroundColor: isSelected ? `${colors.primary}15` : undefined }}
+              onPress={() => { onChange(host.id); setIsOpen(false); }}
+            >
+              <Ionicons name={host.provider === 'github' ? 'logo-github' : 'git-branch-outline'} size={20} color={isSelected ? colors.primary : colors.textSecondary} />
+              <Text className="flex-1" style={{ color: isSelected ? colors.primary : colors.text }} numberOfLines={1}>
+                {GIT_HOST_LABELS[host.provider]} · {host.hostLogin}
+              </Text>
+              {isSelected ? <Ionicons name="checkmark" size={18} color={colors.primary} /> : null}
+            </TouchableOpacity>
+          );
+        })}
+      </Modal>
+    </>
+  );
+});
+
 const RepoPickerList = memo(function RepoPickerList({
   discoverableRepos,
   repositories,
+  accountSummaries,
   searchQuery,
   isLoading,
   isAddingRepoPath,
@@ -179,22 +261,57 @@ const RepoPickerList = memo(function RepoPickerList({
 }: RepoPickerListProps) {
   __onRender?.();
   const { t } = useTranslation();
+  const [providerFilter, setProviderFilter] = useState<ProviderSelection>('all');
+  const [hostFilter, setHostFilter] = useState<string | 'all'>('all');
   const availableRepos = discoverableRepos.filter(
     (r): r is GitHostRepository => 'kind' in r && r.kind === 'unavailable' ? false : true,
   );
+  const providerRepos = providerFilter === 'all'
+    ? availableRepos
+    : availableRepos.filter((repo) => repo.provider === providerFilter);
+  const hostRepos = hostFilter === 'all'
+    ? providerRepos
+    : providerRepos.filter((repo) => repo.hostId === hostFilter);
   const filteredRepos = searchQuery
-    ? availableRepos.filter(
+    ? hostRepos.filter(
         (repo) =>
           repo.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
           repo.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
           repo.owner.toLowerCase().includes(searchQuery.toLowerCase()) ||
           (repo.description ?? '').toLowerCase().includes(searchQuery.toLowerCase()),
       )
-    : availableRepos;
+    : hostRepos;
+  const groupedRepos = PROVIDER_ORDER
+    .map((provider) => ({
+      provider,
+      repos: filteredRepos.filter((repo) => repo.provider === provider),
+    }))
+    .filter((group) => group.repos.length > 0);
   return (
     <>
       <View className="px-4 py-2">
         <SearchBar value={searchQuery} onChangeText={onSetRepoSearchQuery} placeholder={t('explore.searchRepos')} />
+      </View>
+      <View className="px-4 pb-3 gap-1.5">
+        <Text className="text-xs uppercase tracking-wide" style={{ color: colors.textSecondary }}>
+          {t('settings.providerFilterLabel', { defaultValue: 'Filter by provider' })}
+        </Text>
+        <ProviderSelector
+          value={providerFilter}
+          onChange={setProviderFilter}
+          includeAll
+          allLabel={t('settings.providerFilter.all', { defaultValue: 'All Providers' })}
+          title={t('settings.providerFilter.title', { defaultValue: 'Filter by provider' })}
+          testIDPrefix="settings.repo-filter"
+        />
+        <HostFilterSelector
+          value={hostFilter}
+          hosts={accountSummaries.flatMap((summary) => summary.hosts)}
+          onChange={setHostFilter}
+          colors={colors}
+          allLabel={t('settings.hostFilter.all', { defaultValue: 'All Hosts' })}
+          title={t('settings.hostFilter.title', { defaultValue: 'Filter by host' })}
+        />
       </View>
       <Text className="text-xs font-semibold uppercase tracking-wide px-4 py-2.5 border-b" style={{ color: colors.textSecondary, borderColor: colors.border }}>
         {t('settings.yourRepositories')}
@@ -206,36 +323,43 @@ const RepoPickerList = memo(function RepoPickerList({
           {searchQuery ? t('settings.noMatchingRepositories') : t('settings.noRepositoriesFound')}
         </Text>
       ) : (
-        filteredRepos.map((repo) => {
-          const alreadyAdded = repositories.some((item) => item.path === repo.fullName);
-          const isAddingThis = isAddingRepoPath === repo.fullName;
-          const disabled = alreadyAdded || isAddingRepoPath !== null;
-          return (
-            <TouchableOpacity
-              key={repo.fullName}
-              testID="settings-modals.button.select-repo"
-              className="flex-row items-center px-4 py-3.5 border-b gap-3"
-              style={[{ borderColor: colors.border }, disabled && !isAddingThis && { opacity: 0.5 }]}
-              onPress={() => onSelectRepo(repo)}
-              disabled={disabled}
-            >
-              <Ionicons name={repo.isPrivate ? 'lock-closed-outline' : 'git-branch-outline'} size={18} color={colors.primary} />
-              <View className="flex-1">
-                <Text style={{ color: colors.text, fontSize: 15, fontWeight: '500' }}>{repo.fullName}</Text>
-                {repo.description ? (
-                  <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 2 }} numberOfLines={1}>
-                    {repo.description}
-                  </Text>
-                ) : null}
-              </View>
-              {isAddingThis ? (
-                <ActivityIndicator size="small" color={colors.primary} />
-              ) : alreadyAdded ? (
-                <Ionicons name="checkmark-circle" size={18} color={colors.primary} />
-              ) : null}
-            </TouchableOpacity>
-          );
-        })
+        groupedRepos.map(({ provider, repos }) => (
+          <React.Fragment key={provider}>
+            <Text className="text-xs font-semibold uppercase tracking-wide px-4 py-2.5 border-b" style={{ color: colors.textSecondary, borderColor: colors.border }}>
+              {GIT_HOST_LABELS[provider]} ({repos.length})
+            </Text>
+            {repos.map((repo) => {
+              const alreadyAdded = repositories.some((item) => item.path === repo.fullName);
+              const isAddingThis = isAddingRepoPath === repo.fullName;
+              const disabled = alreadyAdded || isAddingRepoPath !== null;
+              return (
+                <TouchableOpacity
+                  key={repo.fullName}
+                  testID="settings-modals.button.select-repo"
+                  className="flex-row items-center px-4 py-3.5 border-b gap-3"
+                  style={[{ borderColor: colors.border }, disabled && !isAddingThis && { opacity: 0.5 }]}
+                  onPress={() => onSelectRepo(repo)}
+                  disabled={disabled}
+                >
+                  <Ionicons name={repo.isPrivate ? 'lock-closed-outline' : 'git-branch-outline'} size={18} color={colors.primary} />
+                  <View className="flex-1">
+                    <Text style={{ color: colors.text, fontSize: 15, fontWeight: '500' }}>{repo.fullName}</Text>
+                    {repo.description ? (
+                      <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 2 }} numberOfLines={1}>
+                        {repo.description}
+                      </Text>
+                    ) : null}
+                  </View>
+                  {isAddingThis ? (
+                    <ActivityIndicator size="small" color={colors.primary} />
+                  ) : alreadyAdded ? (
+                    <Ionicons name="checkmark-circle" size={18} color={colors.primary} />
+                  ) : null}
+                </TouchableOpacity>
+              );
+            })}
+          </React.Fragment>
+        ))
       )}
       {(() => {
         const unavailableRepos = discoverableRepos.filter(
@@ -428,6 +552,7 @@ export function SettingsModals(props: SettingsModalsProps) {
             <RepoPickerList
               discoverableRepos={discoverableRepos}
               repositories={repositories}
+              accountSummaries={accountSummaries}
               searchQuery={repoSearchQuery}
               isLoading={isLoadingDiscoverableRepos}
               isAddingRepoPath={isAddingRepoPath}

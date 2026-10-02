@@ -19,19 +19,34 @@ const PROVIDER_ICONS: Record<GitHostProvider, string> = {
   forgejo: 'git-branch-outline',
 };
 
+export type ProviderSelection = GitHostProvider | 'all';
+
 interface ProviderSelectorProps {
-  value: GitHostProvider;
-  onChange: (provider: GitHostProvider) => void;
+  value: ProviderSelection;
+  onChange: (provider: ProviderSelection) => void;
+  includeAll?: boolean;
+  allLabel?: string;
+  title?: string;
+  testIDPrefix?: string;
 }
 
-export function ProviderSelector({ value, onChange }: ProviderSelectorProps) {
+export function ProviderSelector({
+  value,
+  onChange,
+  includeAll = false,
+  allLabel = 'All Providers',
+  title = 'Select Provider',
+  testIDPrefix = 'onboarding.provider',
+}: ProviderSelectorProps) {
   const { colors } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
 
-  const handleSelect = useCallback((provider: GitHostProvider) => {
+  const handleSelect = useCallback((provider: ProviderSelection) => {
     onChange(provider);
     setIsOpen(false);
   }, [onChange]);
+
+  const options: ProviderSelection[] = includeAll ? ['all', ...PROVIDERS] : PROVIDERS;
 
   const handleOpen = useCallback(() => {
     setIsOpen(true);
@@ -44,7 +59,7 @@ export function ProviderSelector({ value, onChange }: ProviderSelectorProps) {
   return (
     <>
       <TouchableOpacity
-        testID="onboarding.provider.dropdown"
+        testID={`${testIDPrefix}.dropdown`}
         style={[
           styles.trigger,
           {
@@ -56,12 +71,12 @@ export function ProviderSelector({ value, onChange }: ProviderSelectorProps) {
         activeOpacity={0.7}
       >
         <Ionicons
-          name={PROVIDER_ICONS[value] as keyof typeof Ionicons.glyphMap}
+          name={value === 'all' ? 'filter-outline' : PROVIDER_ICONS[value] as keyof typeof Ionicons.glyphMap}
           size={18}
           color={colors.accent}
         />
         <Text style={[styles.triggerText, { color: colors.text }]}>
-          {GIT_HOST_LABELS[value]}
+          {value === 'all' ? allLabel : GIT_HOST_LABELS[value]}
         </Text>
         <Ionicons name="chevron-down" size={16} color={colors.textSecondary} />
       </TouchableOpacity>
@@ -74,19 +89,19 @@ export function ProviderSelector({ value, onChange }: ProviderSelectorProps) {
       >
         <View style={[styles.header, { borderBottomColor: colors.border }]}>
           <Text style={[styles.headerTitle, { color: colors.text }]}>
-            Select Provider
+            {title}
           </Text>
           <TouchableOpacity onPress={handleClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
             <Ionicons name="close" size={24} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
         <View style={styles.optionsList}>
-          {PROVIDERS.map((provider) => {
+          {options.map((provider) => {
             const isSelected = provider === value;
             return (
               <TouchableOpacity
                 key={provider}
-                testID={`onboarding.provider.${provider}`}
+                testID={`${testIDPrefix}.${provider}`}
                 style={[
                   styles.option,
                   { borderBottomColor: colors.border },
@@ -96,7 +111,7 @@ export function ProviderSelector({ value, onChange }: ProviderSelectorProps) {
                 activeOpacity={0.7}
               >
                 <Ionicons
-                  name={PROVIDER_ICONS[provider] as keyof typeof Ionicons.glyphMap}
+                  name={provider === 'all' ? 'filter-outline' : PROVIDER_ICONS[provider] as keyof typeof Ionicons.glyphMap}
                   size={20}
                   color={isSelected ? colors.accent : colors.textSecondary}
                 />
@@ -107,7 +122,7 @@ export function ProviderSelector({ value, onChange }: ProviderSelectorProps) {
                     isSelected && { fontWeight: '600' },
                   ]}
                 >
-                  {GIT_HOST_LABELS[provider]}
+                  {provider === 'all' ? allLabel : GIT_HOST_LABELS[provider]}
                 </Text>
                 {isSelected && (
                   <Ionicons name="checkmark" size={18} color={colors.accent} style={styles.checkIcon} />

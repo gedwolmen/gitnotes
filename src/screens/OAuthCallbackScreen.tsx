@@ -85,6 +85,8 @@ export default function OAuthCallbackScreen() {
     ? 'Your GitHub account is now connected.'
     : denied
       ? 'GitHub sign-in was cancelled or denied.'
+      : result.outcome === 'backend_error' && result.message
+        ? result.message
       : 'The GitHub sign-in flow could not be completed. Please try again.';
 
   return (

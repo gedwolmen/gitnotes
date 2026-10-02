@@ -16,7 +16,7 @@ const loadService = async () => {
   const mockPost = jest.fn<() => Promise<unknown>>();
   const mockGetRandomBytesAsync = jest.fn<() => Promise<string>>();
   const mockDigestStringAsync = jest.fn<() => Promise<string>>();
-  const mockOpenBrowserAsync = jest.fn<() => Promise<{ type: string }>>();
+  const mockOpenAuthSessionAsync = jest.fn<() => Promise<{ type: string; url?: string }>>();
   const mockAddAccount = jest.fn<() => Promise<typeof FAKE_ACCOUNT>>();
   const mockUpsertHostConnection = jest.fn<() => Promise<typeof FAKE_HOST>>();
   const mockSetActiveAccountId = jest.fn<() => Promise<void>>();
@@ -67,7 +67,7 @@ const loadService = async () => {
       }));
 
       jest.doMock('expo-web-browser', () => ({
-        openBrowserAsync: mockOpenBrowserAsync,
+        openAuthSessionAsync: mockOpenAuthSessionAsync,
       }));
 
       const m = require('../../src/services/GitHubOAuthService');
@@ -79,7 +79,7 @@ const loadService = async () => {
   });
 
   return {
-    mod, mockPost, mockGetRandomBytesAsync, mockDigestStringAsync, mockOpenBrowserAsync,
+    mod, mockPost, mockGetRandomBytesAsync, mockDigestStringAsync, mockOpenAuthSessionAsync,
     mockAddAccount, mockUpsertHostConnection, mockSetActiveAccountId, mockSetActiveHostId,
     mockGetActiveHostId, mockSetOAuthCredential,
     setUuid: (s: string) => { uuid.current = s; },
@@ -178,18 +178,36 @@ describe('GitHubOAuthService', () => {
   });
 
   describe('openAuthorizationUrl()', () => {
-    it('opens the authorization URL in the system browser', async () => {
-      const { mod, mockOpenBrowserAsync } = await loadService();
-      mockOpenBrowserAsync.mockResolvedValueOnce({ type: 'opened' });
+    it('returns the callback URL from the auth session', async () => {
+      const { mod, mockOpenAuthSessionAsync } = await loadService();
+      mockOpenAuthSessionAsync.mockResolvedValueOnce({
+        type: 'success',
+        url: 'gitnotes://oauth/callback?code=oauth-code&state=oauth-state',
+      });
 
       const result = await mod.GitHubOAuthService.openAuthorizationUrl(
         'https://github.com/login/oauth/authorize?client_id=Iv1.test',
+        TEST_REDIRECT_URI,
       );
 
-      expect(result).toBe(true);
-      expect(mockOpenBrowserAsync).toHaveBeenCalledWith(
+      expect(result).toEqual({
+        outcome: 'callback',
+        url: 'gitnotes://oauth/callback?code=oauth-code&state=oauth-state',
+      });
+      expect(mockOpenAuthSessionAsync).toHaveBeenCalledWith(
         'https://github.com/login/oauth/authorize?client_id=Iv1.test',
+        TEST_REDIRECT_URI,
       );
+    });
+
+    it('returns cancelled when the auth session is dismissed', async () => {
+      const { mod, mockOpenAuthSessionAsync } = await loadService();
+      mockOpenAuthSessionAsync.mockResolvedValueOnce({ type: 'cancel' });
+
+      await expect(mod.GitHubOAuthService.openAuthorizationUrl(
+        'https://github.com/login/oauth/authorize?client_id=Iv1.test',
+        TEST_REDIRECT_URI,
+      )).resolves.toEqual({ outcome: 'cancelled' });
     });
   });
 
@@ -248,6 +266,35 @@ describe('GitHubOAuthService', () => {
       expect(result.outcome).toBe('backend_error');
       expect(result.code).toBe('network_error');
       expect(mod.pendingOAuthFlows.has('state-abc')).toBe(false);
+    });
+
+    it('returns backend_unreachable when exchange responds with HTTP 500', async () => {
+      const { mod, mockPost } = await loadService();
+      const fakeState = 'state-http-500';
+      mod.pendingOAuthFlows.set(fakeState, {
+        verifier: 'verifier-http-500',
+        backendUrl: TEST_BACKEND,
+        redirectUri: TEST_REDIRECT_URI,
+        clientId: TEST_CLIENT_ID,
+        hostId: TEST_HOST_ID,
+      });
+      mockPost.mockRejectedValueOnce({ response: { status: 500 } });
+
+      const result = await mod.GitHubOAuthService.exchangeCode({
+        code: 'auth-code-500',
+        codeVerifier: 'verifier-http-500',
+        state: fakeState,
+        redirectUri: TEST_REDIRECT_URI,
+        clientId: TEST_CLIENT_ID,
+        backendUrl: TEST_BACKEND,
+        hostId: TEST_HOST_ID,
+      });
+
+      expect(result).toEqual({
+        outcome: 'backend_error',
+        code: 'backend_unreachable',
+        message: 'Backend service unavailable',
+      });
     });
   });
 

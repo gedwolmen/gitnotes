@@ -665,6 +665,17 @@ export class AccountStorage {
     return hosts.find((h) => h.id === hostId) ?? null;
   }
 
+  static async updateHostProfile(
+    hostId: string,
+    profile: Pick<HostConnection, 'name' | 'email' | 'avatarUrl'>,
+  ): Promise<void> {
+    const hosts = await listHostConnections();
+    const index = hosts.findIndex((host) => host.id === hostId);
+    if (index < 0) return;
+    hosts[index] = { ...hosts[index], ...profile };
+    await writeHostConnections(hosts);
+  }
+
   static async getHostToken(hostId: string): Promise<string | null> {
     return readHostToken(hostId);
   }

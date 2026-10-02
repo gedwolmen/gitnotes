@@ -24,6 +24,7 @@ import type { TemplateRepoPreference } from '../../services/TemplateRepoPreferen
 import type { AIProviderConfig } from '../../models/AIProvider';
 import { TIMEOUT_OPTIONS, type BiometricKind, type LockTimeout } from '../../contexts/BiometricLockContext';
 import type { ForegroundSyncHealth } from '../../services/ForegroundSyncService';
+import { AuthService } from '../../services/AuthService';
 import { useProvidersAvailability } from '../../hooks/useProviderAvailability';
 import { describeAvailability } from '../../services/ai/providerAvailabilityCopy';
 import type { GitHostProvider } from '../../services/git/GitHost';
@@ -263,20 +264,22 @@ export function SettingsContent(props: SettingsContentProps) {
     onToggleSSH,
     hostUseSsh,
     onConnectOAuth,
-    oauthLoading,
-    oauthError,
+    onDisconnectOAuth,
+    oauthLoading = {},
+    oauthError = {},
     onConnectGitHubApp,
-    appLoading,
-    appError,
+    appLoading = {},
+    appError = {},
   } = props;
   // Tokens hook gives us spacing/radii/type so the styled disconnect
   // button matches the rest of the app without hardcoded values.
-  const { radii, type } = useTokens();
+  const { spacing, radii, type } = useTokens();
   const { t } = useTranslation();
   const [languagePref, setLanguagePref] = useState<string>('system');
   const [showTimeoutPicker, setShowTimeoutPicker] = useState(false);
   const [showLanguagePicker, setShowLanguagePicker] = useState(false);
   const [showResetAIMemoryModal, setShowResetAIMemoryModal] = useState(false);
+  const [oauthConnected, setOauthConnected] = useState<Record<string, boolean>>({});
   // Drop providers whose `supportedPlatforms` excludes the current OS so a
   // provider that physically can't run here (e.g. on-device Llama on iOS) is
   // hidden entirely instead of showing as a permanently-disabled row.
@@ -294,6 +297,27 @@ export function SettingsContent(props: SettingsContentProps) {
   useEffect(() => {
     getLanguagePreference().then(setLanguagePref);
   }, []);
+
+  useEffect(() => {
+    let disposed = false;
+    const githubHostIds = accountSummaries
+      .flatMap((summary) => summary.hosts)
+      .filter((host) => host.provider === 'github')
+      .map((host) => host.id);
+
+    void Promise.all(
+      githubHostIds.map(async (hostId) => {
+        const availability = await AuthService.getProviderAuthAvailability(hostId, 'github');
+        return [hostId, availability.oauth?.available ?? false] as const;
+      }),
+    ).then((entries) => {
+      if (!disposed) setOauthConnected(Object.fromEntries(entries));
+    });
+
+    return () => {
+      disposed = true;
+    };
+  }, [accountSummaries]);
 
   const currentLangLabel = t(`settings.languageOptions.${languagePref}`);
 
@@ -518,6 +542,11 @@ export function SettingsContent(props: SettingsContentProps) {
                 {t('settings.connectWithGitHub')}
               </Text>
             </GroupRow>
+            <View style={{ paddingHorizontal: spacing[4], paddingBottom: spacing[2] }}>
+              <Text style={{ fontSize: type.xs, color: colors.textSecondary }}>
+                {t('settings.oauthFullAccessWarning')}
+              </Text>
+            </View>
             {/* GitHub App install — fresh install path */}
             <GroupRow
               testID="settings.button.install-github-app"
@@ -567,7 +596,7 @@ export function SettingsContent(props: SettingsContentProps) {
                       <View
                         key={host.id}
                         testID={`settings.row.host.${host.id}`}
-                        className="flex-row items-center px-4 py-3 gap-3"
+                        className="px-4 py-3 gap-3"
                       >
                         <View className="flex-1 min-w-0">
                           <View className="flex-row items-center gap-2">
@@ -619,7 +648,7 @@ export function SettingsContent(props: SettingsContentProps) {
                             color with an unlink icon. Distinct from the
                             account row's neutral chrome so the destructive
                             intent is obvious without being alarming. */}
-                        <View className="flex-row items-center gap-2">
+                        <View className="flex-row flex-wrap items-center gap-2">
                           <View className="flex-row items-center gap-1.5">
                             <Text style={{ fontSize: type.xs, color: colors.textSecondary }}>SSH</Text>
                             <Toggle
@@ -632,18 +661,29 @@ export function SettingsContent(props: SettingsContentProps) {
                             <>
                               <View className="flex-row items-center gap-1.5">
                                 <Text style={{ fontSize: type.xs, color: colors.textSecondary }}>OAuth</Text>
-                                <ActivityIndicator
-                                  size="small"
-                                  color={colors.primary}
-                                  testID={`settings.spinner.oauth.${host.id}`}
-                                />
+                                {oauthLoading[host.id] ? (
+                                  <ActivityIndicator
+                                    size="small"
+                                    color={colors.primary}
+                                    testID={`settings.spinner.oauth.${host.id}`}
+                                  />
+                                ) : null}
                                 <TouchableOpacity
                                   testID={`settings.button.connect-oauth.${host.id}`}
-                                  onPress={() => onConnectOAuth(host.id)}
+                                  onPress={() => {
+                                    if (oauthConnected[host.id]) {
+                                      onDisconnectOAuth(host.id);
+                                      setOauthConnected((current) => ({ ...current, [host.id]: false }));
+                                    } else {
+                                      onConnectOAuth(host.id);
+                                    }
+                                  }}
                                   disabled={oauthLoading[host.id]}
                                   accessibilityRole="button"
                                 >
-                                  <Text style={{ fontSize: type.xs, color: oauthError[host.id] ? colors.error : colors.primary }}>Connect</Text>
+                                  <Text style={{ fontSize: type.xs, color: oauthError[host.id] ? colors.error : colors.primary }}>
+                                    {oauthConnected[host.id] ? 'Disconnect' : 'Connect'}
+                                  </Text>
                                 </TouchableOpacity>
                               </View>
                               <View className="flex-row items-center gap-1.5">
