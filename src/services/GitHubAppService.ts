@@ -249,14 +249,17 @@ export class GitHubAppService {
         account_id: number;
         token: string;
         expires_at: number;
-        renewal_grant_token: string;
-        renewal_grant_expires_at: number;
-      };
+          renewal_grant_token: string;
+          renewal_grant_expires_at: number;
+          repositories?: Array<{ owner: string; repo: string }>;
+        };
 
-      const credentialRepos: SelectedRepository[] = selectedRepositories.map((fullName) => {
-        const [owner, repo] = fullName.split('/');
-        return { owner, repo };
-      });
+      const credentialRepos: SelectedRepository[] = data.repositories?.length
+        ? data.repositories.map(({ owner, repo }) => ({ owner, repo }))
+        : selectedRepositories.map((fullName) => {
+            const [owner, repo] = fullName.split('/');
+            return { owner, repo };
+          });
 
       let resolvedHostId: string;
 

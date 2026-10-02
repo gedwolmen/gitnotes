@@ -356,6 +356,10 @@ describe('GitHubAppService', () => {
           expires_at: Date.now() + 3600000,
           renewal_grant_token: 'grant-token-xyz',
           renewal_grant_expires_at: Date.now() + 86400000,
+          repositories: [
+            { owner: 'owner', repo: 'repo1' },
+            { owner: 'owner', repo: 'repo2' },
+          ],
         },
       });
 
@@ -374,6 +378,10 @@ describe('GitHubAppService', () => {
       expect(stored[1].installationId).toBe(99999);
       expect(stored[1].appId).toBe(123456);
       expect(stored[1].token).toBe('installation-token-abc');
+      expect(stored[1].selectedRepositories).toEqual([
+        { owner: 'owner', repo: 'repo1' },
+        { owner: 'owner', repo: 'repo2' },
+      ]);
     });
 
     it('removes pending flow and returns duplicate when backend returns 409', async () => {
