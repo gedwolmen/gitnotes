@@ -647,6 +647,35 @@ export function SettingsContent(props: SettingsContentProps) {
           </>
         ) : (
           <>
+            <GroupRow
+              testID="settings.button.connect-github-oauth-existing"
+              onPress={() => {
+                if (isProLoading || oauthLoading['__fresh__']) return;
+                if (isPro) {
+                  onConnectOAuth(null);
+                } else {
+                  onOpenPaywall();
+                }
+              }}
+              leading={<Ionicons name="logo-github" size={20} color={colors.primary} />}
+              trailing={
+                isProLoading || oauthLoading['__fresh__'] ? (
+                  <ActivityIndicator size="small" color={colors.primary} />
+                ) : oauthError['__fresh__'] ? (
+                  <Text style={{ fontSize: type.xs, color: colors.error }}>{oauthError['__fresh__']}</Text>
+                ) : (
+                  <Ionicons
+                    name={isPro ? 'chevron-forward' : 'lock-closed-outline'}
+                    size={20}
+                    color={colors.textSecondary}
+                  />
+                )
+              }
+            >
+              <Text style={[styles.settingLabel, { color: colors.primary }]}>
+                {t('settings.connectWithGitHub')}
+              </Text>
+            </GroupRow>
             {accountSummaries.map((summary) => {
               const isActive = summary.accountId === activeAccountId;
               return (
