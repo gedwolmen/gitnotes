@@ -226,6 +226,7 @@ export interface GitHubAppInstallResponse {
   expires_at: number;
   renewal_grant_token: string;
   renewal_grant_expires_at: number;
+  repositories: Array<{ owner: string; repo: string }>;
 }
 
 /**
