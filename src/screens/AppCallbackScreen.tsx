@@ -56,11 +56,6 @@ export default function AppCallbackScreen() {
     }
 
     const pending = pendingAppFlows.get(state);
-    if (!pending) {
-      setResult({ outcome: 'malformed' });
-      return;
-    }
-
     GitHubAppService.handleCallback({ installationId: installation_id, state, pendingFlow: pending })
       .then(setResult)
       .catch(() => setResult({ outcome: 'malformed' }));
