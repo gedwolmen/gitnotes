@@ -1322,7 +1322,7 @@ export default function SettingsScreen() {
             onPress={() => { void handleAppIconSelect(null); }}
             leading={
               <Image
-                source={require('../../assets/generated/alternate/current-blue/icon.png')}
+                source={require('../../assets/generated/alternate/base/icon.png')}
                 style={{ width: 40, height: 40, borderRadius: 8 }}
               />
             }

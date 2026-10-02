@@ -18,10 +18,10 @@
  *   monochrome-icon.png 1024×1024  Android themed icon foreground mask
  *
  * Four palette variants:
- *   current-blue  — original blue palette (same as default output)
- *   neon         — cyan / electric-purple hue rotation
- *   grayscale    — neutral luminance mask
- *   gold         — amber / warm-hue rotation
+ *   base        — original blue palette (same as default output)
+ *   neon        — cyan / electric-purple hue rotation (+45°)
+ *   grayscale   — neutral luminance mask
+ *   gold        — amber / warm-hue rotation (+180°)
  *
  * The artwork is auto-cropped to its alpha bounding box, scaled to a target
  * fraction of the canvas (safe padding), and composited centered on a
@@ -59,10 +59,10 @@ const TARGETS = [
 const VARIANT_TARGET_NAMES = ['icon.png', 'adaptive-icon.png', 'monochrome-icon.png'];
 
 const VARIANTS = {
-  'current-blue': { hueShift: 0, saturationScale: 1.0, isGrayscale: false },
-  neon: { hueShift: 180, saturationScale: 1.4, isGrayscale: false },
+  base: { hueShift: 0, saturationScale: 1.0, isGrayscale: false },
+  neon: { hueShift: 45, saturationScale: 1.4, isGrayscale: false },
   grayscale: { hueShift: 0, saturationScale: 0, isGrayscale: true },
-  gold: { hueShift: 45, saturationScale: 1.25, isGrayscale: false },
+  gold: { hueShift: 180, saturationScale: 1.25, isGrayscale: false },
 };
 
 function srgbToLinear(c) {

@@ -2,7 +2,7 @@
  * Regression test for alternate icon recolor pipeline.
  *
  * Tests that the HSV-based recolorBuffer in generate-branding.js produces
- * colored output for current-blue / neon / gold and grayscale for grayscale.
+ * colored output for base / neon / gold and grayscale for grayscale.
  *
  * Root cause of the original bug: hsvToRgb applied srgbToLinear to
  * intermediate hue values (r1/g1/b1 in [0,1] linear space), producing
@@ -113,7 +113,7 @@ function isGrayscalePixel([r, g, b], tolerance = 5) {
 
 // --- Tests ---
 
-describe('recolorBuffer — identity (current-blue: hueShift=0, saturationScale=1.0)', () => {
+describe('recolorBuffer — identity (base: hueShift=0, saturationScale=1.0)', () => {
   // Logo colors from assets/logo.svg
   const BLUE_DARK = [7, 19, 153];      // dark blue-purple fill
   const BLUE_PURPLE = [91, 126, 236];  // purple-blue fill
@@ -152,7 +152,7 @@ describe('recolorBuffer — identity (current-blue: hueShift=0, saturationScale=
   test('neon variant produces distinctly different colors from identity', () => {
     const buf = makeBuffer([BLUE_DARK]);
     const identity = recolorBuffer(buf, 1, 1, VARIANT);
-    const neon = recolorBuffer(buf, 1, 1, { hueShift: 180, saturationScale: 1.4, isGrayscale: false });
+    const neon = recolorBuffer(buf, 1, 1, { hueShift: 45, saturationScale: 1.4, isGrayscale: false });
     expect(isGrayscalePixel([identity[0], identity[1], identity[2]], 5)).toBe(false);
     expect(isGrayscalePixel([neon[0], neon[1], neon[2]], 5)).toBe(false);
     expect([identity[0], identity[1], identity[2]]).not.toEqual([neon[0], neon[1], neon[2]]);
@@ -178,8 +178,8 @@ describe('recolorBuffer — grayscale variant (isGrayscale=true)', () => {
   });
 });
 
-describe('recolorBuffer — neon variant (hueShift=180, saturationScale=1.4)', () => {
-  const VARIANT = { hueShift: 180, saturationScale: 1.4, isGrayscale: false };
+describe('recolorBuffer — neon variant (hueShift=45, saturationScale=1.4)', () => {
+  const VARIANT = { hueShift: 45, saturationScale: 1.4, isGrayscale: false };
 
   test('neon transform does NOT produce grayscale for colored input', () => {
     const buf = makeBuffer([[7, 19, 153]]);
@@ -191,13 +191,13 @@ describe('recolorBuffer — neon variant (hueShift=180, saturationScale=1.4)', (
     const buf = makeBuffer([[7, 19, 153]]);
     const neon = recolorBuffer(buf, 1, 1, VARIANT);
     const [r, g, b] = neon;
-    // Neon should NOT be blue-dominant (blue channel ≤ red channel)
-    expect(b).toBeLessThanOrEqual(r);
+    // Neon (+45° on blue) produces purple with blue-dominant channel profile
+    expect(b).toBeGreaterThan(r);
   });
 });
 
-describe('recolorBuffer — gold variant (hueShift=45, saturationScale=1.25)', () => {
-  const VARIANT = { hueShift: 45, saturationScale: 1.25, isGrayscale: false };
+describe('recolorBuffer — gold variant (hueShift=180, saturationScale=1.25)', () => {
+  const VARIANT = { hueShift: 180, saturationScale: 1.25, isGrayscale: false };
 
   test('gold transform does NOT produce grayscale for colored input', () => {
     const buf = makeBuffer([[7, 19, 153]]);

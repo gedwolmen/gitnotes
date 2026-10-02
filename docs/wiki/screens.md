@@ -247,7 +247,7 @@ The canonical route param types are in `src/navigation/types.ts`:
 - Account management (`AccountsContext`)
 - GitHub connection (`GitHubAuthContext`)
 - Theme selection (`ThemeContext`)
-- App icon selection — choose between Default (current-blue), Neon, Grayscale, or Gold launcher icons via `AppIconService`; persisted locally via AsyncStorage; available on iOS and Android; web shows unavailable
+- App icon selection — choose between Default (base), Neon, Grayscale, or Gold launcher icons via `AppIconService`; persisted locally via AsyncStorage; available on iOS and Android; web shows unavailable
 - Sync settings (`ForegroundSyncSettings`)
 - Notification preferences
 - Pro/paywall access (`PaywallScreen`)
