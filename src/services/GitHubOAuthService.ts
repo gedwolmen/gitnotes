@@ -322,6 +322,7 @@ export class GitHubOAuthService {
 
       await AccountStorage.updateHostProfile(resolvedHostId, {
         name: data.login,
+        hostLogin: data.login,
         email: null,
         avatarUrl: data.avatar_url ?? null,
       });

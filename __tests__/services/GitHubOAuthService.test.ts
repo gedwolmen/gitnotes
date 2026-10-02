@@ -22,8 +22,8 @@ const loadService = async () => {
   const mockSetActiveAccountId = jest.fn<() => Promise<void>>();
   const mockSetActiveHostId = jest.fn<() => Promise<void>>();
   const mockGetActiveHostId = jest.fn<() => Promise<string | null>>();
-  const mockUpdateHostProfile = jest.fn<() => Promise<void>>();
   const mockSetOAuthCredential = jest.fn<() => Promise<void>>();
+  const mockUpdateHostProfile = jest.fn<() => Promise<void>>();
   const uuid = { current: 'test-state-abc' };
 
   mockGetActiveHostId.mockResolvedValue(null);
@@ -37,11 +37,11 @@ const loadService = async () => {
         AccountStorage: {
           addAccount: mockAddAccount,
           upsertHostConnection: mockUpsertHostConnection,
-           setActiveAccountId: mockSetActiveAccountId,
-           setActiveHostId: mockSetActiveHostId,
-           getActiveHostId: mockGetActiveHostId,
-           updateHostProfile: mockUpdateHostProfile,
-           setOAuthCredential: mockSetOAuthCredential,
+          setActiveAccountId: mockSetActiveAccountId,
+          setActiveHostId: mockSetActiveHostId,
+          getActiveHostId: mockGetActiveHostId,
+          setOAuthCredential: mockSetOAuthCredential,
+          updateHostProfile: mockUpdateHostProfile,
         },
       }));
 
@@ -83,7 +83,7 @@ const loadService = async () => {
   return {
     mod, mockPost, mockGetRandomBytesAsync, mockDigestStringAsync, mockOpenAuthSessionAsync,
     mockAddAccount, mockUpsertHostConnection, mockSetActiveAccountId, mockSetActiveHostId,
-    mockGetActiveHostId, mockUpdateHostProfile, mockSetOAuthCredential,
+    mockGetActiveHostId, mockSetOAuthCredential, mockUpdateHostProfile,
     setUuid: (s: string) => { uuid.current = s; },
   };
 };
@@ -328,9 +328,9 @@ describe('GitHubOAuthService', () => {
 
     it('exchangeCode() with null hostId creates account, host connection, and stores OAuth credential under resolved hostId', async () => {
       const {
-         mod, mockPost, mockAddAccount, mockUpsertHostConnection,
-         mockSetActiveAccountId, mockSetActiveHostId, mockGetActiveHostId, mockUpdateHostProfile,
-         mockSetOAuthCredential,
+        mod, mockPost, mockAddAccount, mockUpsertHostConnection,
+        mockSetActiveAccountId, mockSetActiveHostId, mockGetActiveHostId, mockSetOAuthCredential,
+        mockUpdateHostProfile,
       } = await loadService();
 
       mod.pendingOAuthFlows.set('state-first-oauth', {
@@ -379,13 +379,14 @@ describe('GitHubOAuthService', () => {
         token: 'access-token-first',
       }));
       expect(mockSetActiveAccountId).toHaveBeenCalledWith('acc-123');
-       expect(mockSetActiveHostId).toHaveBeenCalledWith('acc-123:github:default');
-       expect(mockUpdateHostProfile).toHaveBeenCalledWith('acc-123:github:default', expect.objectContaining({
-         name: 'firstuser',
-         email: null,
-         avatarUrl: null,
-       }));
-       expect(mockSetOAuthCredential).toHaveBeenCalledWith('acc-123:github:default', expect.objectContaining({
+      expect(mockSetActiveHostId).toHaveBeenCalledWith('acc-123:github:default');
+      expect(mockUpdateHostProfile).toHaveBeenCalledWith('acc-123:github:default', expect.objectContaining({
+        name: 'firstuser',
+        email: null,
+        avatarUrl: null,
+         hostLogin: 'firstuser',
+      }));
+      expect(mockSetOAuthCredential).toHaveBeenCalledWith('acc-123:github:default', expect.objectContaining({
         kind: 'oauth',
         login: 'firstuser',
         userId: 456,

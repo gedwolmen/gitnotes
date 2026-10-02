@@ -369,13 +369,18 @@ async function listHostConnections(): Promise<HostConnection[]> {
   try {
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-    return parsed.filter(
-      (h): h is HostConnection =>
-        typeof h?.id === 'string' &&
-        typeof h?.accountId === 'string' &&
-        typeof h?.provider === 'string' &&
-        typeof h?.hostLogin === 'string',
-    );
+    return parsed
+      .filter(
+        (h): h is HostConnection =>
+          typeof h?.id === 'string' &&
+          typeof h?.accountId === 'string' &&
+          typeof h?.provider === 'string' &&
+          (typeof h?.hostLogin === 'string' || h?.hostLogin == null),
+      )
+      .map((h) => ({
+        ...h,
+        hostLogin: typeof h.hostLogin === 'string' ? h.hostLogin : '',
+      }));
   } catch {
     return [];
   }
@@ -667,7 +672,7 @@ export class AccountStorage {
 
   static async updateHostProfile(
     hostId: string,
-    profile: Pick<HostConnection, 'name' | 'email' | 'avatarUrl'>,
+    profile: Pick<HostConnection, 'name' | 'email' | 'avatarUrl' | 'hostLogin'>,
   ): Promise<void> {
     const hosts = await listHostConnections();
     const index = hosts.findIndex((host) => host.id === hostId);
