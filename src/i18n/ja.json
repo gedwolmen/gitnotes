@@ -178,10 +178,11 @@
     "security": "セキュリティ",
     "appearance": "外観",
     "style": {
-      "basic": "シンプル",
+      "basic": "基本",
       "neumorphic": "ニューモーフィズム",
       "neoBrutalist": "ネオブルータリズム",
-      "hint": "シンプルは無料で使えます。ニューモーフィズムとネオブルータリズムはGitNotēs Proが必要です。"
+      "retrofuturistic": "レトロフューチュリスティック",
+      "hint": "基本とネオブルータリズムは無料で使えます。ニューモーフィズムとレトロフューチュリスティックはGitNotēs Proが必要です。"
     },
     "darkMode": "ダークモード",
     "accentColor": "アクセントカラー",

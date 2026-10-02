@@ -29,6 +29,7 @@ import { describeAvailability } from '../../services/ai/providerAvailabilityCopy
 import type { GitHostProvider } from '../../services/git/GitHost';
 import { GIT_HOST_LABELS } from '../../services/git/GitHost';
 import { useTokens } from '../../contexts/ThemeContext';
+import type { ThemeStyle } from '../../theme/tokens';
 
 type ThemeColors = {
   background: string;
@@ -70,7 +71,7 @@ type SettingsContentProps = {
   headerHeight: number;
   tabBarHeight: number;
   theme: 'light' | 'dark' | 'system';
-  uiStyle: 'flat' | 'neumorphic' | 'neo-brutalist';
+  uiStyle: ThemeStyle;
   accounts: Account[];
   activeAccountId: string | null;
   authState: AuthState;
@@ -85,7 +86,7 @@ type SettingsContentProps = {
   chatStorageLabel: string;
   providers: AIProviderConfig[];
   setTheme: (theme: 'light' | 'dark' | 'system') => void;
-  setStyle: (style: 'flat' | 'neumorphic' | 'neo-brutalist') => void;
+  setStyle: (style: ThemeStyle) => void;
   onOpenConnectToken: () => void;
   onOpenAddAccount: () => void;
   onSwitchAccount: (id: string) => void | Promise<void>;
@@ -399,6 +400,23 @@ export function SettingsContent(props: SettingsContentProps) {
           }
         >
           <Text style={[styles.settingLabel, { color: colors.text }]}>{t('settings.style.neoBrutalist')}</Text>
+        </GroupRow>
+        <GroupRow
+          testID="settings.option.style.retrofuturistic"
+          onPress={isPro ? () => { HapticService.selection(); setStyle('retrofuturistic'); } : () => promptProUpgrade(t, onOpenPaywall)}
+          accessibilityRole="button"
+          accessibilityLabel={t('settings.style.retrofuturistic')}
+          trailing={
+            <View className="flex-row items-center gap-2">
+              {uiStyle === 'retrofuturistic' ? (
+                <Ionicons name="checkmark" size={18} color={colors.accent} />
+              ) : !isPro ? (
+                <Ionicons name="lock-closed" size={16} color={colors.textSecondary} />
+              ) : null}
+            </View>
+          }
+        >
+          <Text style={[styles.settingLabel, { color: colors.text }]}>{t('settings.style.retrofuturistic')}</Text>
         </GroupRow>
         <GroupRow
           trailing={

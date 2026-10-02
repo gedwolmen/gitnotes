@@ -17,7 +17,7 @@ export function useTabBarHeight(): number {
   const insets = useSafeAreaInsets();
   const { style } = useTheme();
   const { isTablet } = useResponsive();
-  const useFloatingBar = !isTablet && (style === 'neumorphic' || style === 'neo-brutalist');
+  const useFloatingBar = !isTablet && (style === 'neumorphic' || style === 'neo-brutalist' || style === 'retrofuturistic');
   if (!useFloatingBar) return 0;
   return insets.bottom + TAB_BAR_BASE_HEIGHT;
 }
@@ -41,6 +41,9 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
   if (parentRouteName === 'Paywall') return null;
 
   if (Platform.OS === 'android') {
+    const isRetrofuturistic = themeStyle === 'retrofuturistic';
+    const isNeoBrutalist = themeStyle === 'neo-brutalist';
+
     return (
       <View
         pointerEvents="box-none"
@@ -55,9 +58,25 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
       >
         <View
           className="flex-row items-center justify-around py-2 px-3 rounded-full overflow-hidden"
-          style={{
-            backgroundColor: colors.surface,
-          }}
+          style={
+            isRetrofuturistic
+              ? {
+                  backgroundColor: colors.surface,
+                  borderWidth: 1.5,
+                  borderColor: colors.border,
+                  elevation: 0,
+                }
+              : isNeoBrutalist
+              ? {
+                  backgroundColor: colors.surface,
+                  borderWidth: 2,
+                  borderColor: colors.border,
+                  elevation: 0,
+                }
+              : {
+                  backgroundColor: colors.surface,
+                }
+          }
         >
           {state.routes.map((route, index) => {
             const isFocused = state.index === index;
@@ -91,13 +110,19 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
                 hitSlop={6}
               >
                 <Surface
-                  elevation={Platform.OS === 'android' ? 'flat' : 'subtle'}
+                  elevation="flat"
                   radius="pill"
-                  inset={Platform.OS !== 'android' && isFocused}
+                  inset={false}
                   style={{
                     width: 48,
                     height: 40,
                     backgroundColor: 'transparent',
+                    ...(isRetrofuturistic
+                      ? {
+                          borderWidth: isFocused ? 2 : 0,
+                          borderColor: isFocused ? colors.accent : 'transparent',
+                        }
+                      : {}),
                   }}
                   className="items-center justify-center"
                 >
@@ -138,6 +163,72 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
             shadowOffset: { width: 3, height: 3 },
             shadowOpacity: 1,
             shadowRadius: 0,
+          }}
+        >
+          {state.routes.map((route, index) => {
+            const isFocused = state.index === index;
+            const config = TAB_ICONS[route.name];
+            if (!config) return null;
+
+            const onPress = () => {
+              const event = navigation.emit({
+                type: 'tabPress',
+                target: route.key,
+                canPreventDefault: true,
+              });
+              if (!isFocused && !event.defaultPrevented) {
+                navigation.navigate(route.name as never);
+              }
+            };
+
+            const onLongPress = () => {
+              navigation.emit({ type: 'tabLongPress', target: route.key });
+            };
+
+            return (
+              <Pressable
+                key={route.key}
+                testID={`tab-bar.tab.press-${route.name}`}
+                accessibilityRole="button"
+                accessibilityState={isFocused ? { selected: true } : {}}
+                accessibilityLabel={t(config.labelKey)}
+                onPress={onPress}
+                onLongPress={onLongPress}
+                hitSlop={6}
+              >
+                <Surface
+                  elevation="flat"
+                  radius="pill"
+                  style={{
+                    width: 48,
+                    height: 40,
+                    backgroundColor: 'transparent',
+                    borderWidth: isFocused ? 2 : 0,
+                    borderColor: isFocused ? colors.accent : 'transparent',
+                  }}
+                  className="items-center justify-center"
+                >
+                  <Ionicons
+                    name={isFocused ? config.focused : config.outline}
+                    size={22}
+                    color={isFocused ? colors.accent : colors.textSecondary}
+                  />
+                </Surface>
+              </Pressable>
+            );
+          })}
+        </View>
+      ) : themeStyle === 'retrofuturistic' ? (
+        <View
+          className="flex-row items-center justify-around py-2 px-3 rounded-full overflow-hidden"
+          style={{
+            backgroundColor: colors.surface,
+            borderWidth: 1.5,
+            borderColor: colors.border,
+            shadowColor: colors.accent,
+            shadowOffset: { width: 0, height: 0 },
+            shadowOpacity: 0.9,
+            shadowRadius: 8,
           }}
         >
           {state.routes.map((route, index) => {

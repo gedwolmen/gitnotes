@@ -1,21 +1,23 @@
 /**
- * Tests for the three-way UI style selector in SettingsContent.
+ * Tests for the four-way UI style selector in SettingsContent.
  *
  * Entitlement model:
- *   Basic (flat)     — free for all users
- *   Neo-Brutalist    — free for all users (no paywall)
- *   Neumorphic        — Pro only (paywall for free users)
+ *   Basic (flat)          — free for all users
+ *   Neo-Brutalist         — free for all users (no paywall)
+ *   Neumorphic            — Pro only (paywall for free users)
+ *   Retrofuturistic       — Pro only (paywall for free users)
  *
  * Structure:
- *   Rendering — verifies all three options render and are accessible
+ *   Rendering — verifies all four options render and are accessible
  *   Accessibility — verifies role=button and lock icons
- *   Paywall flow — verifies neumorphic triggers paywall for free users
+ *   Paywall flow — verifies premium options trigger paywall for free users
  *   Dark mode — verifies dark mode toggle is unaffected
  *
  * Test IDs:
- *   settings.option.style.basic       → flat style option
- *   settings.option.style.neumorphic → neumorphic style option
- *   settings.option.style.neo-brutalist → neo-brutalist style option
+ *   settings.option.style.basic            → flat style option
+ *   settings.option.style.neumorphic      → neumorphic style option
+ *   settings.option.style.neo-brutalist   → neo-brutalist style option
+ *   settings.option.style.retrofuturistic → retrofuturistic style option
  *
  * Uses real SettingsContent with all required props provided;
  * mocks internal hooks and Alert to verify promptProUpgrade behavior.
@@ -29,13 +31,11 @@ import { SettingsContent } from '../../../src/components/settings/SettingsConten
 // Module-level mocks (must precede any imports)
 // ---------------------------------------------------------------------------
 
-// Mock react-native Alert (used by promptProUpgrade → Alert.alert)
 let mockAlertCalls: Array<{ title: string; message: string; buttons: unknown[] }> = [];
 jest.mock('react-native', () => {
   const React = require('react');
   const View = (props: object & { children?: React.ReactNode }) =>
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    React.createElement('View', props, (props as any)?.children);
+    React.createElement('View', props, (props as { children?: React.ReactNode })?.children);
   View.displayName = 'View';
   return {
     __esModule: true,
@@ -59,7 +59,6 @@ jest.mock('react-native', () => {
   };
 });
 
-// Mock useTranslation to provide t function
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, opts?: object) => {
@@ -70,20 +69,12 @@ jest.mock('react-i18next', () => ({
   }),
 }));
 
-// Mock ThemeContext useTokens hook
 jest.mock('../../../src/contexts/ThemeContext', () => ({
   useTheme: () => ({
     theme: 'light',
     colors: {
-      background: '#ffffff',
-      surface: '#f0f0f0',
-      primary: '#007AFF',
-      accent: '#3b82f6',
-      text: '#000000',
-      textSecondary: '#666666',
-      border: '#cccccc',
-      error: '#FF3B30',
-      elevated: '#e5e5ea',
+      background: '#ffffff', surface: '#f0f0f0', primary: '#007AFF', accent: '#3b82f6',
+      text: '#000000', textSecondary: '#666666', border: '#cccccc', error: '#FF3B30', elevated: '#e5e5ea',
     },
     setTheme: jest.fn(),
     style: 'light',
@@ -96,15 +87,8 @@ jest.mock('../../../src/contexts/ThemeContext', () => ({
     spacing: { 1: 4, 2: 8, 3: 12, 4: 16 },
     type: { xs: 10, sm: 12, md: 14, lg: 16, xl: 20 },
     colors: {
-      background: '#ffffff',
-      surface: '#f0f0f0',
-      primary: '#007AFF',
-      accent: '#3b82f6',
-      text: '#000000',
-      textSecondary: '#666666',
-      border: '#cccccc',
-      error: '#FF3B30',
-      elevated: '#e5e5ea',
+      background: '#ffffff', surface: '#f0f0f0', primary: '#007AFF', accent: '#3b82f6',
+      text: '#000000', textSecondary: '#666666', border: '#cccccc', error: '#FF3B30', elevated: '#e5e5ea',
     },
   }),
 }));
@@ -118,19 +102,12 @@ jest.mock('expo-constants', () => ({
 }));
 
 jest.mock('expo-file-system/legacy', () => ({
-  DocumentDirectory: '',
-  File: {},
-  Directory: {},
-  Paths: {},
+  DocumentDirectory: '', File: {}, Directory: {}, Paths: {},
 }));
 
-jest.mock('expo-image', () => ({
-  Image: 'Image',
-}));
+jest.mock('expo-image', () => ({ Image: 'Image' }));
 
-jest.mock('@expo/vector-icons', () => ({
-  Ionicons: 'Ionicons',
-}));
+jest.mock('@expo/vector-icons', () => ({ Ionicons: 'Ionicons' }));
 
 jest.mock('../../../src/services/ai/AIMemoryIndexService', () => ({
   aiMemoryIndex: { build: jest.fn() },
@@ -159,15 +136,12 @@ jest.mock('@react-navigation/native-stack', () => ({}));
 
 jest.mock('query-string', () => ({ default: { stringify: jest.fn() } }));
 
-// ---------------------------------------------------------------------------
-// Minimal required props factory
-// ---------------------------------------------------------------------------
 interface TestSettingsContentProps {
   colors: Record<string, string>;
   headerHeight: number;
   tabBarHeight: number;
   theme: 'light' | 'dark' | 'system';
-  uiStyle: 'flat' | 'neumorphic' | 'neo-brutalist';
+  uiStyle: 'flat' | 'neumorphic' | 'neo-brutalist' | 'retrofuturistic';
   accounts: unknown[];
   activeAccountId: string | null;
   authState: { isAuthenticated: boolean };
@@ -182,7 +156,7 @@ interface TestSettingsContentProps {
   chatStorageLabel: string;
   providers: unknown[];
   setTheme: (t: 'light' | 'dark' | 'system') => void;
-  setStyle: (s: 'flat' | 'neumorphic' | 'neo-brutalist') => void;
+  setStyle: (s: 'flat' | 'neumorphic' | 'neo-brutalist' | 'retrofuturistic') => void;
   onOpenConnectToken: () => void;
   onOpenAddAccount: () => void;
   onSwitchAccount: (id: string) => void | Promise<void>;
@@ -244,6 +218,14 @@ interface TestSettingsContentProps {
   syncHealth: { status: string; lastRunAt: number; lastCompletedAt: number; lastFailedAt: number; consecutiveFailures: number };
   onToggleSSH: (hostId: string) => void;
   hostUseSsh: Record<string, boolean>;
+  onConnectOAuth: (hostId: string | null) => void;
+  onDisconnectOAuth: (hostId: string) => void;
+  oauthLoading: Record<string, boolean>;
+  oauthError: Record<string, string | null>;
+  onConnectGitHubApp: (hostId: string | null) => void;
+  onDisconnectGitHubApp: (hostId: string) => void;
+  appLoading: Record<string, boolean>;
+  appError: Record<string, string | null>;
 }
 
 function makeProps(overrides: Partial<TestSettingsContentProps> = {}): TestSettingsContentProps {
@@ -332,36 +314,43 @@ function makeProps(overrides: Partial<TestSettingsContentProps> = {}): TestSetti
     syncHealth: { status: 'ok', lastRunAt: 0, lastCompletedAt: 0, lastFailedAt: 0, consecutiveFailures: 0 },
     onToggleSSH: jest.fn(),
     hostUseSsh: {},
+    onConnectOAuth: jest.fn(),
+    onDisconnectOAuth: jest.fn(),
+    oauthLoading: { '__fresh__': false },
+    oauthError: { '__fresh__': null },
+    onConnectGitHubApp: jest.fn(),
+    onDisconnectGitHubApp: jest.fn(),
+    appLoading: { '__fresh__': false },
+    appError: { '__fresh__': null },
     ...overrides,
   };
 }
 
-// ---------------------------------------------------------------------------
-// ---------------------------------------------------------------------------
-describe('SettingsContent style selector [NEW — three-way selector]', () => {
+describe('SettingsContent style selector [four-way selector]', () => {
   beforeEach(() => { mockAlertCalls = []; });
 
-  describe('Rendering — three-way style selector', () => {
-    it('renders all three style options for Pro users', () => {
+  describe('Rendering — four-way style selector', () => {
+    it('renders all four style options for Pro users', () => {
       const props = makeProps({ isPro: true });
       const { getByTestId } = render(<SettingsContent {...props} />);
       expect(getByTestId('settings.option.style.basic')).toBeTruthy();
       expect(getByTestId('settings.option.style.neumorphic')).toBeTruthy();
       expect(getByTestId('settings.option.style.neo-brutalist')).toBeTruthy();
+      expect(getByTestId('settings.option.style.retrofuturistic')).toBeTruthy();
     });
 
-    it('renders all three style options for free users (all visible, premium ones locked)', () => {
+    it('renders all four style options for free users (all visible, premium ones locked)', () => {
       const props = makeProps({ isPro: false });
       const { getByTestId } = render(<SettingsContent {...props} />);
       expect(getByTestId('settings.option.style.basic')).toBeTruthy();
       expect(getByTestId('settings.option.style.neumorphic')).toBeTruthy();
       expect(getByTestId('settings.option.style.neo-brutalist')).toBeTruthy();
+      expect(getByTestId('settings.option.style.retrofuturistic')).toBeTruthy();
     });
 
     it('basic style option is selectable for free users', () => {
       const props = makeProps({ isPro: false, uiStyle: 'neumorphic' });
       const { getByTestId } = render(<SettingsContent {...props} />);
-      // Basic option should be pressable and call setStyle
       expect(getByTestId('settings.option.style.basic')).toBeTruthy();
     });
 
@@ -379,7 +368,6 @@ describe('SettingsContent style selector [NEW — three-way selector]', () => {
       await act(async () => {
         fireEvent.press(getByTestId('settings.option.style.neo-brutalist'));
       });
-      // Neo-Brutalist is now free — no paywall, directly sets the style
       expect(setStyle).toHaveBeenCalledWith('neo-brutalist');
       expect(mockAlertCalls.length).toBe(0);
     });
@@ -436,9 +424,30 @@ describe('SettingsContent style selector [NEW — three-way selector]', () => {
       });
       expect(setStyle).toHaveBeenCalledWith('flat');
     });
+
+    it('retrofuturistic option is free for Pro users — calls setStyle directly', async () => {
+      const setStyle = jest.fn();
+      const props = makeProps({ isPro: true, uiStyle: 'flat', setStyle });
+      const { getByTestId } = render(<SettingsContent {...props} />);
+
+      await act(async () => {
+        fireEvent.press(getByTestId('settings.option.style.retrofuturistic'));
+      });
+      expect(setStyle).toHaveBeenCalledWith('retrofuturistic');
+      expect(mockAlertCalls.length).toBe(0);
+    });
+
+    it('retrofuturistic option is NOT directly pressable for free users (paywall)', async () => {
+      const props = makeProps({ isPro: false });
+      const { getByTestId } = render(<SettingsContent {...props} />);
+      await act(async () => {
+        fireEvent.press(getByTestId('settings.option.style.retrofuturistic'));
+      });
+      expect(mockAlertCalls.length).toBe(1);
+    });
   });
 
-  describe('Accessibility — three-way style selector', () => {
+  describe('Accessibility — four-way style selector', () => {
     it('basic style option has accessible and role=button', () => {
       const props = makeProps({ isPro: false });
       const { getByTestId } = render(<SettingsContent {...props} />);
@@ -450,15 +459,22 @@ describe('SettingsContent style selector [NEW — three-way selector]', () => {
     it('premium style options have role=button even for free users (triggers paywall)', () => {
       const props = makeProps({ isPro: false });
       const { getByTestId } = render(<SettingsContent {...props} />);
-      const option = getByTestId('settings.option.style.neumorphic');
-      expect(option.props.accessibilityRole).toBe('button');
+      const neumorphicOption = getByTestId('settings.option.style.neumorphic');
+      const retroOption = getByTestId('settings.option.style.retrofuturistic');
+      expect(neumorphicOption.props.accessibilityRole).toBe('button');
+      expect(retroOption.props.accessibilityRole).toBe('button');
     });
 
     it('selected option displays checkmark trailing icon', () => {
       const props = makeProps({ isPro: true, uiStyle: 'neo-brutalist' });
       const { getByTestId } = render(<SettingsContent {...props} />);
-      const option = getByTestId('settings.option.style.neo-brutalist');
-      expect(option).toBeTruthy();
+      expect(getByTestId('settings.option.style.neo-brutalist')).toBeTruthy();
+    });
+
+    it('retrofuturistic option is rendered when selected', () => {
+      const props = makeProps({ isPro: true, uiStyle: 'retrofuturistic' });
+      const { getByTestId } = render(<SettingsContent {...props} />);
+      expect(getByTestId('settings.option.style.retrofuturistic')).toBeTruthy();
     });
   });
 
@@ -475,7 +491,19 @@ describe('SettingsContent style selector [NEW — three-way selector]', () => {
       expect(upgradeButton).toBeDefined();
     });
 
-    it('pressing neo-brutalist option does NOT show Alert for free users (now free)', async () => {
+    it('pressing retrofuturistic option shows Alert (promptProUpgrade) for free users', async () => {
+      const props = makeProps({ isPro: false });
+      const { getByTestId } = render(<SettingsContent {...props} />);
+
+      await act(async () => {
+        fireEvent.press(getByTestId('settings.option.style.retrofuturistic'));
+      });
+      expect(mockAlertCalls.length).toBe(1);
+      const upgradeButton = mockAlertCalls[0].buttons[1] as { onPress: () => void };
+      expect(upgradeButton).toBeDefined();
+    });
+
+    it('pressing neo-brutalist option does NOT show Alert for free users (free)', async () => {
       const setStyle = jest.fn();
       const props = makeProps({ isPro: false, uiStyle: 'flat', setStyle });
       const { getByTestId } = render(<SettingsContent {...props} />);
@@ -483,7 +511,6 @@ describe('SettingsContent style selector [NEW — three-way selector]', () => {
       await act(async () => {
         fireEvent.press(getByTestId('settings.option.style.neo-brutalist'));
       });
-      // Neo-Brutalist is free — no paywall, no alert
       expect(mockAlertCalls.length).toBe(0);
       expect(setStyle).toHaveBeenCalledWith('neo-brutalist');
     });

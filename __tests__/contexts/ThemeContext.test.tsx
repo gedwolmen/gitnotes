@@ -34,6 +34,8 @@ import {
   NEUMORPHIC_DARK,
   NEUTRAL_BRUTALIST_LIGHT,
   NEUTRAL_BRUTALIST_DARK,
+  RETROFUTURISTIC_LIGHT,
+  RETROFUTURISTIC_DARK,
   resolveColors,
   deriveAccentMuted,
   type Palette,
@@ -134,6 +136,10 @@ describe('resolveColors baseline (no custom accent)', () => {
     { style: 'flat', isDark: true, expected: FLAT_DARK },
     { style: 'neumorphic', isDark: false, expected: NEUMORPHIC_LIGHT },
     { style: 'neumorphic', isDark: true, expected: NEUMORPHIC_DARK },
+    { style: 'neo-brutalist', isDark: false, expected: NEUTRAL_BRUTALIST_LIGHT },
+    { style: 'neo-brutalist', isDark: true, expected: NEUTRAL_BRUTALIST_DARK },
+    { style: 'retrofuturistic', isDark: false, expected: RETROFUTURISTIC_LIGHT },
+    { style: 'retrofuturistic', isDark: true, expected: RETROFUTURISTIC_DARK },
   ];
 
   for (const { style, isDark, expected } of cases) {
@@ -195,6 +201,71 @@ describe('resolveColors neo-brutalist', () => {
 
   it('neo-brutalist-dark palette matches NEUTRAL_BRUTALIST_DARK', () => {
     expect(resolveColors('neo-brutalist', true)).toEqual(NEUTRAL_BRUTALIST_DARK);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Retrofuturistic palette resolution
+// ---------------------------------------------------------------------------
+describe('resolveColors retrofuturistic', () => {
+  const PALETTE_KEYS: Array<keyof Palette> = [
+    'bg', 'surface', 'highlight', 'shadow', 'text', 'textSecondary',
+    'accent', 'accentMuted', 'error', 'success', 'warning',
+    'background', 'surfaceSecondary', 'primary', 'border', 'card', 'elevated',
+  ];
+
+  it('returns retrofuturistic-light palette with all 17 required keys', () => {
+    const colors = resolveColors('retrofuturistic', false);
+    for (const key of PALETTE_KEYS) {
+      expect(colors).toHaveProperty(key);
+      expect(typeof colors[key]).toBe('string');
+      expect(colors[key]).toMatch(/^#[0-9A-Fa-f]{6}$/);
+    }
+  });
+
+  it('returns retrofuturistic-dark palette with all 17 required keys', () => {
+    const colors = resolveColors('retrofuturistic', true);
+    for (const key of PALETTE_KEYS) {
+      expect(colors).toHaveProperty(key);
+      expect(typeof colors[key]).toBe('string');
+      expect(colors[key]).toMatch(/^#[0-9A-Fa-f]{6}$/);
+    }
+  });
+
+  it('retrofuturistic-light palette matches RETROFUTURISTIC_LIGHT', () => {
+    expect(resolveColors('retrofuturistic', false)).toEqual(RETROFUTURISTIC_LIGHT);
+  });
+
+  it('retrofuturistic-dark palette matches RETROFUTURISTIC_DARK', () => {
+    expect(resolveColors('retrofuturistic', true)).toEqual(RETROFUTURISTIC_DARK);
+  });
+
+  it('retrofuturistic-dark accent is electric cyan (#00E5FF)', () => {
+    expect(resolveColors('retrofuturistic', true).accent).toBe('#00E5FF');
+  });
+
+  it('retrofuturistic-dark primary is hot-pink (#E91E63)', () => {
+    expect(resolveColors('retrofuturistic', true).primary).toBe('#E91E63');
+  });
+
+  it('retrofuturistic-dark background is deep space navy (#0D0D1A)', () => {
+    expect(resolveColors('retrofuturistic', true).background).toBe('#0D0D1A');
+  });
+
+  it('retrofuturistic-light background is cream (#FAFAF5)', () => {
+    expect(resolveColors('retrofuturistic', false).background).toBe('#FAFAF5');
+  });
+
+  it('retrofuturistic-dark returns distinct palette from flat-dark', () => {
+    const retro = resolveColors('retrofuturistic', true);
+    const flat = resolveColors('flat', true);
+    expect(retro).not.toEqual(flat);
+  });
+
+  it('retrofuturistic-light returns distinct palette from neumorphic-light', () => {
+    const retro = resolveColors('retrofuturistic', false);
+    const neu = resolveColors('neumorphic', false);
+    expect(retro).not.toEqual(neu);
   });
 });
 
@@ -571,5 +642,148 @@ describe('ThemeContext remount hydration', () => {
     expect(result2.current.style).toBe('neo-brutalist');
     expect(result2.current.isDark).toBe(true);
     expect(result2.current.colors).toEqual(NEUTRAL_BRUTALIST_DARK);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Retrofuturistic style persistence
+// ---------------------------------------------------------------------------
+describe('ThemeContext retrofuturistic style persistence', () => {
+  beforeEach(async () => {
+    await prepStorage({});
+  });
+
+  afterEach(() => {
+    clearBootCache();
+  });
+
+  it('readBootStyle accepts retrofuturistic from storage', async () => {
+    await prepStorage({ '@gitnotes:style': 'retrofuturistic' });
+    const { result } = renderHook(() => useTheme(), {
+      wrapper: ({ children }) => <ThemeProvider>{children}</ThemeProvider>,
+    });
+    await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+    expect(result.current.style).toBe('retrofuturistic');
+  });
+
+  it('loadPersisted accepts retrofuturistic from AsyncStorage', async () => {
+    const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+    await AsyncStorage.setItem('@gitnotes:style', 'retrofuturistic');
+    clearBootCache();
+    await bootstrapStorage();
+
+    const { result } = renderHook(() => useTheme(), {
+      wrapper: ({ children }) => <ThemeProvider>{children}</ThemeProvider>,
+    });
+    await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+    expect(result.current.style).toBe('retrofuturistic');
+  });
+
+  it('setStyle("retrofuturistic") persists to AsyncStorage', async () => {
+    const { result } = renderHook(() => useTheme(), {
+      wrapper: ({ children }) => <ThemeProvider>{children}</ThemeProvider>,
+    });
+    await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+
+    await act(async () => {
+      result.current.setStyle('retrofuturistic');
+    });
+
+    const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+    const stored = await AsyncStorage.getItem('@gitnotes:style');
+    expect(stored).toBe('retrofuturistic');
+    expect(result.current.style).toBe('retrofuturistic');
+  });
+
+  it('retrofuturistic style returns retrofuturistic-light colors in system=light mode', async () => {
+    await prepStorage({ '@gitnotes:style': 'retrofuturistic' });
+    const { result } = renderHook(() => useTheme(), {
+      wrapper: ({ children }) => <ThemeProvider>{children}</ThemeProvider>,
+    });
+    await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+    expect(result.current.colors).toEqual(RETROFUTURISTIC_LIGHT);
+  });
+
+  it('setStyle("retrofuturistic") applies retrofuturistic palette immediately', async () => {
+    const { result } = renderHook(() => useTheme(), {
+      wrapper: ({ children }) => <ThemeProvider>{children}</ThemeProvider>,
+    });
+    await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+
+    await act(async () => {
+      result.current.setStyle('retrofuturistic');
+    });
+
+    expect(result.current.colors).toEqual(RETROFUTURISTIC_LIGHT);
+  });
+
+  it('retrofuturistic dark mode returns retrofuturistic-dark colors', async () => {
+    const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+    await AsyncStorage.setItem('@gitnotes:style', 'retrofuturistic');
+    await AsyncStorage.setItem('@gitnotes:theme', 'dark');
+    clearBootCache();
+    await bootstrapStorage();
+
+    const { result } = renderHook(() => useTheme(), {
+      wrapper: ({ children }) => <ThemeProvider>{children}</ThemeProvider>,
+    });
+    await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+    expect(result.current.style).toBe('retrofuturistic');
+    expect(result.current.isDark).toBe(true);
+    expect(result.current.colors).toEqual(RETROFUTURISTIC_DARK);
+  });
+
+  it('retrofuturistic style survives ThemeProvider unmount/remount cycle', async () => {
+    const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+    await AsyncStorage.setItem('@gitnotes:style', 'retrofuturistic');
+    clearBootCache();
+    await bootstrapStorage();
+
+    const { result, unmount } = renderHook(() => useTheme(), {
+      wrapper: ({ children }) => <ThemeProvider>{children}</ThemeProvider>,
+    });
+    await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+    expect(result.current.style).toBe('retrofuturistic');
+    expect(result.current.colors).toEqual(RETROFUTURISTIC_LIGHT);
+
+    unmount();
+
+    clearBootCache();
+    await bootstrapStorage();
+
+    const { result: result2 } = renderHook(() => useTheme(), {
+      wrapper: ({ children }) => <ThemeProvider>{children}</ThemeProvider>,
+    });
+    await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+    expect(result2.current.style).toBe('retrofuturistic');
+    expect(result2.current.colors).toEqual(RETROFUTURISTIC_LIGHT);
+  });
+
+  it('retrofuturistic style survives ThemeProvider remount in dark mode', async () => {
+    const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+    await AsyncStorage.setItem('@gitnotes:style', 'retrofuturistic');
+    await AsyncStorage.setItem('@gitnotes:theme', 'dark');
+    clearBootCache();
+    await bootstrapStorage();
+
+    const { result, unmount } = renderHook(() => useTheme(), {
+      wrapper: ({ children }) => <ThemeProvider>{children}</ThemeProvider>,
+    });
+    await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+    expect(result.current.style).toBe('retrofuturistic');
+    expect(result.current.isDark).toBe(true);
+    expect(result.current.colors).toEqual(RETROFUTURISTIC_DARK);
+
+    unmount();
+    clearBootCache();
+    await bootstrapStorage();
+
+    const { result: result2 } = renderHook(() => useTheme(), {
+      wrapper: ({ children }) => <ThemeProvider>{children}</ThemeProvider>,
+    });
+    await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+    expect(result2.current.style).toBe('retrofuturistic');
+    expect(result2.current.isDark).toBe(true);
+    expect(result2.current.colors).toEqual(RETROFUTURISTIC_DARK);
   });
 });

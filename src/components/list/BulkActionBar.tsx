@@ -1,4 +1,3 @@
-import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -27,6 +26,7 @@ export function BulkActionBar({
   const noun = count === 1 ? itemNoun : itemNounPlural ?? `${itemNoun}s`;
 
   const isNeoBrutalist = themeStyle === 'neo-brutalist';
+  const isRetrofuturistic = themeStyle === 'retrofuturistic';
 
   return (
     <View
@@ -35,9 +35,9 @@ export function BulkActionBar({
       style={[
         {
           backgroundColor: colors.surface,
-          borderColor: colors.border,
+          borderColor: isRetrofuturistic ? colors.accent : colors.border,
           bottom: bottomOffset,
-          borderWidth: isNeoBrutalist ? 2 : StyleSheet.hairlineWidth,
+          borderWidth: isNeoBrutalist ? 2 : isRetrofuturistic ? 1.5 : StyleSheet.hairlineWidth,
           ...(isNeoBrutalist
             ? {
                 shadowColor: colors.border,
@@ -46,13 +46,21 @@ export function BulkActionBar({
                 shadowOffset: { width: 3, height: 3 },
                 elevation: 0,
               }
-            : {
-                shadowColor: '#000',
-                shadowOpacity: 0.12,
-                shadowRadius: 12,
-                shadowOffset: { width: 0, height: 4 },
-                elevation: 6,
-              }),
+            : isRetrofuturistic
+              ? {
+                  shadowColor: colors.accent,
+                  shadowOpacity: 0.9,
+                  shadowRadius: 8,
+                  shadowOffset: { width: 0, height: 0 },
+                  elevation: 0,
+                }
+              : {
+                  shadowColor: '#000',
+                  shadowOpacity: 0.12,
+                  shadowRadius: 12,
+                  shadowOffset: { width: 0, height: 4 },
+                  elevation: 6,
+                }),
         },
       ]}
     >

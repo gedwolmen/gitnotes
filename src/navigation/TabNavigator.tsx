@@ -143,7 +143,8 @@ export default function TabNavigator() {
   const { t } = useTranslation();
   const useNeumorphicBar = !isTablet && style === 'neumorphic';
   const useNeoBrutalistBar = !isTablet && style === 'neo-brutalist';
-  const useCustomBar = useNeumorphicBar || useNeoBrutalistBar;
+  const useRetrofuturisticBar = !isTablet && style === 'retrofuturistic';
+  const useCustomBar = useNeumorphicBar || useNeoBrutalistBar || useRetrofuturisticBar;
 
   // Paywall lives on the root stack (sibling of MainTabs), so the custom
   // TabBar's parent-route check never fires for the default bar (flat/tablet).

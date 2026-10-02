@@ -29,6 +29,7 @@ interface GitButtonHaloProps {
 export default function GitButtonHalo({ active, color = HALO_COLOR, testID }: GitButtonHaloProps) {
   const { style: themeStyle } = useTheme();
   const isNeoBrutalist = themeStyle === 'neo-brutalist';
+  const isRetrofuturistic = themeStyle === 'retrofuturistic';
   const pulse = useSharedValue(0);
 
   useEffect(() => {
@@ -52,6 +53,9 @@ export default function GitButtonHalo({ active, color = HALO_COLOR, testID }: Gi
     if (isNeoBrutalist) {
       return { opacity: baseOpacity, transform: [{ scale }], borderWidth: 2 };
     }
+    if (isRetrofuturistic) {
+      return { opacity: baseOpacity, transform: [{ scale }], borderWidth: 2 };
+    }
     return { opacity: baseOpacity, transform: [{ scale }] };
   });
 
@@ -59,6 +63,9 @@ export default function GitButtonHalo({ active, color = HALO_COLOR, testID }: Gi
     const baseOpacity = active ? interpolate(pulse.value, [0, 0.5, 1], [0.35, 0.12, 0.35]) : 0;
     const scale = interpolate(pulse.value, [0, 0.5, 1], [0.98, 1.12, 0.98]);
     if (isNeoBrutalist) {
+      return { opacity: baseOpacity, transform: [{ scale }], borderWidth: 1 };
+    }
+    if (isRetrofuturistic) {
       return { opacity: baseOpacity, transform: [{ scale }], borderWidth: 1 };
     }
     return { opacity: baseOpacity, transform: [{ scale }] };
@@ -73,7 +80,7 @@ export default function GitButtonHalo({ active, color = HALO_COLOR, testID }: Gi
       <Animated.View
         style={[
           styles.outerRing,
-          isNeoBrutalist ? neoBrutalistStyles.outerRing : null,
+          isNeoBrutalist ? neoBrutalistStyles.outerRing : isRetrofuturistic ? retrofuturisticStyles.outerRing : null,
           { borderColor: color, shadowColor: color },
           outerRingStyle,
         ]}
@@ -81,7 +88,7 @@ export default function GitButtonHalo({ active, color = HALO_COLOR, testID }: Gi
       <Animated.View
         style={[
           styles.innerRing,
-          isNeoBrutalist ? neoBrutalistStyles.innerRing : null,
+          isNeoBrutalist ? neoBrutalistStyles.innerRing : isRetrofuturistic ? retrofuturisticStyles.innerRing : null,
           { borderColor: color, shadowColor: color },
           innerRingStyle,
         ]}
@@ -127,6 +134,19 @@ const neoBrutalistStyles = StyleSheet.create({
   },
   outerRing: {
     shadowRadius: 0,
+    shadowOpacity: 1,
+    elevation: 0,
+  },
+});
+
+const retrofuturisticStyles = StyleSheet.create({
+  innerRing: {
+    shadowRadius: 18,
+    shadowOpacity: 1,
+    elevation: 0,
+  },
+  outerRing: {
+    shadowRadius: 14,
     shadowOpacity: 1,
     elevation: 0,
   },

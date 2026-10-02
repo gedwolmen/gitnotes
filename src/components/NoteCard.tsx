@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import { Note } from '../models/Note';
@@ -37,6 +37,7 @@ function NoteCardImpl({
   const { colors, isDark, style: themeStyle } = useTheme();
   const { isTablet } = useResponsive();
   const isNeoBrutalist = themeStyle === 'neo-brutalist';
+  const isRetrofuturistic = themeStyle === 'retrofuturistic';
   const isCard = variant === 'card';
   const showCompact = isCard ? false : compact;
   const isOfflineUncached = isOffline && !isCached;
@@ -82,10 +83,19 @@ function NoteCardImpl({
                 shadowRadius: 0,
                 shadowOffset: { width: 3, height: 3 },
               }
-            : {
-                shadowColor: colors.shadow,
-                shadowOpacity: isDark ? 0 : 0.1,
-              }),
+            : isRetrofuturistic
+              ? {
+                  borderWidth: 1.5,
+                  borderColor: colors.accent,
+                  shadowColor: colors.accent,
+                  shadowOpacity: 0.9,
+                  shadowRadius: 8,
+                  shadowOffset: { width: 0, height: 0 },
+                }
+              : {
+                  shadowColor: colors.shadow,
+                  shadowOpacity: isDark ? 0 : 0.1,
+                }),
           opacity: isOfflineUncached ? 0.5 : 1,
         },
         showCompact && styles.cardCompact,
