@@ -231,6 +231,14 @@ interface TestSettingsContentProps {
   syncHealth: { status: string; lastRunAt: number; lastCompletedAt: number; lastFailedAt: number; consecutiveFailures: number };
   onToggleSSH: (hostId: string) => void;
   hostUseSsh: Record<string, boolean>;
+  onConnectOAuth: (hostId: string | null) => void;
+  onDisconnectOAuth: (hostId: string) => void;
+  oauthLoading: Record<string, boolean>;
+  oauthError: Record<string, string | null>;
+  onConnectGitHubApp: (hostId: string | null) => void;
+  onDisconnectGitHubApp: (hostId: string) => void;
+  appLoading: Record<string, boolean>;
+  appError: Record<string, string | null>;
   appIcon: 'Neon' | 'Grayscale' | 'Gold' | null;
   appIconSupported: boolean;
   appIconLoading: boolean;
@@ -323,6 +331,14 @@ function makeProps(overrides: Partial<TestSettingsContentProps> = {}): TestSetti
     syncHealth: { status: 'ok', lastRunAt: 0, lastCompletedAt: 0, lastFailedAt: 0, consecutiveFailures: 0 },
     onToggleSSH: jest.fn(),
     hostUseSsh: {},
+    onConnectOAuth: jest.fn(),
+    onDisconnectOAuth: jest.fn(),
+    oauthLoading: {},
+    oauthError: {},
+    onConnectGitHubApp: jest.fn(),
+    onDisconnectGitHubApp: jest.fn(),
+    appLoading: {},
+    appError: {},
     appIcon: null,
     appIconSupported: true,
     appIconLoading: false,
