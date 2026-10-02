@@ -70,7 +70,7 @@ type SettingsContentProps = {
   headerHeight: number;
   tabBarHeight: number;
   theme: 'light' | 'dark' | 'system';
-  uiStyle: 'flat' | 'neumorphic';
+  uiStyle: 'flat' | 'neumorphic' | 'neo-brutalist';
   accounts: Account[];
   activeAccountId: string | null;
   authState: AuthState;
@@ -85,7 +85,7 @@ type SettingsContentProps = {
   chatStorageLabel: string;
   providers: AIProviderConfig[];
   setTheme: (theme: 'light' | 'dark' | 'system') => void;
-  setStyle: (style: 'flat' | 'neumorphic') => void;
+  setStyle: (style: 'flat' | 'neumorphic' | 'neo-brutalist') => void;
   onOpenConnectToken: () => void;
   onOpenAddAccount: () => void;
   onSwitchAccount: (id: string) => void | Promise<void>;
@@ -356,24 +356,49 @@ export function SettingsContent(props: SettingsContentProps) {
         title={t('settings.appearance')}
       >
         <GroupRow
-          testID="settings.row.updated-ui"
-          onPress={() => { if (!isPro) onOpenPaywall(); }}
+          testID="settings.option.style.basic"
+          onPress={() => { HapticService.selection(); setStyle('flat'); }}
+          accessibilityRole="button"
+          accessibilityLabel={t('settings.style.basic')}
           trailing={
-            isPro ? (
-              <View className="flex-row items-center gap-2">
-                <Toggle
-                  testID="settings.toggle.neu"
-                  value={uiStyle === 'neumorphic'}
-                  onValueChange={(value) => setStyle(value ? 'neumorphic' : 'flat')}
-                />
-                <HintIcon hintKey="hints.settings.updatedUI" testID="hint.updated-ui" />
-              </View>
-            ) : (
-              <Ionicons name="lock-closed" size={18} color={colors.textSecondary} />
-            )
+            uiStyle === 'flat' ? (
+              <Ionicons name="checkmark" size={18} color={colors.accent} />
+            ) : null
           }
         >
-          <Text style={[styles.settingLabel, { color: colors.text }]}>{t('settings.updatedUI')}</Text>
+          <Text style={[styles.settingLabel, { color: colors.text }]}>{t('settings.style.basic')}</Text>
+        </GroupRow>
+        <GroupRow
+          testID="settings.option.style.neumorphic"
+          onPress={isPro ? () => { HapticService.selection(); setStyle('neumorphic'); } : () => promptProUpgrade(t, onOpenPaywall)}
+          accessibilityRole="button"
+          accessibilityLabel={t('settings.style.neumorphic')}
+          trailing={
+            <View className="flex-row items-center gap-2">
+              {uiStyle === 'neumorphic' ? (
+                <Ionicons name="checkmark" size={18} color={colors.accent} />
+              ) : !isPro ? (
+                <Ionicons name="lock-closed" size={16} color={colors.textSecondary} />
+              ) : null}
+            </View>
+          }
+        >
+          <Text style={[styles.settingLabel, { color: colors.text }]}>{t('settings.style.neumorphic')}</Text>
+        </GroupRow>
+        <GroupRow
+          testID="settings.option.style.neo-brutalist"
+          onPress={() => { HapticService.selection(); setStyle('neo-brutalist'); }}
+          accessibilityRole="button"
+          accessibilityLabel={t('settings.style.neoBrutalist')}
+          trailing={
+            <View className="flex-row items-center gap-2">
+              {uiStyle === 'neo-brutalist' ? (
+                <Ionicons name="checkmark" size={18} color={colors.accent} />
+              ) : null}
+            </View>
+          }
+        >
+          <Text style={[styles.settingLabel, { color: colors.text }]}>{t('settings.style.neoBrutalist')}</Text>
         </GroupRow>
         <GroupRow
           trailing={

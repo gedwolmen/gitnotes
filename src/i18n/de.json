@@ -177,7 +177,12 @@
     },
     "security": "Sicherheit",
     "appearance": "Erscheinungsbild",
-    "updatedUI": "Neumorphic UI",
+    "style": {
+      "basic": "Einfach",
+      "neumorphic": "Neumorphisch",
+      "neoBrutalist": "Neo-Brutalistisch",
+      "hint": "Einfach ist kostenlos. Neumorphisch und Neo-Brutalistisch erfordern GitNotēs Pro."
+    },
     "darkMode": "Dunkelmodus",
     "accentColor": "Akzentfarbe",
     "useSystemTheme": "Systemdesign verwenden",
@@ -533,7 +538,7 @@
   },
   "hints": {
     "settings": {
-      "updatedUI": "Soft-UI-Schatten verleihen ein taktiles, erhöhtes Gefühl. Deaktiviere für den klassischen flachen Look.",
+      "style": "Einfach ist kostenlos. Neumorphisch und Neo-Brutalistisch erfordern GitNotēs Pro. Tippe, um deinen UI-Stil zu ändern.",
       "darkMode": "Wechsle zwischen hellem und dunklem Erscheinungsbild. Für Systemeinstellungen verwende die Option unten.",
       "accentColor": "Wähle eine beliebige Hex-Farbe, um die Akzentfarbe deiner App zu personalisieren. Gilt für alle Themes und Stile.",
       "useSystemTheme": "Automatisch an den hellen oder dunklen Modus deines Geräts anpassen.",

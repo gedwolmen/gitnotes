@@ -21,10 +21,12 @@ export function BulkActionBar({
   itemNoun,
   itemNounPlural,
 }: BulkActionBarProps) {
-  const { colors } = useTheme();
+  const { colors, style: themeStyle } = useTheme();
   if (count === 0) return null;
 
   const noun = count === 1 ? itemNoun : itemNounPlural ?? `${itemNoun}s`;
+
+  const isNeoBrutalist = themeStyle === 'neo-brutalist';
 
   return (
     <View
@@ -35,12 +37,22 @@ export function BulkActionBar({
           backgroundColor: colors.surface,
           borderColor: colors.border,
           bottom: bottomOffset,
-          borderWidth: StyleSheet.hairlineWidth,
-          shadowColor: '#000',
-          shadowOpacity: 0.12,
-          shadowRadius: 12,
-          shadowOffset: { width: 0, height: 4 },
-          elevation: 6,
+          borderWidth: isNeoBrutalist ? 2 : StyleSheet.hairlineWidth,
+          ...(isNeoBrutalist
+            ? {
+                shadowColor: colors.border,
+                shadowOpacity: 1,
+                shadowRadius: 0,
+                shadowOffset: { width: 3, height: 3 },
+                elevation: 0,
+              }
+            : {
+                shadowColor: '#000',
+                shadowOpacity: 0.12,
+                shadowRadius: 12,
+                shadowOffset: { width: 0, height: 4 },
+                elevation: 6,
+              }),
         },
       ]}
     >
