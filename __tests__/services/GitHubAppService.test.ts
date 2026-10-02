@@ -299,6 +299,30 @@ describe('GitHubAppService', () => {
       expect(firstResult).toEqual(secondResult);
     });
 
+    it('returns the cached result for a sequential duplicate callback', async () => {
+      const { mod, mockPost } = await loadService();
+      const fakeState = 'callback-state-sequential-duplicate';
+      mod.pendingAppFlows.set(fakeState, {
+        selectedRepositoryIds: ['1'],
+        selectedRepositories: ['owner/repo'],
+        backendUrl: TEST_BACKEND,
+        hostId: TEST_HOST_ID,
+      });
+      mockPost.mockRejectedValueOnce(new Error('network error'));
+
+      const firstResult = await mod.GitHubAppService.handleCallback({
+        installationId: '12345',
+        state: fakeState,
+      });
+      const secondResult = await mod.GitHubAppService.handleCallback({
+        installationId: '12345',
+        state: fakeState,
+      });
+
+      expect(mockPost).toHaveBeenCalledTimes(1);
+      expect(secondResult).toEqual(firstResult);
+    });
+
     it('returns backend_error when backend responds with 503', async () => {
       const { mod, mockPost } = await loadService();
       const fakeState = 'callback-state-503';
