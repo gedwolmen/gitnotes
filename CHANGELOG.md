@@ -8,6 +8,14 @@ All notable fixes and feature changes to GitNotēs are documented here.
 >
 > **History**: prior fixes (pre-2026-08) lived in single-PR wiki pages. Those pages were retired in [#1047](https://github.com/skepjandi/gitnotes/pull/1047); their full diagnostic content is preserved in git history via `git log -p -- docs/wiki/<file>.md`.
 
+## 2026-10-02
+
+### fix(branding): use GitNotēs for user-visible app copy
+
+**What:** Native app labels and several user-facing messages used `GitNotes`, making the product name inconsistent with the branded `GitNotēs` spelling.
+
+**Fix:** Align Expo/iOS display names, AI locale labels, loading accessibility text, and repository removal copy with `GitNotēs` while preserving ASCII internal identifiers.
+
 ## 2026-10-01
 
 ### fix(graph): keep top nodes below the screen header
