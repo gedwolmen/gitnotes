@@ -272,6 +272,85 @@ async function reregisterAppCredentialForHost(
   );
 }
 
+// ── Auth failure classification ──────────────────────────────────────────────
+
+/**
+ * Returns true when `error` represents an authentication failure (401), not a
+ * permission (403), SAML/SSO, conflict, rate-limit, network, or server error.
+ *
+ * For GitHub API errors: checks `status === 401` using the same classification
+ * logic as `syncFailure.ts`.
+ *
+ * For native Git errors: parses error message strings from git2 for auth-specific
+ * failure patterns, excluding permission/403 patterns.
+ *
+ * Does NOT trigger fallback for:
+ * - App repository-selection errors (`repo_not_in_selection`)
+ * - App renewal failures
+ * - SAML/SSO errors (GitHub 403 with SSO header)
+ * - Permission/scope 403s
+ * - Conflicts (409)
+ * - Rate limits (429)
+ * - Network errors
+ * - Server errors (5xx)
+ * - Validation errors
+ */
+export function isAuthFailure(error: unknown): boolean {
+  if (error == null) return false;
+
+  // NativeCredentialBridgeError types that are NOT auth failures — do NOT fallback.
+  const raw = typeof error === 'object' ? error : { message: String(error) };
+  const msg = typeof error === 'object' && 'message' in error
+    ? String((error as Record<string, unknown>).message).toLowerCase()
+    : String(error).toLowerCase();
+  if (/repo_not_in_selection|renewal_failed|credential_not_found/i.test(msg)) {
+    return false;
+  }
+
+  // GitHub API error with 401 status — authentication failure.
+  const response = (raw as Record<string, unknown>).response as Record<string, unknown> | undefined;
+  const status = response?.status ?? (raw as Record<string, number>).status;
+  if (typeof status === 'number' && status === 401) {
+    return true;
+  }
+
+  // Native Git error — check message for auth-specific patterns.
+  // 401 in message is a strong auth signal.
+  if (/\b401\b/.test(msg)) return true;
+
+  // "authentication failed" is the git2 message for bad credentials.
+  if (/authentication\s*failed/i.test(msg)) return true;
+
+  // "credentials" alone can appear in git2 credential rejection messages,
+  // but we exclude messages that also mention "permission" (403/permission denied).
+  if (/credential/i.test(msg) && !/permission/i.test(msg) && !/denied/i.test(msg)) {
+    return true;
+  }
+
+  // "unauthorized" — but not "not authorized" which can appear in some 403 cases.
+  if (/^.*\b401\b.*$/.test(msg) || /unauthorized/i.test(msg)) return true;
+
+  return false;
+}
+
+/**
+ * Returns the next credential kind in the fallback chain after `currentKind`.
+ * The fallback order is: github_app → oauth → token (PAT).
+ * Returns null when there is no fallback (currentKind is 'token', 'ssh', or unknown).
+ */
+export function getNextCredentialKind(currentKind: CredentialKindForNative): CredentialKindForNative | null {
+  switch (currentKind) {
+    case 'github_app':
+      return 'oauth';
+    case 'oauth':
+      return 'token';
+    case 'token':
+    case 'ssh':
+    default:
+      return null;
+  }
+}
+
 // ── 401 recovery ─────────────────────────────────────────────────────────────
 
 /**

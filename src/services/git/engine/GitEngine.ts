@@ -22,6 +22,10 @@ import {
   registerGitHubOAuthCredential,
   registerPatCredential,
   initNativeCredentialBridge,
+  isAuthFailure,
+  getNextCredentialKind,
+  getRegisteredCredentialKind,
+  type CredentialKindForNative,
 } from '../NativeCredentialBridge';
 
 // Shape of the native module surface. Named (not `typeof GitEngineModule`) so the
@@ -117,6 +121,149 @@ const CredentialStore = {
   delete: async (_repoId: string) => {/* noop */},
 };
 type Credential = { kind: string; username?: string; privateKey?: string; publicKey?: string | null; passphrase?: string | null; token?: string };
+
+// Auth-fallback tracking: repoId → set of credential kinds already tried for current operation.
+// Cleared after successful operation or final failure.
+const _authFallbackTried = new Map<string, Set<CredentialKindForNative>>();
+
+// Active fallback kind: when set, indicates a fallback retry is in progress and
+// `ensureCredentialForOp` should NOT re-resolve (the credential is already registered).
+const _activeFallbackKind = new Map<string, CredentialKindForNative>();
+
+function _clearAuthFallback(repoId: string): void {
+  _authFallbackTried.delete(repoId);
+  _activeFallbackKind.delete(repoId);
+}
+
+function _markAuthFallbackTried(repoId: string, kind: CredentialKindForNative): void {
+  if (!_authFallbackTried.has(repoId)) {
+    _authFallbackTried.set(repoId, new Set());
+  }
+  _authFallbackTried.get(repoId)!.add(kind);
+}
+
+function _hasAuthFallbackTried(repoId: string, kind: CredentialKindForNative): boolean {
+  return _authFallbackTried.get(repoId)?.has(kind) ?? false;
+}
+
+async function _tryNextFallback(opts: {
+  repoId: string;
+  hostId: string;
+  currentKind: CredentialKindForNative;
+}): Promise<boolean> {
+  const { repoId, hostId, currentKind } = opts;
+
+  let nextKind: CredentialKindForNative | null = currentKind;
+  while ((nextKind = getNextCredentialKind(nextKind)) !== null) {
+    if (_hasAuthFallbackTried(repoId, nextKind)) continue;
+    if (nextKind === 'ssh') continue;
+
+    const token = await _getTokenForKind(hostId, nextKind);
+    if (!token) continue;
+
+    await _registerCredential(repoId, hostId, nextKind, token);
+    _markAuthFallbackTried(repoId, nextKind);
+    _activeFallbackKind.set(repoId, nextKind);
+    return true;
+  }
+  return false;
+}
+
+async function _getTokenForKind(hostId: string, kind: CredentialKindForNative): Promise<string | null> {
+  switch (kind) {
+    case 'github_app': {
+      const app = await AccountStorage.getGitHubAppCredential(hostId);
+      return app?.token ?? null;
+    }
+    case 'oauth': {
+      const oauth = await AccountStorage.getOAuthCredential(hostId);
+      return oauth?.accessToken ?? null;
+    }
+    case 'token': {
+      return await AccountStorage.getHostToken(hostId);
+    }
+    default:
+      return null;
+  }
+}
+
+async function _registerCredential(
+  repoId: string,
+  hostId: string,
+  kind: CredentialKindForNative,
+  token: string,
+): Promise<void> {
+  switch (kind) {
+    case 'github_app':
+      await registerGitHubAppCredential(repoId, hostId, token);
+      break;
+    case 'oauth':
+      await registerGitHubOAuthCredential(repoId, hostId, token);
+      break;
+    case 'token':
+      await registerPatCredential(repoId, hostId, token);
+      break;
+    case 'ssh':
+      break;
+  }
+}
+
+async function _attemptOpWithAuthFallback<T>(
+  repoId: string | null | undefined,
+  hostIdForFallback: string,
+  op: () => Promise<T>,
+  isAuthError: (result: T) => boolean,
+): Promise<T> {
+  if (!repoId) return op();
+
+  _clearAuthFallback(repoId);
+  await ensureCredentialForOp(repoId);
+
+  // Loop through all available auth fallbacks until success, non-auth failure, or exhaustion.
+  // Each credential kind (github_app -> oauth -> token) is tried at most once.
+  let lastCaughtError: unknown = null;
+  while (true) {
+    let result: T;
+    let caughtAuthError = false;
+
+    try {
+      result = await op();
+    } catch (error) {
+      // Non-auth errors propagate immediately — no fallback rotation.
+      if (!isAuthFailure(error)) throw error;
+      caughtAuthError = true;
+      lastCaughtError = error;
+      result = undefined as unknown as T;
+    }
+
+    // If the operation succeeded without an auth error, we're done.
+    if (!caughtAuthError && !isAuthError(result)) {
+      _clearAuthFallback(repoId);
+      return result;
+    }
+
+    // Auth failure detected — determine current credential and attempt next fallback.
+    const currentKind = getRegisteredCredentialKind(repoId, hostIdForFallback);
+    if (!currentKind) {
+      // No registered credential — cannot fallback.
+      _clearAuthFallback(repoId);
+      throw caughtAuthError
+        ? new Error(`Auth failure with no registered credential for repo ${repoId}`)
+        : (isAuthError(result) ? new Error(`Auth failure result with no registered credential for repo ${repoId}`) : result);
+    }
+
+    const hasFallback = await _tryNextFallback({ repoId, hostId: hostIdForFallback, currentKind });
+    if (!hasFallback) {
+      // No more fallback credentials available — all have been exhausted.
+      _clearAuthFallback(repoId);
+      if (caughtAuthError && lastCaughtError) throw lastCaughtError;
+      return result;
+    }
+
+    // Fallback credential registered — loop to retry with the new credential.
+    // do not clear _authFallbackTried here; _tryNextFallback already marked the new kind as tried.
+  }
+}
 
 // Stub types from ../../../../modules/GitEngine
 type Author = { name: string; email: string };
@@ -299,6 +446,14 @@ async function ensureCredentialForOp(repoId: string | null | undefined): Promise
   const existing = await GitEngineModule!.getCredential(repoId);
   if (existing?.kind === 'ssh') return;
 
+  // If an auth-fallback retry is in progress (_authFallbackTried is non-empty),
+  // the fallback wrapper has already registered the next credential. Skip
+  // resolution to avoid re-registering the same (failed) credential.
+  // We check _authFallbackTried.size > 0 (not just _activeFallbackKind) because
+  // _activeFallbackKind persists even when the first attempt failed for a
+  // non-auth reason and no fallback was triggered.
+  if (_activeFallbackKind.has(repoId) && (_authFallbackTried.get(repoId)?.size ?? 0) > 0) return;
+
   // Look up the saved repo to check if it's a GitHub host.
   const repo = (await StorageService.getSavedRepositories()).find((entry) => entry.id === repoId);
   if (repo?.hostId) {
@@ -318,6 +473,7 @@ async function ensureCredentialForOp(repoId: string | null | undefined): Promise
           break;
         // SSH is already handled above; 'ssh' cannot reach here.
       }
+      _markAuthFallbackTried(repoId, kind);
       return;
     }
   }
@@ -548,8 +704,18 @@ export async function fetch(
   if (!GitEngineModule) {
     throw new Error('GitEngine native module unavailable: cannot fetch');
   }
-  await ensureCredentialForOp(repoId);
-  return run(() => GitEngineModule!.fetch(repoPath, remoteName, repoId ?? null), undefined);
+
+  const repo = (await StorageService.getSavedRepositories()).find((entry) => entry.id === repoId);
+  const hostId = repo?.hostId;
+
+  if (!repoId || !hostId) {
+    await ensureCredentialForOp(repoId);
+    return run(() => GitEngineModule!.fetch(repoPath, remoteName, repoId ?? null), undefined);
+  }
+
+  const makeOp = async () => run(() => GitEngineModule!.fetch(repoPath, remoteName, repoId ?? null), undefined);
+
+  return _attemptOpWithAuthFallback(repoId, hostId, makeOp, () => false);
 }
 
 export async function pull(
@@ -560,13 +726,30 @@ export async function pull(
   if (!GitEngineModule) {
     return { ok: false, error: 'GitEngine native module unavailable' };
   }
-  await ensureCredentialForOp(repoId);
-  const native = await run(
-    () => GitEngineModule!.pull(repoPath, remoteName, repoId ?? null),
-    { kind: 'Unknown', message: 'unavailable', conflicts: [] },
-  );
-  const ok = native.kind === 'FastForward' || native.kind === 'UpToDate' || native.kind === 'Merged' || native.kind === 'Unborn';
-  return ok ? { ok: true } : { ok: false, error: native.message || 'pull failed' };
+
+  const repo = (await StorageService.getSavedRepositories()).find((entry) => entry.id === repoId);
+  const hostId = repo?.hostId;
+
+  if (!repoId || !hostId) {
+    await ensureCredentialForOp(repoId);
+    const native = await run(
+      () => GitEngineModule!.pull(repoPath, remoteName, repoId ?? null),
+      { kind: 'Unknown', message: 'unavailable', conflicts: [] },
+    );
+    const ok = native.kind === 'FastForward' || native.kind === 'UpToDate' || native.kind === 'Merged' || native.kind === 'Unborn';
+    return ok ? { ok: true } : { ok: false, error: native.message || 'pull failed' };
+  }
+
+  const makeOp = async () => {
+    const native = await run(
+      () => GitEngineModule!.pull(repoPath, remoteName, repoId ?? null),
+      { kind: 'Unknown', message: 'unavailable', conflicts: [] },
+    );
+    const opOk = native.kind === 'FastForward' || native.kind === 'UpToDate' || native.kind === 'Merged' || native.kind === 'Unborn';
+    return { ok: opOk, error: opOk ? undefined : (native.message || 'pull failed') };
+  };
+
+  return _attemptOpWithAuthFallback(repoId, hostId, makeOp, (r) => r.ok === false && r.error !== undefined && isAuthFailure(new Error(r.error)));
 }
 
 /**
@@ -582,9 +765,22 @@ export async function push(
   if (!GitEngineModule) {
     return { ok: false, error: 'GitEngine native module unavailable' };
   }
-  await ensureCredentialForOp(repoId);
-  const native = await (GitEngineModule!.push(repoPath, remoteName, repoId ?? null, false) as unknown as { pushed: number; nonFastForward: boolean; message: string });
-  return { ok: native.pushed > 0, error: native.message || undefined };
+
+  const repo = (await StorageService.getSavedRepositories()).find((entry) => entry.id === repoId);
+  const hostId = repo?.hostId;
+
+  if (!repoId || !hostId) {
+    await ensureCredentialForOp(repoId);
+    const native = await (GitEngineModule!.push(repoPath, remoteName, repoId ?? null, false) as unknown as { pushed: number; nonFastForward: boolean; message: string });
+    return { ok: native.pushed > 0, error: native.message || undefined };
+  }
+
+  const makeOp = async () => {
+    const native = await (GitEngineModule!.push(repoPath, remoteName, repoId ?? null, false) as unknown as { pushed: number; nonFastForward: boolean; message: string });
+    return { ok: native.pushed > 0, error: native.message || undefined };
+  };
+
+  return _attemptOpWithAuthFallback(repoId, hostId, makeOp, (r) => r.ok === false && r.error !== undefined && isAuthFailure(new Error(r.error)));
 }
 
 /**
@@ -620,10 +816,29 @@ export async function pushWithIntegrate(
   if (!GitEngineModule) {
     return { ok: false, error: 'GitEngine native module unavailable', message: '', conflicts: [], pushed: 0 };
   }
-  await ensureCredentialForOp(repoId);
-  return run(
-    () => GitEngineModule!.pushWithIntegrate(repoPath, remoteName, repoId ?? null),
-    { ok: false, error: 'unavailable', message: '', conflicts: [], pushed: 0 },
+
+  const repo = (await StorageService.getSavedRepositories()).find((entry) => entry.id === repoId);
+  const hostId = repo?.hostId;
+
+  if (!repoId || !hostId) {
+    await ensureCredentialForOp(repoId);
+    return run(
+      () => GitEngineModule!.pushWithIntegrate(repoPath, remoteName, repoId ?? null),
+      { ok: false, error: 'unavailable', message: '', conflicts: [], pushed: 0 },
+    );
+  }
+
+  const makeOp = async () =>
+    run(
+      () => GitEngineModule!.pushWithIntegrate(repoPath, remoteName, repoId ?? null),
+      { ok: false, error: 'unavailable', message: '', conflicts: [], pushed: 0 },
+    );
+
+  return _attemptOpWithAuthFallback(
+    repoId,
+    hostId,
+    makeOp,
+    (r) => r.ok === false && r.error !== undefined && isAuthFailure(new Error(r.error)),
   );
 }
 
