@@ -696,9 +696,10 @@ export function SettingsContent(props: SettingsContentProps) {
                       operates on. */}
                   {summary.hosts.map((host) => {
                     const isHostActive = host.id === summary.activeHostId;
+                    const hostLogin = host.hostLogin || GIT_HOST_LABELS[host.provider];
                     const idLabel = host.instanceBaseUrl
-                      ? `${host.hostLogin}@${host.instanceBaseUrl.replace(/^https?:\/\//, '')}`
-                      : host.hostLogin;
+                      ? `${hostLogin}@${host.instanceBaseUrl.replace(/^https?:\/\//, '')}`
+                      : hostLogin;
                     return (
                       <View
                         key={host.id}
@@ -721,7 +722,10 @@ export function SettingsContent(props: SettingsContentProps) {
                               <View
                                 style={{
                                   paddingHorizontal: 6,
-                                  paddingVertical: 1,
+                                  minHeight: 18,
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  flexShrink: 0,
                                   borderRadius: 6,
                                   backgroundColor: colors.primary,
                                 }}
