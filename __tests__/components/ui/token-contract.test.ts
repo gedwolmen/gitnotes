@@ -5,6 +5,8 @@ import {
   NEUMORPHIC_DARK,
   NEUTRAL_BRUTALIST_LIGHT,
   NEUTRAL_BRUTALIST_DARK,
+  RETROFUTURISTIC_LIGHT,
+  RETROFUTURISTIC_DARK,
   type Palette,
 } from '../../../src/theme/tokens';
 
@@ -53,6 +55,8 @@ const PALETTE_FIXTURES: PaletteFixture[] = [
   { label: 'neumorphic-dark', palette: NEUMORPHIC_DARK },
   { label: 'neo-brutalist-light', palette: NEUTRAL_BRUTALIST_LIGHT },
   { label: 'neo-brutalist-dark', palette: NEUTRAL_BRUTALIST_DARK },
+  { label: 'retrofuturistic-light', palette: RETROFUTURISTIC_LIGHT },
+  { label: 'retrofuturistic-dark', palette: RETROFUTURISTIC_DARK },
 ];
 
 describe('Palette contrast — text on background', () => {
