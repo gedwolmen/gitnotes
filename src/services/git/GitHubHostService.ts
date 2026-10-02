@@ -21,6 +21,7 @@ import type {
   GitHostUser,
   GitHostWriteService,
 } from './GitHost';
+import { AccountStorage } from '../AccountStorage';
 
 interface GitHubBranch {
   name: string;
@@ -185,7 +186,27 @@ export class GitHubHostService implements GitHostService, GitHostWriteService {
     );
   }
 
-  async listRepositories(): Promise<GitHostRepositoryResult[]> {
+  async listRepositories(hostId?: string): Promise<GitHostRepositoryResult[]> {
+    // When a hostId is provided, check for a GitHub App credential first.
+    // App-only hosts store selected repositories separately from PAT/OAuth tokens.
+    if (hostId) {
+      const appCred = await AccountStorage.getGitHubAppCredential(hostId);
+      if (appCred && appCred.selectedRepositories.length > 0) {
+        return appCred.selectedRepositories.map(
+          (r): GitHostRepository => ({
+            provider: 'github',
+            owner: r.owner,
+            repo: r.repo,
+            fullName: `${r.owner}/${r.repo}`,
+            name: r.repo,
+            description: null,
+            isPrivate: true,
+            hostId,
+          }),
+        );
+      }
+    }
+    // Fall back to the singleton GitHubService (PAT/OAuth token flow).
     try {
       const repos = await GitHubService.getRepositories();
       return repos.map(

@@ -4,6 +4,8 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
+  type StyleProp,
+  type ViewStyle,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Modal } from './ui/Modal';
@@ -28,6 +30,7 @@ interface ProviderSelectorProps {
   allLabel?: string;
   title?: string;
   testIDPrefix?: string;
+  triggerStyle?: StyleProp<ViewStyle>;
 }
 
 export function ProviderSelector({
@@ -37,6 +40,7 @@ export function ProviderSelector({
   allLabel = 'All Providers',
   title = 'Select Provider',
   testIDPrefix = 'onboarding.provider',
+  triggerStyle,
 }: ProviderSelectorProps) {
   const { colors } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
@@ -62,6 +66,7 @@ export function ProviderSelector({
         testID={`${testIDPrefix}.dropdown`}
         style={[
           styles.trigger,
+          triggerStyle,
           {
             borderColor: colors.border,
             backgroundColor: colors.surface,
@@ -145,6 +150,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 1,
     gap: 10,
+    marginBottom: 8,
   },
   triggerText: {
     flex: 1,

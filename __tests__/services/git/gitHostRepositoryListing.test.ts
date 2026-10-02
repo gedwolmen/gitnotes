@@ -63,6 +63,7 @@ jest.mock('../../../src/services/AccountStorage', () => ({
   AccountStorage: {
     getHostToken: jest.fn(),
     getHostConnection: jest.fn(),
+    getGitHubAppCredential: jest.fn(),
   },
 }));
 
@@ -117,6 +118,39 @@ describe('GitHostService.listRepositories()', () => {
         provider: 'github',
         reason: 'Network error',
       });
+    });
+
+    it('lists repositories selected by a GitHub App installation for the host', async () => {
+      const { AccountStorage: mockAccountStorage } = jest.requireMock('../../../src/services/AccountStorage');
+      mockAccountStorage.getGitHubAppCredential.mockResolvedValue({
+        kind: 'github_app',
+        selectedRepositories: [
+          { owner: 'acme', repo: 'private-notes' },
+          { owner: 'acme', repo: 'public-notes' },
+        ],
+      });
+
+      const service = new GitHubHostService();
+      const result = await service.listRepositories('github-host');
+
+      expect(result).toEqual([
+        expect.objectContaining({
+          provider: 'github',
+          owner: 'acme',
+          repo: 'private-notes',
+          fullName: 'acme/private-notes',
+          name: 'private-notes',
+          hostId: 'github-host',
+        }),
+        expect.objectContaining({
+          provider: 'github',
+          owner: 'acme',
+          repo: 'public-notes',
+          fullName: 'acme/public-notes',
+          name: 'public-notes',
+          hostId: 'github-host',
+        }),
+      ]);
     });
   });
 

@@ -595,15 +595,16 @@ export default function SettingsScreen() {
     setManualRepoHostId(allHosts.length === 1 ? allHosts[0].id : null);
     try {
       const allRepos: GitHostRepositoryResult[] = [];
-      const hostsWithTokens = await Promise.all(
+      const eligibleHosts = await Promise.all(
         accountSummaries.flatMap((summary) =>
           summary.hosts.map(async (host) => {
             const token = await AccountStorage.getHostToken(host.id);
-            return token ? { host, token } : null;
+            const appCred = await AccountStorage.getGitHubAppCredential(host.id);
+            return token || appCred ? { host } : null;
           }),
         ),
       );
-      const validHosts = hostsWithTokens.filter((h): h is { host: HostConnectionSummary; token: string } => h !== null);
+      const validHosts = eligibleHosts.filter((h): h is { host: HostConnectionSummary } => h !== null);
       await Promise.all(
         validHosts.map(async ({ host }) => {
           try {

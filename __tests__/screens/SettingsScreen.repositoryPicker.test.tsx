@@ -133,6 +133,7 @@ jest.mock('@/stores/repoStore', () => ({
 jest.mock('@/services/AccountStorage', () => ({
   AccountStorage: {
     getHostToken: jest.fn(),
+    getGitHubAppCredential: jest.fn(),
     getHostUseSsh: jest.fn(() => Promise.resolve(false)),
   },
 }));

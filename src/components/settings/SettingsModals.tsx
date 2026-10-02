@@ -196,12 +196,20 @@ const HostFilterSelector = memo(function HostFilterSelector({
     <>
       <TouchableOpacity
         testID="settings.repo-filter.host-dropdown"
-        className="flex-row items-center gap-2 px-3 py-2.5 rounded-lg border"
-        style={{ borderColor: colors.border, backgroundColor: colors.surface }}
+        className="flex-row items-center border"
+        style={{
+          borderColor: colors.border,
+          backgroundColor: colors.surface,
+          paddingHorizontal: 14,
+          paddingVertical: 12,
+          borderRadius: 10,
+          gap: 10,
+          marginBottom: 8,
+        }}
         onPress={() => setIsOpen(true)}
       >
         <Ionicons name="server-outline" size={18} color={colors.primary} />
-        <Text className="flex-1" style={{ color: colors.text, fontSize: 14, fontWeight: '500' }} numberOfLines={1}>
+        <Text className="flex-1" style={{ color: colors.text, fontSize: 15, fontWeight: '500' }} numberOfLines={1}>
           {selectedLabel}
         </Text>
         <Ionicons name="chevron-down" size={16} color={colors.textSecondary} />
