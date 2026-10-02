@@ -393,7 +393,7 @@ class GitHubServiceClass {
     }
   }
 
-  async getRepositories(): Promise<GitHubRepository[]> {
+  async getRepositories(opts?: TokenOpts): Promise<GitHubRepository[]> {
     const all: GitHubRepository[] = [];
     const params = new URLSearchParams({
       sort: 'updated',
@@ -404,7 +404,7 @@ class GitHubServiceClass {
     let url: string | null = `https://api.github.com/user/repos?${params.toString()}`;
     try {
       while (url) {
-        const { data, nextUrl } = await this.requestPaginated(url);
+        const { data, nextUrl } = await this.requestPaginated(url, opts);
         if (Array.isArray(data)) all.push(...data);
         url = nextUrl;
       }
@@ -1258,9 +1258,10 @@ class GitHubServiceClass {
     }
   }
 
-  private async requestPaginated(url: string): Promise<{ data: any; nextUrl: string | null }> {
-    if (!this.token) throw new Error('GitHub token is not configured');
-    const response = await http.get(url);
+  private async requestPaginated(url: string, opts?: TokenOpts): Promise<{ data: any; nextUrl: string | null }> {
+    const resolvedToken = opts?.tokenOverride ?? this.token;
+    if (!resolvedToken) throw new Error('GitHub token is not configured');
+    const response = await http.get(url, { authOverride: resolvedToken });
     const linkHeader = response.headers['link'] as string | null;
     const nextUrl = parseNextLink(linkHeader);
     return { data: response.data, nextUrl };

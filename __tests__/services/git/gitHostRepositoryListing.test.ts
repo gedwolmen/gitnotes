@@ -91,6 +91,7 @@ describe('GitHostService.listRepositories()', () => {
         description: 'A test repo',
         isPrivate: true,
         sizeKb: 1024,
+        hostId: undefined,
       });
 
       expect(result[1]).toMatchObject({
@@ -102,7 +103,25 @@ describe('GitHostService.listRepositories()', () => {
         description: null,
         isPrivate: false,
         sizeKb: 2048,
+        hostId: undefined,
       });
+    });
+
+    it('uses the host token and preserves host identity for host-scoped discovery', async () => {
+      const github = jest.requireMock('@/services/GitHubService');
+      const { AccountStorage: mockAccountStorage } = jest.requireMock('../../../src/services/AccountStorage');
+      const hostId = 'github-host-2';
+      mockAccountStorage.getHostToken.mockResolvedValue('host-specific-token');
+      github.GitHubService.getRepositories.mockResolvedValue(mockGitHubRepos);
+
+      const service = new GitHubHostService();
+      const result = await service.listRepositories(hostId);
+
+      expect(github.GitHubService.getRepositories).toHaveBeenCalledWith({ tokenOverride: 'host-specific-token' });
+      expect(result).toEqual(expect.arrayContaining([
+        expect.objectContaining({ fullName: 'owner/repo1', hostId }),
+        expect.objectContaining({ fullName: 'owner/repo2', hostId }),
+      ]));
     });
 
     it('returns unavailable on error', async () => {
