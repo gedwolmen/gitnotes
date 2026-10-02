@@ -12,13 +12,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTokens } from '../../contexts/ThemeContext';
 import { useRepoStore } from '../../stores/repoStore';
 import { useAIStore } from '../../stores/aiStore';
-import { GitHubService, GitHubRepository } from '../../services/GitHubService';
+import { GitHubService } from '../../services/GitHubService';
+import type { GitHubRepository } from '../../services/GitHubService';
 import { LastUsedRepoService } from '../../services/LastUsedRepoService';
 import SearchBar from '../SearchBar';
 import { HapticService } from '../../utils/haptics';
 import * as ChatStorageService from '../../services/ChatStorageService';
 import { Modal, Button, Surface } from '../ui';
 import { getActiveBranch } from '../../services/git/activeBranchStore';
+import { buildDisplayRepos, type DisplayRepo } from './chatRepoDisplay';
 
 interface ChatRepoPickerModalProps {
   visible: boolean;
@@ -32,12 +34,6 @@ interface ChatRepoPickerModalProps {
  * a GitHub repo the user hasn't added yet. Tapping an unadded one auto-adds
  * it and proceeds to branch selection.
  */
-type DisplayRepo = {
-  readonly path: string;
-  readonly name: string;
-  readonly isAdded: boolean;
-};
-
 export const ChatRepoPickerModal: React.FC<ChatRepoPickerModalProps> = ({
   visible,
   onClose,
@@ -93,24 +89,10 @@ export const ChatRepoPickerModal: React.FC<ChatRepoPickerModalProps> = ({
     void fetchGithubRepos();
   }, [visible, fetchGithubRepos]);
 
-  // Build the merged display list: added (local) repos first, then GitHub
-  // repos that haven't been added yet. Duplicates are excluded by path.
-  const displayRepos = useMemo<DisplayRepo[]>(() => {
-    const addedPaths = new Set(repositories.map((r) => r.path));
-    const added: DisplayRepo[] = repositories.map((r) => ({
-      path: r.path.includes('/') ? r.path : r.name,
-      name: r.name,
-      isAdded: true,
-    }));
-    const available: DisplayRepo[] = githubRepos
-      .filter((gr) => !addedPaths.has(gr.full_name))
-      .map((gr) => ({
-        path: gr.full_name,
-        name: gr.name,
-        isAdded: false,
-      }));
-    return [...added, ...available];
-  }, [repositories, githubRepos]);
+  const displayRepos = useMemo(
+    () => buildDisplayRepos(repositories, githubRepos),
+    [repositories, githubRepos],
+  );
 
   const filteredRepos = useMemo(() => {
     if (!searchQuery.trim()) return displayRepos;

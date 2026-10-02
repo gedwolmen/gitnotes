@@ -10,6 +10,18 @@ All notable fixes and feature changes to GitNotēs are documented here.
 
 ## 2026-10-02
 
+### fix(ui): deduplicate repository picker entries
+
+**What:** The AI repository picker could render the same local or GitHub repository more than once, producing React duplicate-key warnings and unstable list rows.
+
+**Fix:** Deduplicate local and GitHub repository paths while preserving local repositories as the preferred entries.
+
+### test(auth): align GitHub OAuth storage mock with the service contract
+
+**What:** GitHub OAuth tests returned `backend_error` because their `AccountStorage` mock omitted the profile-update method used by the exchange flow.
+
+**Fix:** Add the missing mock and assert the profile update on successful first-time OAuth.
+
 ### fix(branding): use GitNotēs for user-visible app copy
 
 **What:** Native app labels and several user-facing messages used `GitNotes`, making the product name inconsistent with the branded `GitNotēs` spelling.
