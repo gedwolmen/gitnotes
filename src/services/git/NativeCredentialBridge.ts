@@ -90,7 +90,11 @@ export async function registerGitHubOAuthCredential(
   repoCredentialKinds.set(key, 'oauth');
   // The Rust side receives the token via the bridge - we call setCredential
   // through the native module's JS proxy (populated by the UniFFI scaffolding).
-  await nativeSetCredential(repoId, { github_oauth: { token } });
+  await nativeSetCredential(repoId, {
+    kind: 'userpass',
+    username: 'x-access-token',
+    password: token,
+  });
 }
 
 /**
@@ -106,7 +110,11 @@ export async function registerGitHubAppCredential(
 ): Promise<void> {
   const key = repoKey(repoId, hostId);
   repoCredentialKinds.set(key, 'github_app');
-  await nativeSetCredential(repoId, { github_app_installation: { token } });
+  await nativeSetCredential(repoId, {
+    kind: 'userpass',
+    username: 'x-access-token',
+    password: token,
+  });
 }
 
 /**
@@ -122,7 +130,11 @@ export async function registerPatCredential(
 ): Promise<void> {
   const key = repoKey(repoId, hostId);
   repoCredentialKinds.set(key, 'token');
-  await nativeSetCredential(repoId, { user_pass: { username: 'x-access-token', password: token } });
+  await nativeSetCredential(repoId, {
+    kind: 'userpass',
+    username: 'x-access-token',
+    password: token,
+  });
 }
 
 /**

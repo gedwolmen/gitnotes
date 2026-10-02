@@ -41,7 +41,10 @@ function makeAppCred(overrides: Partial<{
   } as GitHubAppCredentialRecord;
 }
 
-function mockSetCredential(_repoId: string, _cred: object): Promise<void> {
+let lastNativeCredential: object | null = null;
+
+function mockSetCredential(_repoId: string, cred: object): Promise<void> {
+  lastNativeCredential = cred;
   return Promise.resolve();
 }
 
@@ -68,6 +71,7 @@ jest.mock('@/services/AccountStorage', () => ({
 
 beforeEach(() => {
   jest.clearAllMocks();
+  lastNativeCredential = null;
   initNativeCredentialBridge({ setCredential: mockSetCredential, clearCredential: mockClearCredential });
 });
 
@@ -76,6 +80,11 @@ describe('OAuth credential lifecycle', () => {
     await registerGitHubOAuthCredential('github.com/acme/repo-a', 'host-1', 'oauth_token');
     const kind = await getRegisteredCredentialKind('github.com/acme/repo-a', 'host-1');
     expect(kind).toBe('oauth');
+    expect(lastNativeCredential).toEqual({
+      kind: 'userpass',
+      username: 'x-access-token',
+      password: 'oauth_token',
+    });
   });
 
   test('multiple OAuth repos under same host are independently registered', async () => {
