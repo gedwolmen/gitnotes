@@ -18,7 +18,9 @@
  *   monochrome-icon.png 1024×1024  Android themed icon foreground mask
  *
  * Four palette variants:
- *   base        — original blue palette (same as default output)
+ *   base        — EXACT byte-for-byte copy of top-level defaults (icon.png,
+ *                  adaptive-icon.png, monochrome-icon.png).  DO NOT pass through
+ *                  recolorBuffer — hueShift=0 still causes rounding differences.
  *   neon        — cyan / electric-purple hue rotation (+45°)
  *   grayscale   — neutral luminance mask
  *   gold        — amber / warm-hue rotation (+180°)
@@ -59,7 +61,7 @@ const TARGETS = [
 const VARIANT_TARGET_NAMES = ['icon.png', 'adaptive-icon.png', 'monochrome-icon.png'];
 
 const VARIANTS = {
-  base: { hueShift: 0, saturationScale: 1.0, isGrayscale: false },
+  base: { hueShift: 0, saturationScale: 1.0, isGrayscale: false, isBase: true },
   neon: { hueShift: 45, saturationScale: 1.4, isGrayscale: false },
   grayscale: { hueShift: 0, saturationScale: 0, isGrayscale: true },
   gold: { hueShift: 180, saturationScale: 1.25, isGrayscale: false },
@@ -281,10 +283,17 @@ async function generateAll() {
       const baseTarget = TARGETS.find((t) => t.name === name);
       if (!baseTarget) continue;
 
-      const buffer = await generateTarget(svgBuffer, baseTarget, variant);
       const outPath = path.join(variantDir, name);
-      fs.writeFileSync(outPath, buffer);
-      console.log(`✓ Generated alternate/${variantKey}/${name}`);
+      if (variant.isBase) {
+        // base/ must be byte-identical to top-level defaults — copy directly
+        // to avoid hueShift=0 round-trip rounding differences from recolorBuffer
+        fs.copyFileSync(path.join(OUT_DIR, name), outPath);
+        console.log(`✓ Copied alternate/${variantKey}/${name} from defaults`);
+      } else {
+        const buffer = await generateTarget(svgBuffer, baseTarget, variant);
+        fs.writeFileSync(outPath, buffer);
+        console.log(`✓ Generated alternate/${variantKey}/${name}`);
+      }
     }
   }
 

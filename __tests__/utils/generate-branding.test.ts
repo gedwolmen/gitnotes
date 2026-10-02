@@ -8,6 +8,11 @@
  * intermediate hue values (r1/g1/b1 in [0,1] linear space), producing
  * near-zero values for all channels. Fix: linearToSrgb(r1+m) instead of
  * linearToSrgb(srgbToLinear(r1)+m).
+ *
+ * Regression: base/ assets must be byte-identical to top-level defaults.
+ * The recolorBuffer pipeline (even hueShift=0, saturationScale=1.0) causes
+ * PNG re-encoding rounding differences. base/ is therefore copied from the
+ * top-level defaults on each generation.
  */
 'use strict';
 
@@ -187,12 +192,15 @@ describe('recolorBuffer — neon variant (hueShift=45, saturationScale=1.4)', ()
     expect(isGrayscalePixel([result[0], result[1], result[2]], 5)).toBe(false);
   });
 
-  test('neon produces non-gray, non-blue colors distinctly different from identity', () => {
-    const buf = makeBuffer([[7, 19, 153]]);
-    const neon = recolorBuffer(buf, 1, 1, VARIANT);
-    const [r, g, b] = neon;
-    // Neon (+45° on blue) produces purple with blue-dominant channel profile
-    expect(b).toBeGreaterThan(r);
+  test('neon produces purple (blue-dominant) from blue logo pixels', () => {
+    const buf = makeBuffer([[7, 19, 153], [91, 126, 236], [4, 66, 230]]);
+    const result = recolorBuffer(buf, 3, 1, VARIANT);
+    // Neon +45° on blue [H≈240] lands at H≈285 (purple) — blue channel dominant
+    for (let i = 0; i < 3; i++) {
+      const [r, g, b] = [result[i * 4], result[i * 4 + 1], result[i * 4 + 2]];
+      expect(b).toBeGreaterThan(r);
+      expect(isGrayscalePixel([r, g, b], 5)).toBe(false);
+    }
   });
 });
 
@@ -205,13 +213,35 @@ describe('recolorBuffer — gold variant (hueShift=180, saturationScale=1.25)', 
     expect(isGrayscalePixel([result[0], result[1], result[2]], 5)).toBe(false);
   });
 
-  test('gold produces distinctly different colors from identity', () => {
-    const buf = makeBuffer([[7, 19, 153]]);
-    const identity = recolorBuffer(buf, 1, 1, { hueShift: 0, saturationScale: 1.0, isGrayscale: false });
-    const gold = recolorBuffer(buf, 1, 1, VARIANT);
-    expect(isGrayscalePixel([identity[0], identity[1], identity[2]], 5)).toBe(false);
-    expect(isGrayscalePixel([gold[0], gold[1], gold[2]], 5)).toBe(false);
-    expect([identity[0], identity[1], identity[2]]).not.toEqual([gold[0], gold[1], gold[2]]);
+  test('gold produces amber/yellow (red-dominant) from blue logo pixels', () => {
+    const buf = makeBuffer([[7, 19, 153], [91, 126, 236], [4, 66, 230]]);
+    const result = recolorBuffer(buf, 3, 1, VARIANT);
+    // Gold +180° on blue [H≈240] lands at H≈60 (orange/amber) — red channel dominant
+    for (let i = 0; i < 3; i++) {
+      const [r, g, b] = [result[i * 4], result[i * 4 + 1], result[i * 4 + 2]];
+      expect(r).toBeGreaterThan(b);
+      expect(isGrayscalePixel([r, g, b], 5)).toBe(false);
+    }
+  });
+});
+
+describe('base variant — must be byte-identical to top-level defaults', () => {
+  const path = require('path');
+  const crypto = require('crypto');
+  const ROOT = path.resolve(__dirname, '../..');
+  const DEFAULT_DIR = path.join(ROOT, 'assets', 'generated');
+  const BASE_DIR = path.join(ROOT, 'assets', 'generated', 'alternate', 'base');
+
+  test.each([
+    ['icon.png'],
+    ['adaptive-icon.png'],
+    ['monochrome-icon.png'],
+  ])('alternate/base/%s SHA-256 matches assets/generated/%s', (name) => {
+    const defaultFile = path.join(DEFAULT_DIR, name);
+    const baseFile = path.join(BASE_DIR, name);
+    const defaultHash = crypto.createHash('sha256').update(require('fs').readFileSync(defaultFile)).digest('hex');
+    const baseHash = crypto.createHash('sha256').update(require('fs').readFileSync(baseFile)).digest('hex');
+    expect(baseHash).toBe(defaultHash);
   });
 });
 
