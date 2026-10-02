@@ -22,6 +22,12 @@ All notable fixes and feature changes to GitNotēs are documented here.
 
 **Fix:** Add the missing mock and assert the profile update on successful first-time OAuth.
 
+### fix(settings): keep host-scoped repositories and account labels
+
+**What:** Repository discovery could use the wrong GitHub account when multiple OAuth and token connections were present, breaking host filtering and hiding repositories from the Add Repository list. Settings could also lose a host login and render the active badge as a thin line on desktop.
+
+**Fix:** Route host-scoped GitHub repository requests through the stored host token, preserve host identity on results, refresh host login data during OAuth reconnect, and give Settings host labels and active badges stable fallbacks and dimensions.
+
 ### fix(branding): use GitNotēs for user-visible app copy
 
 **What:** Native app labels and several user-facing messages used `GitNotes`, making the product name inconsistent with the branded `GitNotēs` spelling.

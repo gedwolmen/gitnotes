@@ -6,6 +6,7 @@ import {
   GitHubIssue,
   ShaResult,
 } from '../GitHubService';
+import type { TokenOpts } from '../GitHubService';
 import type {
   GitHostBranch,
   GitHostContent,
@@ -206,9 +207,10 @@ export class GitHubHostService implements GitHostService, GitHostWriteService {
         );
       }
     }
-    // Fall back to the singleton GitHubService (PAT/OAuth token flow).
+    const hostToken = hostId ? await AccountStorage.getHostToken(hostId) : null;
+    const tokenOptions: TokenOpts | undefined = hostToken ? { tokenOverride: hostToken } : undefined;
     try {
-      const repos = await GitHubService.getRepositories();
+      const repos = await GitHubService.getRepositories(tokenOptions);
       return repos.map(
         (r): GitHostRepository => ({
           provider: 'github',
@@ -219,6 +221,7 @@ export class GitHubHostService implements GitHostService, GitHostWriteService {
           description: r.description ?? null,
           isPrivate: r.private,
           sizeKb: r.size,
+          hostId,
         }),
       );
     } catch (error) {
