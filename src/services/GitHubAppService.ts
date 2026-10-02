@@ -48,6 +48,11 @@ export type AppInitiationResult =
   | { ok: true; installationUrl: string; state: string }
   | { ok: false; reason: 'backend_unreachable' | 'network_error' | 'not_configured' | 'malformed_response' };
 
+export type AppBrowserResult =
+  | { outcome: 'callback'; url: string }
+  | { outcome: 'cancelled' }
+  | { outcome: 'failed' };
+
 export type AppRenewalResult =
   | { ok: true; credential: GitHubAppCredentialRecord }
   | { ok: false; code: GitHubAppErrorCode; message: string };
@@ -163,17 +168,22 @@ export class GitHubAppService {
   }
 
   /**
-   * Open the GitHub App installation URL in the system browser.
-   * Returns `true` if the browser was opened successfully.
+   * Open the GitHub App installation URL as an auth session so the custom-scheme
+   * redirect is delivered back to the app instead of remaining in the browser.
    */
-  static async openInstallationUrl(installationUrl: string): Promise<boolean> {
+  static async openInstallationUrl(
+    installationUrl: string,
+    redirectUrl = 'gitnotes://app/callback',
+  ): Promise<AppBrowserResult> {
     try {
-      const result = await WebBrowser.openBrowserAsync(installationUrl);
-      void result;
-      return true;
+      const result = await WebBrowser.openAuthSessionAsync(installationUrl, redirectUrl);
+      if (result.type === 'success' && 'url' in result) {
+        return { outcome: 'callback', url: result.url };
+      }
+      return { outcome: 'cancelled' };
     } catch (err) {
-      console.warn('[GitHubAppService] openBrowserAsync failed:', err);
-      return false;
+      console.warn('[GitHubAppService] openAuthSessionAsync failed:', err);
+      return { outcome: 'failed' };
     }
   }
 
