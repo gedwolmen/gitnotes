@@ -99,6 +99,11 @@ jest.mock('expo-crypto', () => ({
     `test-${Math.random().toString(36).slice(2, 11)}-${Math.random().toString(36).slice(2, 11)}`,
 }));
 
+jest.mock('expo-keep-awake', () => ({
+  activateKeepAwakeAsync: jest.fn(async () => undefined),
+  deactivateKeepAwake: jest.fn(),
+}));
+
 jest.mock('expo-blur', () => {
   const { View } = jest.requireActual('react-native');
   return {
