@@ -40,7 +40,7 @@ type ProductionStackParamList = {
     error?: string;
     error_description?: string;
     setup_action?: string;
-  };
+  } | undefined;
 };
 
 type DevOnlyStackParamList = {
