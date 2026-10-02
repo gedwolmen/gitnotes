@@ -36,7 +36,7 @@ export default function AppCallbackScreen() {
   const { colors } = useTheme();
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<AppCallbackRoute>();
-  const { refreshAccounts } = useAccounts();
+  const { refreshAccounts, connectGitHubApp } = useAccounts();
 
   const [result, setResult] = useState<AppCallbackResult | null>(null);
 
@@ -70,9 +70,11 @@ export default function AppCallbackScreen() {
 
   useEffect(() => {
     if (result?.outcome === 'success') {
-      refreshAccounts().catch(() => undefined);
+      refreshAccounts()
+        .then(() => connectGitHubApp(result.credential.hostId))
+        .catch(() => undefined);
     }
-  }, [refreshAccounts, result]);
+  }, [connectGitHubApp, refreshAccounts, result]);
 
   if (!result) {
     return (

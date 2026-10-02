@@ -73,6 +73,7 @@ export const GITHUB_APP_INSTALL_RESPONSE_FIXTURE: GitHubAppInstallResponse = {
   expires_at: Date.now() + 3600000, // 1 hour from now (Unix ms)
   renewal_grant_token: "grant_token",
   renewal_grant_expires_at: Date.now() + 86400000, // 1 day from now (Unix ms)
+  repositories: [{ owner: "testuser", repo: "repo1" }],
 };
 
 export const GITHUB_APP_RENEWAL_RESPONSE_FIXTURE: GitHubAppRenewalResponse = {
@@ -85,6 +86,7 @@ export const GITHUB_APP_RENEWAL_RESPONSE_FIXTURE: GitHubAppRenewalResponse = {
   expires_at: Date.now() + 3600000,
   renewal_grant_token: "new_grant_token",
   renewal_grant_expires_at: Date.now() + 86400000,
+  repositories: [{ owner: "testuser", repo: "repo1" }],
 };
 
 // ── Error Codes ─────────────────────────────────────────────────────────────
@@ -161,6 +163,7 @@ export const GITHUB_APP_INSTALL_RESPONSE_FIELDS = [
   "expires_at",
   "renewal_grant_token",
   "renewal_grant_expires_at",
+  "repositories",
 ] as const;
 
 /**

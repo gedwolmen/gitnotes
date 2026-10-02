@@ -31,6 +31,7 @@ import { LfsService } from '../services/git/lfs';
 import { AuthService, type HostConnectionSummary } from '../services/AuthService';
 import { GitHubOAuthService } from '../services/GitHubOAuthService';
 import { GitHubAppService } from '../services/GitHubAppService';
+import { OAUTH_CALLBACK_URL, WORKER_BASE_URL } from '../types/worker';
 import { OnboardingService } from '../services/OnboardingService';
 import { HapticService } from '../utils/haptics';
 import { createThrottledEmitter } from '../utils/progressThrottle';
@@ -71,6 +72,16 @@ import {
 const MAX_OUTER_CLONE_RETRIES = 1;
 // The onProgress abort throw may never land (stuck transfer), so cancel force-closes after this.
 const CLONE_CANCEL_GRACE_MS = 800;
+
+/**
+ * Resolves the backend URL for OAuth/App handlers, normalizes the URL to avoid
+ * double /api/v1 paths, and falls back to the Worker default when no override exists.
+ */
+function resolveBackendUrl(): string {
+  const configured = process.env.EXPO_PUBLIC_GITNOTES_BACKEND_URL;
+  const base = configured ?? WORKER_BASE_URL;
+  return base.replace(/\/api\/v1\/?$/, '');
+}
 
 type ImportAtAddOutcome = 'imported' | 'cancelled' | 'failed';
 
@@ -584,15 +595,16 @@ export default function SettingsScreen() {
     setManualRepoHostId(allHosts.length === 1 ? allHosts[0].id : null);
     try {
       const allRepos: GitHostRepositoryResult[] = [];
-      const hostsWithTokens = await Promise.all(
+      const eligibleHosts = await Promise.all(
         accountSummaries.flatMap((summary) =>
           summary.hosts.map(async (host) => {
             const token = await AccountStorage.getHostToken(host.id);
-            return token ? { host, token } : null;
+            const appCred = await AccountStorage.getGitHubAppCredential(host.id);
+            return token || appCred ? { host } : null;
           }),
         ),
       );
-      const validHosts = hostsWithTokens.filter((h): h is { host: HostConnectionSummary; token: string } => h !== null);
+      const validHosts = eligibleHosts.filter((h): h is { host: HostConnectionSummary } => h !== null);
       await Promise.all(
         validHosts.map(async ({ host }) => {
           try {
@@ -1022,28 +1034,36 @@ export default function SettingsScreen() {
     setOauthLoading((prev) => ({ ...prev, [key]: true }));
     setOauthError((prev) => ({ ...prev, [key]: null }));
     try {
-      const backendUrl = process.env.EXPO_PUBLIC_GITNOTES_BACKEND_URL;
+      const backendUrl = resolveBackendUrl();
       const clientId = process.env.EXPO_PUBLIC_GITHUB_OAUTH_CLIENT_ID;
-      if (!backendUrl || !clientId) {
+      if (!clientId) {
         setOauthError((prev) => ({ ...prev, [key]: 'OAuth not configured on this device' }));
         return;
       }
-      const redirectUri = 'gitnotes://oauth/callback';
+      const redirectUri = OAUTH_CALLBACK_URL;
       const result = await GitHubOAuthService.initiate({ backendUrl, redirectUri, clientId, hostId });
       if (!result.ok) {
         setOauthError((prev) => ({ ...prev, [key]: result.reason }));
         return;
       }
-      const opened = await GitHubOAuthService.openAuthorizationUrl(result.authorizationUrl);
-      if (!opened) {
+      const browserResult = await GitHubOAuthService.openAuthorizationUrl(result.authorizationUrl, redirectUri);
+      if (browserResult.outcome === 'failed') {
         setOauthError((prev) => ({ ...prev, [key]: 'Could not open browser' }));
+      } else if (browserResult.outcome === 'callback') {
+        const callback = new URL(browserResult.url);
+        navigation.navigate('OAuthCallback', {
+          code: callback.searchParams.get('code') ?? undefined,
+          state: callback.searchParams.get('state') ?? undefined,
+          error: callback.searchParams.get('error') ?? undefined,
+          error_description: callback.searchParams.get('error_description') ?? undefined,
+        });
       }
     } catch (err) {
       setOauthError((prev) => ({ ...prev, [key]: err instanceof Error ? err.message : 'Unknown error' }));
     } finally {
       setOauthLoading((prev) => ({ ...prev, [key]: false }));
     }
-  }, []);
+  }, [navigation]);
 
   const handleDisconnectOAuth = useCallback(async (hostId: string) => {
     setOauthLoading((prev) => ({ ...prev, [hostId]: true }));
@@ -1063,11 +1083,7 @@ export default function SettingsScreen() {
     setAppLoading((prev) => ({ ...prev, [key]: true }));
     setAppError((prev) => ({ ...prev, [key]: null }));
     try {
-      const backendUrl = process.env.EXPO_PUBLIC_GITNOTES_BACKEND_URL;
-      if (!backendUrl) {
-        setAppError((prev) => ({ ...prev, [key]: 'Backend URL not set on this device' }));
-        return;
-      }
+      const backendUrl = resolveBackendUrl();
       const result = await GitHubAppService.buildInstallUrl({ backendUrl, hostId, selectedRepositoryIds: [] });
       if (!result.ok) {
         setAppError((prev) => ({ ...prev, [key]: result.reason }));
@@ -1142,7 +1158,7 @@ export default function SettingsScreen() {
             id: s.account.id,
             login: s.account.login,
             name: s.account.name,
-            avatarUrl: s.account.avatarUrl,
+            avatarUrl: s.account.avatarUrl ?? s.hosts.find((h) => h.id === s.activeHostId)?.avatarUrl ?? s.hosts[0]?.avatarUrl ?? null,
           },
           hosts: s.hosts.map((h) => ({
             id: h.id,
@@ -1328,12 +1344,6 @@ export default function SettingsScreen() {
         onClose={() => { setShowConnectHostModal(false); setConnectHostPreset(undefined); }}
         presetProvider={connectHostPreset}
         colors={colors}
-        onConnectOAuth={handleConnectOAuth}
-        onConnectGitHubApp={handleConnectGitHubApp}
-        oauthLoading={oauthLoading}
-        oauthError={oauthError}
-        appLoading={appLoading}
-        appError={appError}
       />
       <HexColorPickerModal
         visible={showAccentColorPicker}

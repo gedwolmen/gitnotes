@@ -119,3 +119,50 @@ describe('clone recovery credential identity', () => {
     });
   });
 });
+
+describe('credential preservation during push', () => {
+  test('AccountStorage credentials are not deleted on successful push', async () => {
+    // AccountStorage mock doesn't include delete methods, so calling them would fail.
+    // If the implementation tries to delete credentials, the test would throw.
+    pushWithIntegrate.mockResolvedValue({ ok: true, message: 'pushed', conflicts: [], pushed: 1 });
+
+    const result = await pushWithRecovery({
+      repoPath: 'owner/repo',
+      branch: 'main',
+      repoId: 'repo-id',
+    });
+
+    expect(result).toEqual({ success: true });
+    // If we reach here, no delete methods were called (they don't exist in mock)
+  });
+
+  test('AccountStorage credentials are not deleted on failed push', async () => {
+    // AccountStorage mock doesn't include delete methods, so calling them would fail.
+    // If the implementation tries to delete credentials, the test would throw.
+    pushWithIntegrate.mockResolvedValue({ ok: false, error: 'non-fast-forward', message: 'Push rejected' });
+
+    const result = await pushWithRecovery({
+      repoPath: 'owner/repo',
+      branch: 'main',
+      repoId: 'repo-id',
+    });
+
+    // Result should be failure, not throw
+    expect(result.success).toBe(false);
+    // If we reach here, no delete methods were called (they don't exist in mock)
+  });
+
+  test('fallback stops after PAT when all credentials fail', async () => {
+    const authError = new Error('Authentication failed');
+    pushWithIntegrate.mockRejectedValueOnce(authError);
+
+    const result = await pushWithRecovery({
+      repoPath: 'owner/repo',
+      branch: 'main',
+      repoId: 'repo-id',
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error).toBeDefined();
+  });
+});

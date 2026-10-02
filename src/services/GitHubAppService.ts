@@ -144,9 +144,15 @@ export class GitHubAppService {
 
       return { ok: true, installationUrl: data.installation_url, state: data.state };
     } catch (err) {
-      const error = err as { response?: { status?: number }; message?: string };
+      const error = err as {
+        response?: { status?: number; data?: { code?: string } };
+        message?: string;
+      };
       if (error.response?.status === 503) {
         return { ok: false, reason: 'not_configured' };
+      }
+      if (error.response?.data?.code === 'backend_unreachable') {
+        return { ok: false, reason: 'backend_unreachable' };
       }
       if (error.response?.status === 400 || error.response?.status === 422) {
         return { ok: false, reason: 'backend_unreachable' };
@@ -243,14 +249,17 @@ export class GitHubAppService {
         account_id: number;
         token: string;
         expires_at: number;
-        renewal_grant_token: string;
-        renewal_grant_expires_at: number;
-      };
+          renewal_grant_token: string;
+          renewal_grant_expires_at: number;
+          repositories?: Array<{ owner: string; repo: string }>;
+        };
 
-      const credentialRepos: SelectedRepository[] = selectedRepositories.map((fullName) => {
-        const [owner, repo] = fullName.split('/');
-        return { owner, repo };
-      });
+      const credentialRepos: SelectedRepository[] = data.repositories?.length
+        ? data.repositories.map(({ owner, repo }) => ({ owner, repo }))
+        : selectedRepositories.map((fullName) => {
+            const [owner, repo] = fullName.split('/');
+            return { owner, repo };
+          });
 
       let resolvedHostId: string;
 
@@ -332,6 +341,13 @@ export class GitHubAppService {
       }
       if (error.response?.status === 503) {
         return { outcome: 'backend_error', code: 'backend_unreachable', message: 'Backend service unavailable' };
+      }
+      if (error.response?.data?.code === 'backend_unreachable') {
+        return {
+          outcome: 'backend_error',
+          code: 'backend_unreachable',
+          message: error.response.data.message ?? 'Backend service unavailable',
+        };
       }
       console.warn('[GitHubAppService] handleCallback failed:', error.message);
       return { outcome: 'backend_error', code: 'network_error', message: error.message ?? '' };

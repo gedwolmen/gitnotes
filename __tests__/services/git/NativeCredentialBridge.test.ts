@@ -12,6 +12,8 @@ import {
   clearHostCredentials,
   initNativeCredentialBridge,
   NativeCredentialBridgeError,
+  isAuthFailure,
+  getNextCredentialKind,
 } from '@/services/git/NativeCredentialBridge';
 import type { GitHubAppCredentialRecord } from '@/services/git/contracts';
 
@@ -41,7 +43,10 @@ function makeAppCred(overrides: Partial<{
   } as GitHubAppCredentialRecord;
 }
 
-function mockSetCredential(_repoId: string, _cred: object): Promise<void> {
+let lastNativeCredential: object | null = null;
+
+function mockSetCredential(_repoId: string, cred: object): Promise<void> {
+  lastNativeCredential = cred;
   return Promise.resolve();
 }
 
@@ -68,6 +73,7 @@ jest.mock('@/services/AccountStorage', () => ({
 
 beforeEach(() => {
   jest.clearAllMocks();
+  lastNativeCredential = null;
   initNativeCredentialBridge({ setCredential: mockSetCredential, clearCredential: mockClearCredential });
 });
 
@@ -76,6 +82,11 @@ describe('OAuth credential lifecycle', () => {
     await registerGitHubOAuthCredential('github.com/acme/repo-a', 'host-1', 'oauth_token');
     const kind = await getRegisteredCredentialKind('github.com/acme/repo-a', 'host-1');
     expect(kind).toBe('oauth');
+    expect(lastNativeCredential).toEqual({
+      kind: 'userpass',
+      username: 'x-access-token',
+      password: 'oauth_token',
+    });
   });
 
   test('multiple OAuth repos under same host are independently registered', async () => {
@@ -480,5 +491,97 @@ describe('initNativeCredentialBridge', () => {
       initNativeCredentialBridge({ setCredential: mockSetCredential, clearCredential: mockClearCredential });
       initNativeCredentialBridge({ setCredential: mockSetCredential, clearCredential: mockClearCredential });
     }).not.toThrow();
+  });
+});
+
+describe('isAuthFailure', () => {
+  test('returns true for 401 status in response object', () => {
+    const error = { response: { status: 401, message: 'Bad credentials' } };
+    expect(isAuthFailure(error)).toBe(true);
+  });
+
+  test('returns true for GitHub API error with 401 status', () => {
+    const error = new Error('Bad credentials');
+    (error as Record<string, unknown>).response = { status: 401 };
+    expect(isAuthFailure(error)).toBe(true);
+  });
+
+  test('returns true for "authentication failed" message', () => {
+    expect(isAuthFailure(new Error('Authentication failed'))).toBe(true);
+  });
+
+  test('returns true for "401" in error message', () => {
+    expect(isAuthFailure(new Error('Failed to push: 401 Unauthorized'))).toBe(true);
+  });
+
+  test('returns true for "credentials" without permission in message', () => {
+    expect(isAuthFailure(new Error('Failed to send request: credentials rejected'))).toBe(true);
+  });
+
+  test('returns true for "unauthorized" in message', () => {
+    expect(isAuthFailure(new Error('HTTP Error: 401 Unauthorized'))).toBe(true);
+  });
+
+  test('returns false for 403 status (permission error)', () => {
+    const error = new Error('Forbidden');
+    (error as Record<string, unknown>).response = { status: 403 };
+    expect(isAuthFailure(error)).toBe(false);
+  });
+
+  test('returns false for "permission denied" message', () => {
+    expect(isAuthFailure(new Error('Permission denied'))).toBe(false);
+  });
+
+  test('returns false for "403" in error message', () => {
+    expect(isAuthFailure(new Error('Server returned 403 Forbidden'))).toBe(false);
+  });
+
+  test('returns false for SAML error (403 with SSO header)', () => {
+    const error = new Error('SAML required');
+    (error as Record<string, unknown>).response = { status: 403, headers: { 'x-github-sso': 'required' } };
+    expect(isAuthFailure(error)).toBe(false);
+  });
+
+  test('returns false for network error', () => {
+    expect(isAuthFailure(new Error('Network error: ECONNREFUSED'))).toBe(false);
+  });
+
+  test('returns false for server error (500)', () => {
+    const error = new Error('Internal Server Error');
+    (error as Record<string, unknown>).response = { status: 500 };
+    expect(isAuthFailure(error)).toBe(false);
+  });
+
+  test('returns false for conflict error (409)', () => {
+    const error = new Error('Conflict');
+    (error as Record<string, unknown>).response = { status: 409 };
+    expect(isAuthFailure(error)).toBe(false);
+  });
+
+  test('returns false for null', () => {
+    expect(isAuthFailure(null)).toBe(false);
+  });
+
+  test('returns false for non-error values', () => {
+    expect(isAuthFailure('error string')).toBe(false);
+    expect(isAuthFailure({})).toBe(false);
+  });
+});
+
+describe('getNextCredentialKind', () => {
+  test('github_app -> oauth', () => {
+    expect(getNextCredentialKind('github_app')).toBe('oauth');
+  });
+
+  test('oauth -> token', () => {
+    expect(getNextCredentialKind('oauth')).toBe('token');
+  });
+
+  test('token -> null (no more fallbacks)', () => {
+    expect(getNextCredentialKind('token')).toBeNull();
+  });
+
+  test('ssh -> null', () => {
+    expect(getNextCredentialKind('ssh')).toBeNull();
   });
 });

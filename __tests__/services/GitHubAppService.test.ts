@@ -99,6 +99,24 @@ describe('GitHubAppService', () => {
       expect(result.reason).toBe('not_configured');
     });
 
+    it('returns backend_unreachable when the backend reports that code in a 500 response', async () => {
+      const { mod, mockPost } = await loadService();
+      mockPost.mockRejectedValueOnce({
+        response: {
+          status: 500,
+          data: { code: 'backend_unreachable', message: 'An unexpected error occurred' },
+        },
+      });
+
+      const result = await mod.GitHubAppService.buildInstallUrl({
+        backendUrl: TEST_BACKEND,
+        hostId: TEST_HOST_ID,
+        selectedRepositoryIds: [],
+      });
+
+      expect(result).toEqual({ ok: false, reason: 'backend_unreachable' });
+    });
+
     it('stores pending flow with selectedRepositoryIds and hostId after successful call', async () => {
       const { mod, mockPost } = await loadService();
       const fakeState = 'app-install-state-12345';
@@ -271,6 +289,34 @@ describe('GitHubAppService', () => {
       expect(result.outcome).toBe('backend_error');
     });
 
+    it('returns backend_unreachable when callback backend reports that code in a 500 response', async () => {
+      const { mod, mockPost } = await loadService();
+      const fakeState = 'callback-state-500';
+      mod.pendingAppFlows.set(fakeState, {
+        selectedRepositoryIds: ['1'],
+        selectedRepositories: ['owner/repo'],
+        backendUrl: TEST_BACKEND,
+        hostId: TEST_HOST_ID,
+      });
+      mockPost.mockRejectedValueOnce({
+        response: {
+          status: 500,
+          data: { code: 'backend_unreachable', message: 'An unexpected error occurred' },
+        },
+      });
+
+      const result = await mod.GitHubAppService.handleCallback({
+        installationId: '12345',
+        state: fakeState,
+      });
+
+      expect(result).toEqual({
+        outcome: 'backend_error',
+        code: 'backend_unreachable',
+        message: 'An unexpected error occurred',
+      });
+    });
+
     it('returns backend_error on network error', async () => {
       const { mod, mockPost } = await loadService();
       const fakeState = 'callback-state-neterror';
@@ -310,6 +356,10 @@ describe('GitHubAppService', () => {
           expires_at: Date.now() + 3600000,
           renewal_grant_token: 'grant-token-xyz',
           renewal_grant_expires_at: Date.now() + 86400000,
+          repositories: [
+            { owner: 'owner', repo: 'repo1' },
+            { owner: 'owner', repo: 'repo2' },
+          ],
         },
       });
 
@@ -328,6 +378,10 @@ describe('GitHubAppService', () => {
       expect(stored[1].installationId).toBe(99999);
       expect(stored[1].appId).toBe(123456);
       expect(stored[1].token).toBe('installation-token-abc');
+      expect(stored[1].selectedRepositories).toEqual([
+        { owner: 'owner', repo: 'repo1' },
+        { owner: 'owner', repo: 'repo2' },
+      ]);
     });
 
     it('removes pending flow and returns duplicate when backend returns 409', async () => {

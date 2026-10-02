@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "GitNotēs",
+    "name": "GitNotes",
     "slug": "gitnotes",
     "version": "1.7.5",
     "orientation": "default",
@@ -28,6 +28,8 @@
             ]
           }
         ],
+        "CFBundleDisplayName": "GitNotes",
+        "CFBundleName": "GitNotes",
         "NSPhotoLibraryUsageDescription": "GitNotēs needs access to your photo library to attach images to notes.",
         "NSMicrophoneUsageDescription": "GitNotēs needs access to your microphone for voice-to-text note input.",
         "ITSAppUsesNonExemptEncryption": false,

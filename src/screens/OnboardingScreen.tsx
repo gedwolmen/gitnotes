@@ -199,6 +199,7 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
                 <ProviderSelector
                   value={selectedProvider}
                   onChange={(provider) => {
+                    if (provider === 'all') return;
                     setSelectedProvider(provider);
                     setInstanceUrl(GIT_HOST_API_BASES[provider]);
                   }}

@@ -103,6 +103,11 @@ export type OAuthInitiationResult =
   | { ok: true; authorizationUrl: string; state: string }
   | { ok: false; reason: 'backend_unreachable' | 'network_error' };
 
+export type OAuthBrowserResult =
+  | { outcome: 'callback'; url: string }
+  | { outcome: 'cancelled' }
+  | { outcome: 'failed' };
+
 // ── Backend HTTP client ────────────────────────────────────────────────────────
 
 const axiosInstance = (() => {
@@ -224,19 +229,22 @@ export class GitHubOAuthService {
   }
 
   /**
-   * Open the GitHub authorization URL in the system browser.
-   * Returns `true` if the browser was opened, `false` if it failed.
+   * Open the GitHub authorization URL in an auth session.
+   * The auth session returns the custom-scheme callback URL directly on success.
    */
-  static async openAuthorizationUrl(authorizationUrl: string): Promise<boolean> {
+  static async openAuthorizationUrl(
+    authorizationUrl: string,
+    redirectUrl: string,
+  ): Promise<OAuthBrowserResult> {
     try {
-      const result = await WebBrowser.openBrowserAsync(authorizationUrl);
-      // On iOS, `result` is `{ type: 'cancel' | 'dismiss' | 'success' }`.
-      // On Android, it may return a different shape. Treat any non-cancel as opened.
-      void result;
-      return true;
+      const result = await WebBrowser.openAuthSessionAsync(authorizationUrl, redirectUrl);
+      if (result.type === 'success' && 'url' in result) {
+        return { outcome: 'callback', url: result.url };
+      }
+      return { outcome: 'cancelled' };
     } catch (err) {
-      console.warn('[GitHubOAuthService] openBrowserAsync failed:', err);
-      return false;
+      console.warn('[GitHubOAuthService] openAuthSessionAsync failed:', err);
+      return { outcome: 'failed' };
     }
   }
 
@@ -275,6 +283,7 @@ export class GitHubOAuthService {
       const data = response.data as {
         login: string;
         user_id: number;
+        avatar_url?: string | null;
         access_token: string;
         expires_at: number;
         refresh_token: string;
@@ -288,7 +297,7 @@ export class GitHubOAuthService {
           login: data.login,
           name: data.login,
           email: '',
-          avatarUrl: '',
+          avatarUrl: data.avatar_url ?? '',
         });
         const host = await AccountStorage.upsertHostConnection({
           accountId: account.id,
@@ -298,7 +307,7 @@ export class GitHubOAuthService {
           hostUserId: data.user_id,
           name: data.login,
           email: null,
-          avatarUrl: null,
+          avatarUrl: data.avatar_url ?? null,
           token: data.access_token,
         });
         const currentActiveHostId = await AccountStorage.getActiveHostId();
@@ -310,6 +319,12 @@ export class GitHubOAuthService {
       } else {
         resolvedHostId = hostId;
       }
+
+      await AccountStorage.updateHostProfile(resolvedHostId, {
+        name: data.login,
+        email: null,
+        avatarUrl: data.avatar_url ?? null,
+      });
 
       const credential: GitHubOAuthCredentialRecord = {
         id: `${resolvedHostId}:oauth`,
@@ -346,6 +361,9 @@ export class GitHubOAuthService {
         return { outcome: 'backend_error', code: mapBackendError(code), message };
       }
       if (error.response?.status === 503) {
+        return { outcome: 'backend_error', code: 'backend_unreachable', message: 'Backend service unavailable' };
+      }
+      if (error.response?.status === 500) {
         return { outcome: 'backend_error', code: 'backend_unreachable', message: 'Backend service unavailable' };
       }
       console.warn('[GitHubOAuthService] exchange failed:', error.message);

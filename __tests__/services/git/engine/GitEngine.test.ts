@@ -19,6 +19,8 @@ jest.mock('@/services/AccountStorage', () => ({
   AccountStorage: {
     getHostConnection: jest.fn(),
     getHostToken: jest.fn(),
+    getGitHubAppCredential: jest.fn(),
+    getOAuthCredential: jest.fn(),
   },
 }));
 
@@ -174,5 +176,288 @@ describe('GitEngine.pull', () => {
     await expect(GitEngine.pushWithIntegrate('/repo', 'origin', 'repo-without-credentials'))
       .rejects.toThrow('No credentials found for repo repo-without-credentials');
     expect(nativeModule.pushWithIntegrate).not.toHaveBeenCalled();
+  });
+});
+
+describe('GitEngine.pushWithIntegrate auth fallback chain', () => {
+  beforeEach(() => {
+    nativeModule.pull.mockReset();
+    nativeModule.pushWithIntegrate.mockReset();
+    nativeModule.getCredential.mockReset();
+    nativeModule.setCredential.mockReset();
+    jest.mocked(AuthService.getToken).mockReset();
+    jest.mocked(AccountStorage.getHostConnection).mockReset();
+    jest.mocked(AccountStorage.getHostToken).mockReset();
+    jest.mocked(AccountStorage.getGitHubAppCredential).mockReset();
+    jest.mocked(AccountStorage.getOAuthCredential).mockReset();
+    jest.mocked(StorageService.getSavedRepositories).mockReset();
+    nativeModule.pushWithIntegrate.mockResolvedValue({
+      ok: false,
+      kind: 'Error',
+      message: '',
+      conflicts: [],
+      pushed: 0,
+    });
+    nativeModule.getCredential.mockResolvedValue(null);
+    nativeModule.setCredential.mockResolvedValue(undefined);
+    jest.mocked(AuthService.getToken).mockResolvedValue('new-token');
+    jest.mocked(StorageService.getSavedRepositories).mockResolvedValue([
+      {
+        id: 'github/owner/repo',
+        path: 'github/owner/repo',
+        name: 'repo',
+        provider: 'github',
+        hostId: 'github-host',
+      },
+    ]);
+    jest.mocked(AccountStorage.getHostConnection).mockResolvedValue({
+      id: 'github-host',
+      accountId: 'account',
+      provider: 'github',
+      instanceBaseUrl: 'https://github.com',
+      hostLogin: 'testuser',
+      hostUserId: 1,
+      name: 'GitHub',
+      email: null,
+      avatarUrl: null,
+      addedAt: 0,
+    });
+    jest.mocked(AccountStorage.getHostToken).mockResolvedValue(null);
+    jest.mocked(AccountStorage.getGitHubAppCredential).mockResolvedValue(null);
+    jest.mocked(AccountStorage.getOAuthCredential).mockResolvedValue(null);
+  });
+
+  it('retries with OAuth after GitHub App fails with auth error', async () => {
+    const authError = new Error('Authentication failed');
+    nativeModule.pushWithIntegrate
+      .mockRejectedValueOnce(authError)
+      .mockResolvedValueOnce({ ok: true, message: 'pushed', conflicts: [], pushed: 1 });
+
+    jest.mocked(AccountStorage.getGitHubAppCredential).mockResolvedValue({
+      kind: 'github_app' as const,
+      token: 'github-app-token',
+      appId: 1,
+      appName: 'GitNotes',
+      selectedRepositories: [{ owner: 'owner', repo: 'repo' }],
+    });
+    jest.mocked(AccountStorage.getOAuthCredential).mockResolvedValue({
+      kind: 'oauth' as const,
+      accessToken: 'oauth-token',
+      provider: 'github',
+    });
+
+    const result = await GitEngine.pushWithIntegrate('/repo', 'origin', 'github/owner/repo');
+
+    expect(result.ok).toBe(true);
+    expect(nativeModule.pushWithIntegrate).toHaveBeenCalledTimes(2);
+    expect(nativeModule.setCredential).toHaveBeenCalledWith('github/owner/repo', {
+      kind: 'userpass',
+      username: 'x-access-token',
+      password: 'github-app-token',
+    });
+    expect(nativeModule.setCredential).toHaveBeenLastCalledWith('github/owner/repo', {
+      kind: 'userpass',
+      username: 'x-access-token',
+      password: 'oauth-token',
+    });
+  });
+
+  it('retries with PAT after GitHub App and OAuth both fail with auth errors', async () => {
+    const authError = new Error('Authentication failed');
+    nativeModule.pushWithIntegrate
+      .mockRejectedValueOnce(authError)
+      .mockRejectedValueOnce(authError)
+      .mockResolvedValueOnce({ ok: true, message: 'pushed', conflicts: [], pushed: 1 });
+
+    jest.mocked(AccountStorage.getGitHubAppCredential).mockResolvedValue({
+      kind: 'github_app' as const,
+      token: 'github-app-token',
+      appId: 1,
+      appName: 'GitNotes',
+      selectedRepositories: [{ owner: 'owner', repo: 'repo' }],
+    });
+    jest.mocked(AccountStorage.getOAuthCredential).mockResolvedValue({
+      kind: 'oauth' as const,
+      accessToken: 'oauth-token',
+      provider: 'github',
+    });
+    jest.mocked(AccountStorage.getHostToken).mockResolvedValue('pat-token');
+
+    const result = await GitEngine.pushWithIntegrate('/repo', 'origin', 'github/owner/repo');
+
+    expect(result.ok).toBe(true);
+    expect(nativeModule.pushWithIntegrate).toHaveBeenCalledTimes(3);
+  });
+
+  it('fails after all credentials exhaust auth errors (App -> OAuth -> PAT)', async () => {
+    const authError = new Error('Authentication failed');
+    nativeModule.pushWithIntegrate
+      .mockRejectedValueOnce(authError)
+      .mockRejectedValueOnce(authError)
+      .mockRejectedValueOnce(authError);
+
+    jest.mocked(AccountStorage.getGitHubAppCredential).mockResolvedValue({
+      kind: 'github_app' as const,
+      token: 'github-app-token',
+      appId: 1,
+      appName: 'GitNotes',
+      selectedRepositories: [{ owner: 'owner', repo: 'repo' }],
+    });
+    jest.mocked(AccountStorage.getOAuthCredential).mockResolvedValue({
+      kind: 'oauth' as const,
+      accessToken: 'oauth-token',
+      provider: 'github',
+    });
+    jest.mocked(AccountStorage.getHostToken).mockResolvedValue('pat-token');
+
+    await expect(GitEngine.pushWithIntegrate('/repo', 'origin', 'github/owner/repo')).rejects.toThrow('Authentication failed');
+    expect(nativeModule.pushWithIntegrate).toHaveBeenCalledTimes(3);
+  });
+
+  it('does not retry when native operation fails with 403 permission error', async () => {
+    nativeModule.pushWithIntegrate.mockResolvedValueOnce({
+      ok: false,
+      error: 'Permission denied',
+      message: 'Permission denied',
+      conflicts: [],
+      pushed: 0,
+    });
+
+    jest.mocked(AccountStorage.getGitHubAppCredential).mockResolvedValue({
+      kind: 'github_app' as const,
+      token: 'github-app-token',
+      appId: 1,
+      appName: 'GitNotes',
+      selectedRepositories: [{ owner: 'owner', repo: 'repo' }],
+    });
+    jest.mocked(AccountStorage.getOAuthCredential).mockResolvedValue({
+      kind: 'oauth' as const,
+      accessToken: 'oauth-token',
+      provider: 'github',
+    });
+    jest.mocked(AccountStorage.getHostToken).mockResolvedValue('pat-token');
+
+    const result = await GitEngine.pushWithIntegrate('/repo', 'origin', 'github/owner/repo');
+
+    expect(result.ok).toBe(false);
+    expect(result.error).toContain('Permission denied');
+    expect(nativeModule.pushWithIntegrate).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not retry when native operation fails with network error', async () => {
+    nativeModule.pushWithIntegrate.mockResolvedValueOnce({
+      ok: false,
+      error: 'Network error: ECONNREFUSED',
+      message: 'Network error: ECONNREFUSED',
+      conflicts: [],
+      pushed: 0,
+    });
+
+    jest.mocked(AccountStorage.getGitHubAppCredential).mockResolvedValue({
+      kind: 'github_app' as const,
+      token: 'github-app-token',
+      appId: 1,
+      appName: 'GitNotes',
+      selectedRepositories: [{ owner: 'owner', repo: 'repo' }],
+    });
+    jest.mocked(AccountStorage.getOAuthCredential).mockResolvedValue({
+      kind: 'oauth' as const,
+      accessToken: 'oauth-token',
+      provider: 'github',
+    });
+    jest.mocked(AccountStorage.getHostToken).mockResolvedValue('pat-token');
+
+    const result = await GitEngine.pushWithIntegrate('/repo', 'origin', 'github/owner/repo');
+
+    expect(result.ok).toBe(false);
+    expect(result.error).toContain('Network error');
+    expect(nativeModule.pushWithIntegrate).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not retry when native operation fails with 409 conflict error', async () => {
+    nativeModule.pushWithIntegrate.mockResolvedValueOnce({
+      ok: false,
+      error: 'Push rejected: non-fast-forward',
+      message: 'Push rejected: non-fast-forward',
+      conflicts: [],
+      pushed: 0,
+    });
+
+    jest.mocked(AccountStorage.getGitHubAppCredential).mockResolvedValue({
+      kind: 'github_app' as const,
+      token: 'github-app-token',
+      appId: 1,
+      appName: 'GitNotes',
+      selectedRepositories: [{ owner: 'owner', repo: 'repo' }],
+    });
+    jest.mocked(AccountStorage.getOAuthCredential).mockResolvedValue({
+      kind: 'oauth' as const,
+      accessToken: 'oauth-token',
+      provider: 'github',
+    });
+    jest.mocked(AccountStorage.getHostToken).mockResolvedValue('pat-token');
+
+    const result = await GitEngine.pushWithIntegrate('/repo', 'origin', 'github/owner/repo');
+
+    expect(result.ok).toBe(false);
+    expect(nativeModule.pushWithIntegrate).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not retry when native operation fails with 500 server error', async () => {
+    nativeModule.pushWithIntegrate.mockResolvedValueOnce({
+      ok: false,
+      error: 'Internal Server Error',
+      message: 'Internal Server Error',
+      conflicts: [],
+      pushed: 0,
+    });
+
+    jest.mocked(AccountStorage.getGitHubAppCredential).mockResolvedValue({
+      kind: 'github_app' as const,
+      token: 'github-app-token',
+      appId: 1,
+      appName: 'GitNotes',
+      selectedRepositories: [{ owner: 'owner', repo: 'repo' }],
+    });
+    jest.mocked(AccountStorage.getOAuthCredential).mockResolvedValue({
+      kind: 'oauth' as const,
+      accessToken: 'oauth-token',
+      provider: 'github',
+    });
+    jest.mocked(AccountStorage.getHostToken).mockResolvedValue('pat-token');
+
+    const result = await GitEngine.pushWithIntegrate('/repo', 'origin', 'github/owner/repo');
+
+    expect(result.ok).toBe(false);
+    expect(nativeModule.pushWithIntegrate).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not retry when native operation fails with SAML 403 error', async () => {
+    nativeModule.pushWithIntegrate.mockResolvedValueOnce({
+      ok: false,
+      error: 'SAML required',
+      message: 'SAML required',
+      conflicts: [],
+      pushed: 0,
+    });
+
+    jest.mocked(AccountStorage.getGitHubAppCredential).mockResolvedValue({
+      kind: 'github_app' as const,
+      token: 'github-app-token',
+      appId: 1,
+      appName: 'GitNotes',
+      selectedRepositories: [{ owner: 'owner', repo: 'repo' }],
+    });
+    jest.mocked(AccountStorage.getOAuthCredential).mockResolvedValue({
+      kind: 'oauth' as const,
+      accessToken: 'oauth-token',
+      provider: 'github',
+    });
+    jest.mocked(AccountStorage.getHostToken).mockResolvedValue('pat-token');
+
+    const result = await GitEngine.pushWithIntegrate('/repo', 'origin', 'github/owner/repo');
+
+    expect(result.ok).toBe(false);
+    expect(nativeModule.pushWithIntegrate).toHaveBeenCalledTimes(1);
   });
 });

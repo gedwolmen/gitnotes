@@ -324,6 +324,7 @@
     "connectGithub": "Connect GitHub",
     "connectWithGitHub": "Connect with GitHub",
     "installGithubApp": "Install GitHub App",
+    "oauthFullAccessWarning": "OAuth grants access to all repositories your GitHub account can reach. For selected-repository access, use the GitHub App or connect with a fine-grained token.",
     "changeToken": "Change Token",
     "replaceActiveToken": "Replace Active Token",
     "addAnotherAccount": "Add another account",
@@ -550,7 +551,7 @@
     "save": "Save",
     "show": "Show",
     "hide": "Hide",
-    "connectHost": "Connect host",
+    "connectHost": "Connect hosts via tokens",
     "help": {
       "github": "Your token needs access to the repository: a fine-grained token with Contents: Read and write on each repository (select your repos), or a classic token with the repo scope."
     },
@@ -565,11 +566,6 @@
       "invalidTokenBody": "The token was rejected. It may be invalid, expired, or revoked — or lack the required repository permissions. Check the token in your provider's settings and update or regenerate it if needed.",
       "networkTitle": "Connection failed",
       "networkBody": "Could not reach the host. Check your network and try again."
-    },
-    "alternatives": {
-      "or": "or",
-      "githubOAuth": "Continue with GitHub OAuth",
-      "githubApp": "Continue with GitHub App"
     }
   },
   "ai": {
