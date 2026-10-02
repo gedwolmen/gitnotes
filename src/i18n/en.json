@@ -184,7 +184,7 @@
     }
   },
   "chat": {
-    "title": "GitNotes AI",
+    "title": "GitNotēs AI",
     "askAI": "Ask AI",
     "typeMessage": "Type a message...",
     "thinking": "Thinking...",
@@ -192,7 +192,7 @@
     "emptyTitle": "Start your first AI chat",
     "emptySubtitle": "Tap New Chat above to send your first prompt.",
     "startConversation": "Start the conversation",
-    "emptyStateBody": "Ask about your notes, attach context, or let GitNotes AI make changes for you.",
+    "emptyStateBody": "Ask about your notes, attach context, or let GitNotēs AI make changes for you.",
     "configRequiredTitle": "Configuration Required",
     "configRequiredBody": "Please set up a chat repository in AI settings first.",
     "aiNotConfiguredTitle": "AI Not Configured",
