@@ -1,4 +1,4 @@
-export type ThemeStyle = 'neumorphic' | 'flat' | 'neo-brutalist';
+export type ThemeStyle = 'neumorphic' | 'flat' | 'neo-brutalist' | 'retrofuturistic';
 
 export interface Palette {
   bg: string;
@@ -148,6 +148,49 @@ export const NEUTRAL_BRUTALIST_DARK: Palette = {
   elevated: '#2A2A2A',
 };
 
+// Retrofuturistic: dark-mode primary with deep-space navy + neon glow accents.
+// Dark: #0D0D1A bg, electric cyan #00E5FF glow, amber #FFD700, hot-pink #E91E63.
+// Light: cream #FAFAF5 base, muted cyan/amber/pink for readability on light surfaces.
+export const RETROFUTURISTIC_LIGHT: Palette = {
+  bg: '#F5F5F0',
+  surface: '#FAFAF5',
+  highlight: '#FFFFFF',
+  shadow: '#000000',
+  text: '#1A1A2E',
+  textSecondary: '#5C5C7A',
+  accent: '#007B8A',
+  accentMuted: '#0097A7',
+  error: '#C41E3A',
+  success: '#1E7D3A',
+  warning: '#B45309',
+  background: '#FAFAF5',
+  surfaceSecondary: '#EFEFEA',
+  primary: '#007B8A',
+  border: '#BFBFBF',
+  card: '#FAFAF5',
+  elevated: '#FFFFFF',
+};
+
+export const RETROFUTURISTIC_DARK: Palette = {
+  bg: '#0D0D1A',
+  surface: '#12122A',
+  highlight: '#1E1E3A',
+  shadow: '#000000',
+  text: '#E8E8F0',
+  textSecondary: '#A0A0C0',
+  accent: '#00E5FF',
+  accentMuted: '#00C4CC',
+  error: '#FF6B6B',
+  success: '#4ADE80',
+  warning: '#FFD700',
+  background: '#0D0D1A',
+  surfaceSecondary: '#1A1A35',
+  primary: '#E91E63',
+  border: '#2A2A50',
+  card: '#12122A',
+  elevated: '#1E1E3A',
+};
+
 // Note color-coding palette. Keys must match `NoteColor` in models/Note.
 // These render as the card border accent in `NoteCard` and as swatches in
 // `ColorPicker`. They are intentionally theme-agnostic — same hex in both
@@ -268,5 +311,6 @@ export function resolveColors(style: ThemeStyle, isDark: boolean): Palette {
   if (style === 'flat') return isDark ? FLAT_DARK : FLAT_LIGHT;
   if (style === 'neumorphic') return isDark ? NEUMORPHIC_DARK : NEUMORPHIC_LIGHT;
   if (style === 'neo-brutalist') return isDark ? NEUTRAL_BRUTALIST_DARK : NEUTRAL_BRUTALIST_LIGHT;
+  if (style === 'retrofuturistic') return isDark ? RETROFUTURISTIC_DARK : RETROFUTURISTIC_LIGHT;
   return isDark ? FLAT_DARK : FLAT_LIGHT;
 }

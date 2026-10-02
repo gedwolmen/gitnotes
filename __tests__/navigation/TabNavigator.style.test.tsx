@@ -5,11 +5,10 @@
  * - Basic/flat phone: uses default React Navigation tab bar (tabBar prop = undefined)
  * - Neumorphic phone: uses custom TabBar with BlurView
  * - Neo-Brutalist phone: uses custom tab bar with solid View (no BlurView) + crisp border/offset
+ * - Retrofuturistic phone: uses custom tab bar with solid View + accent glow border (no BlurView)
  * - Tablet (any style): uses TabletRail
  * - Paywall suppression: TabBar not rendered when parent route is Paywall
  * - Route navigation events: tabPress/tabLongPress are emitted correctly
- *
- * These tests are written BEFORE implementation (failing-first TDD).
  */
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
@@ -34,6 +33,26 @@ const FLAT_LIGHT = {
   border: '#c6c6c8',
   card: '#ffffff',
   elevated: '#ffffff',
+};
+
+const RETRO_DARK = {
+  bg: '#0D0D1A',
+  surface: '#141428',
+  highlight: '#1E1E3A',
+  shadow: '#000000',
+  text: '#E0E0FF',
+  textSecondary: '#8888AA',
+  accent: '#00E5FF',
+  accentMuted: '#00B8D4',
+  error: '#FF6B6B',
+  success: '#00E5A0',
+  warning: '#FFD700',
+  background: '#0D0D1A',
+  surfaceSecondary: '#1A1A30',
+  primary: '#00E5FF',
+  border: '#2A2A4A',
+  card: '#141428',
+  elevated: '#1E1E38',
 };
 
 const TOKENS = {
@@ -167,10 +186,23 @@ describe('TabNavigator source code structure', () => {
     expect(content).toMatch(/style\s*===\s*['"]neo-brutalist['"]/);
   });
 
+  it('TabNavigator should route custom bar for retrofuturistic phones', () => {
+    const fs = require('fs');
+    const content = fs.readFileSync(require.resolve('@/navigation/TabNavigator'), 'utf8');
+    expect(content).toMatch(/retrofuturistic/i);
+    expect(content).toMatch(/style\s*===\s*['"]retrofuturistic['"]/);
+  });
+
   it('TabBar should have neo-brutalist conditional rendering', () => {
     const fs = require('fs');
     const content = fs.readFileSync(require.resolve('@/components/ui/TabBar'), 'utf8');
     expect(content).toMatch(/neo-brutalist/i);
+  });
+
+  it('TabBar should have retrofuturistic conditional rendering', () => {
+    const fs = require('fs');
+    const content = fs.readFileSync(require.resolve('@/components/ui/TabBar'), 'utf8');
+    expect(content).toMatch(/retrofuturistic/i);
   });
 
   it('TabBar should have BlurView conditional on style', () => {
@@ -189,8 +221,10 @@ describe('TabNavigator routing logic', () => {
     const { isTablet } = useResponsive();
     const useNeumorphicBar = !isTablet && style === 'neumorphic';
     const useNeoBrutalistBar = !isTablet && style === 'neo-brutalist';
+    const useRetrofuturisticBar = !isTablet && style === 'retrofuturistic';
     expect(useNeumorphicBar).toBe(false);
     expect(useNeoBrutalistBar).toBe(false);
+    expect(useRetrofuturisticBar).toBe(false);
   });
 
   it('neumorphic style should trigger custom tab bar', () => {
@@ -207,8 +241,10 @@ describe('TabNavigator routing logic', () => {
     const { isTablet } = useResponsive();
     const useNeumorphicBar = !isTablet && style === 'neumorphic';
     const useNeoBrutalistBar = !isTablet && style === 'neo-brutalist';
+    const useRetrofuturisticBar = !isTablet && style === 'retrofuturistic';
     expect(useNeumorphicBar).toBe(true);
     expect(useNeoBrutalistBar).toBe(false);
+    expect(useRetrofuturisticBar).toBe(false);
   });
 
   it('neo-brutalist style should trigger custom tab bar', () => {
@@ -225,8 +261,30 @@ describe('TabNavigator routing logic', () => {
     const { isTablet } = useResponsive();
     const useNeumorphicBar = !isTablet && style === 'neumorphic';
     const useNeoBrutalistBar = !isTablet && style === 'neo-brutalist';
+    const useRetrofuturisticBar = !isTablet && style === 'retrofuturistic';
     expect(useNeumorphicBar).toBe(false);
     expect(useNeoBrutalistBar).toBe(true);
+    expect(useRetrofuturisticBar).toBe(false);
+  });
+
+  it('retrofuturistic style should trigger custom tab bar', () => {
+    const { useTheme } = require('@/contexts/ThemeContext');
+    const { useResponsive } = require('@/hooks/useResponsive');
+    (useTheme as jest.Mock).mockReturnValueOnce({
+      isDark: true,
+      style: 'retrofuturistic',
+      colors: RETRO_DARK,
+      tokens: { ...TOKENS, colors: RETRO_DARK },
+      spacing: { 1: 4, 2: 8, 3: 12, 4: 16, 5: 20, 6: 24, 8: 32 },
+    });
+    const { style } = useTheme();
+    const { isTablet } = useResponsive();
+    const useNeumorphicBar = !isTablet && style === 'neumorphic';
+    const useNeoBrutalistBar = !isTablet && style === 'neo-brutalist';
+    const useRetrofuturisticBar = !isTablet && style === 'retrofuturistic';
+    expect(useNeumorphicBar).toBe(false);
+    expect(useNeoBrutalistBar).toBe(false);
+    expect(useRetrofuturisticBar).toBe(true);
   });
 
   it('tablet should use rail regardless of style', () => {
@@ -243,6 +301,35 @@ describe('TabBar rendering', () => {
     const { root } = render(<TabBar {...props} />);
     expect(root).not.toBeNull();
   });
+
+  it('TabBar renders with retrofuturistic style without crashing', () => {
+    const { useTheme } = require('@/contexts/ThemeContext');
+    (useTheme as jest.Mock).mockReturnValueOnce({
+      isDark: true,
+      style: 'retrofuturistic',
+      colors: RETRO_DARK,
+      tokens: { ...TOKENS, colors: RETRO_DARK },
+      spacing: { 1: 4, 2: 8, 3: 12, 4: 16, 5: 20, 6: 24, 8: 32 },
+    });
+    const props = makeTabBarProps('HomeTab');
+    const { root } = render(<TabBar {...props} />);
+    expect(root).not.toBeNull();
+  });
+
+  it('TabBar with retrofuturistic renders tab press targets', () => {
+    const { useTheme } = require('@/contexts/ThemeContext');
+    (useTheme as jest.Mock).mockReturnValueOnce({
+      isDark: true,
+      style: 'retrofuturistic',
+      colors: RETRO_DARK,
+      tokens: { ...TOKENS, colors: RETRO_DARK },
+      spacing: { 1: 4, 2: 8, 3: 12, 4: 16, 5: 20, 6: 24, 8: 32 },
+    });
+    const props = makeTabBarProps('HomeTab');
+    const { root } = render(<TabBar {...props} />);
+    const tabs = root.findAllByProps({ 'accessibilityRole': 'button' });
+    expect(tabs.length).toBeGreaterThan(0);
+  });
 });
 
 describe('TabBar paywall suppression', () => {
@@ -256,6 +343,20 @@ describe('TabBar paywall suppression', () => {
     const props = makeTabBarProps('HomeTab', ['HomeTab', 'NotesTab'], 'MainTabs');
     const { root } = render(<TabBar {...props} />);
     expect(root).not.toBeFalsy();
+  });
+
+  it('should suppress TabBar with retrofuturistic style when on Paywall route', () => {
+    const { useTheme } = require('@/contexts/ThemeContext');
+    (useTheme as jest.Mock).mockReturnValueOnce({
+      isDark: true,
+      style: 'retrofuturistic',
+      colors: RETRO_DARK,
+      tokens: { ...TOKENS, colors: RETRO_DARK },
+      spacing: { 1: 4, 2: 8, 3: 12, 4: 16, 5: 20, 6: 24, 8: 32 },
+    });
+    const props = makeTabBarProps('HomeTab', ['HomeTab', 'NotesTab'], 'Paywall');
+    const { root } = render(<TabBar {...props} />);
+    expect(root).toBeFalsy();
   });
 });
 
@@ -279,6 +380,25 @@ describe('TabBar route navigation events', () => {
     fireEvent(tabs[0], 'longPress');
     expect(props.navigation.emit).toHaveBeenCalledWith(
       expect.objectContaining({ type: 'tabLongPress' }),
+    );
+  });
+
+  it('should emit tabPress when retrofuturistic tab is pressed', () => {
+    const { useTheme } = require('@/contexts/ThemeContext');
+    (useTheme as jest.Mock).mockReturnValueOnce({
+      isDark: true,
+      style: 'retrofuturistic',
+      colors: RETRO_DARK,
+      tokens: { ...TOKENS, colors: RETRO_DARK },
+      spacing: { 1: 4, 2: 8, 3: 12, 4: 16, 5: 20, 6: 24, 8: 32 },
+    });
+    const props = makeTabBarProps('HomeTab');
+    const { root } = render(<TabBar {...props} />);
+    const tabs = root.findAllByProps({ 'accessibilityRole': 'button' });
+    expect(tabs.length).toBeGreaterThan(0);
+    fireEvent.press(tabs[0]);
+    expect(props.navigation.emit).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'tabPress' }),
     );
   });
 });

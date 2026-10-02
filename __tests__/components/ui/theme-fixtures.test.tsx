@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text, View, StyleSheet } from 'react-native';
+import { Text, View } from 'react-native';
 import { render } from '@testing-library/react-native';
 import { Surface } from '../../../src/components/ui/Surface';
 import { Card } from '../../../src/components/ui/Card';
@@ -18,6 +18,8 @@ import {
   NEUMORPHIC_DARK,
   NEUTRAL_BRUTALIST_LIGHT,
   NEUTRAL_BRUTALIST_DARK,
+  RETROFUTURISTIC_LIGHT,
+  RETROFUTURISTIC_DARK,
   RADII,
   SPACING,
   TYPE,
@@ -60,6 +62,8 @@ const FIXTURES: ThemeFixture[] = [
   { label: 'neumorphic-dark', palette: NEUMORPHIC_DARK, style: 'neumorphic', isDark: true },
   { label: 'neo-brutalist-light', palette: NEUTRAL_BRUTALIST_LIGHT, style: 'neo-brutalist', isDark: false },
   { label: 'neo-brutalist-dark', palette: NEUTRAL_BRUTALIST_DARK, style: 'neo-brutalist', isDark: true },
+  { label: 'retrofuturistic-light', palette: RETROFUTURISTIC_LIGHT, style: 'retrofuturistic', isDark: false },
+  { label: 'retrofuturistic-dark', palette: RETROFUTURISTIC_DARK, style: 'retrofuturistic', isDark: true },
 ];
 
 // ---------------------------------------------------------------------------
@@ -867,6 +871,80 @@ describe('Raw-shadow neo-brutalist regression', () => {
         const outer = result.outer as Record<string, unknown>;
         expect(outer.borderWidth).toBe(2);
       }
+    });
+  });
+});
+
+describe('Raw-shadow retrofuturistic regression', () => {
+  describe('retrofuturistic buildElevation glow-border contract', () => {
+    it('retrofuturistic iOS has no inner shadow (no dual-shadow overlay)', () => {
+      for (const tier of ['subtle', 'raised', 'floating'] as const) {
+        const result = buildElevation({ tier, inset: false, style: 'retrofuturistic', colors: RETROFUTURISTIC_DARK, platform: 'ios' });
+        expect(result.inner).toEqual({});
+      }
+    });
+
+    it('retrofuturistic web has no inner shadow (no dual-shadow overlay)', () => {
+      for (const tier of ['subtle', 'raised', 'floating'] as const) {
+        const result = buildElevation({ tier, inset: false, style: 'retrofuturistic', colors: RETROFUTURISTIC_DARK, platform: 'web' });
+        expect(result.inner).toEqual({});
+      }
+    });
+
+    it('retrofuturistic iOS uses accent as glow color (colored glow, not soft shadow)', () => {
+      const result = buildElevation({ tier: 'raised', inset: false, style: 'retrofuturistic', colors: RETROFUTURISTIC_DARK, platform: 'ios' });
+      const outer = result.outer as Record<string, unknown>;
+      expect(outer.shadowColor).toBe(RETROFUTURISTIC_DARK.accent);
+    });
+
+    it('retrofuturistic iOS has no blur fallthrough (glow spread, not neumorphic blur)', () => {
+      const result = buildElevation({ tier: 'raised', inset: false, style: 'retrofuturistic', colors: RETROFUTURISTIC_DARK, platform: 'ios' });
+      const outer = result.outer as Record<string, unknown>;
+      expect(outer.shadowRadius).toBe(8);
+      expect(outer.shadowOpacity).toBe(0.9);
+      expect(outer.shadowOffset).toEqual({ width: 0, height: 0 });
+    });
+
+    it('retrofuturistic iOS has borderWidth (crisp border)', () => {
+      const result = buildElevation({ tier: 'raised', inset: false, style: 'retrofuturistic', colors: RETROFUTURISTIC_DARK, platform: 'ios' });
+      const outer = result.outer as Record<string, unknown>;
+      expect(outer.borderWidth).toBe(1.5);
+    });
+
+    it('retrofuturistic android has elevation=0 (no Material elevation)', () => {
+      for (const tier of ['subtle', 'raised', 'floating'] as const) {
+        const result = buildElevation({ tier, inset: false, style: 'retrofuturistic', colors: RETROFUTURISTIC_DARK, platform: 'android' });
+        const outer = result.outer as Record<string, unknown>;
+        expect(outer.elevation).toBe(0);
+      }
+    });
+
+    it('retrofuturistic android uses accent border (glowing border, not material)', () => {
+      const result = buildElevation({ tier: 'raised', inset: false, style: 'retrofuturistic', colors: RETROFUTURISTIC_DARK, platform: 'android' });
+      const outer = result.outer as Record<string, unknown>;
+      expect(outer.borderColor).toBe(RETROFUTURISTIC_DARK.accent);
+    });
+
+    it('retrofuturistic glow size scales with tier (subtle=4, raised=8, floating=14)', () => {
+      const subtle = buildElevation({ tier: 'subtle', inset: false, style: 'retrofuturistic', colors: RETROFUTURISTIC_DARK, platform: 'ios' });
+      const raised = buildElevation({ tier: 'raised', inset: false, style: 'retrofuturistic', colors: RETROFUTURISTIC_DARK, platform: 'ios' });
+      const floating = buildElevation({ tier: 'floating', inset: false, style: 'retrofuturistic', colors: RETROFUTURISTIC_DARK, platform: 'ios' });
+      expect((subtle.outer as Record<string, unknown>).shadowRadius).toBe(4);
+      expect((raised.outer as Record<string, unknown>).shadowRadius).toBe(8);
+      expect((floating.outer as Record<string, unknown>).shadowRadius).toBe(14);
+    });
+
+    it('neumorphic still uses dual-shadow inner+outer on iOS (unchanged behavior)', () => {
+      const result = buildElevation({ tier: 'raised', inset: false, style: 'neumorphic', colors: NEUMORPHIC_LIGHT, platform: 'ios' });
+      expect(result.inner).not.toEqual({});
+      const outer = result.outer as Record<string, unknown>;
+      expect(outer.shadowRadius).toBe(8);
+    });
+
+    it('flat still returns empty outer/inner (unchanged behavior)', () => {
+      const result = buildElevation({ tier: 'raised', inset: false, style: 'flat', colors: FLAT_LIGHT, platform: 'ios' });
+      expect(result.outer).toEqual({});
+      expect(result.inner).toEqual({});
     });
   });
 });

@@ -301,7 +301,8 @@
       "basic": "Basic",
       "neumorphic": "Neumorphic",
       "neoBrutalist": "Neo-Brutalist",
-      "hint": "Basic is free. Neumorphic and Neo-Brutalist require GitNotēs Pro."
+      "retrofuturistic": "Retrofuturistic",
+      "hint": "Basic and Neo-Brutalist are free. Neumorphic and Retrofuturistic require GitNotēs Pro."
     },
     "darkMode": "Dark Mode",
     "accentColor": "Accent Color",

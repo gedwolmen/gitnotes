@@ -181,7 +181,8 @@
       "basic": "기본",
       "neumorphic": "뉴모피즘",
       "neoBrutalist": "네오브루탈리즘",
-      "hint": "기본은 무료입니다. 뉴모피즘과 네오브루탈리즘은 GitNotēs Pro가 필요합니다."
+      "retrofuturistic": "레트로퓨처리즘",
+      "hint": "기본과 네오브루탈리즘은 무료입니다. 뉴모피즘과 레트로퓨처리즘은 GitNotēs Pro가 필요합니다."
     },
     "darkMode": "다크 모드",
     "accentColor": "강조 색상",

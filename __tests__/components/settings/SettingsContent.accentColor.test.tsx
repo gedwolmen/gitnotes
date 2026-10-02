@@ -262,6 +262,14 @@ interface TestSettingsContentProps {
   syncHealth: { status: string; lastRunAt: number; lastCompletedAt: number; lastFailedAt: number; consecutiveFailures: number };
   onToggleSSH: (hostId: string) => void;
   hostUseSsh: Record<string, boolean>;
+  oauthLoading: Record<string, boolean>;
+  oauthError: Record<string, string | null>;
+  appLoading: Record<string, boolean>;
+  appError: Record<string, string | null>;
+  onConnectOAuth: (hostId: string | null) => void;
+  onDisconnectOAuth: (hostId: string) => void;
+  onConnectGitHubApp: (hostId: string | null) => void;
+  onDisconnectGitHubApp: (hostId: string) => void;
 }
 
 function makeProps(overrides: Partial<TestSettingsContentProps> = {}): TestSettingsContentProps {
@@ -350,6 +358,14 @@ function makeProps(overrides: Partial<TestSettingsContentProps> = {}): TestSetti
     syncHealth: { status: 'ok', lastRunAt: 0, lastCompletedAt: 0, lastFailedAt: 0, consecutiveFailures: 0 },
     onToggleSSH: jest.fn(),
     hostUseSsh: {},
+    oauthLoading: { '__fresh__': false },
+    oauthError: { '__fresh__': null },
+    appLoading: { '__fresh__': false },
+    appError: { '__fresh__': null },
+    onConnectOAuth: jest.fn(),
+    onDisconnectOAuth: jest.fn(),
+    onConnectGitHubApp: jest.fn(),
+    onDisconnectGitHubApp: jest.fn(),
     ...overrides,
   };
 }

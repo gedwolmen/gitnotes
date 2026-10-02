@@ -181,7 +181,8 @@
       "basic": "Einfach",
       "neumorphic": "Neumorphisch",
       "neoBrutalist": "Neo-Brutalistisch",
-      "hint": "Einfach ist kostenlos. Neumorphisch und Neo-Brutalistisch erfordern GitNotēs Pro."
+      "retrofuturistic": "Retrofuturistisch",
+      "hint": "Einfach und Neo-Brutalistisch sind kostenlos. Neumorphisch und Retrofuturistisch erfordern GitNotēs Pro."
     },
     "darkMode": "Dunkelmodus",
     "accentColor": "Akzentfarbe",
