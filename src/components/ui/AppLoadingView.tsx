@@ -19,7 +19,7 @@ export function AppLoadingView({ colorScheme = 'light' }: AppLoadingViewProps) {
           paddingTop: insets.top,
         },
       ]}
-      accessibilityLabel="Loading GitNotes"
+      accessibilityLabel="Loading GitNotēs"
       accessibilityRole="progressbar"
     >
       <StatusBar style={isDark ? 'light' : 'dark'} />
