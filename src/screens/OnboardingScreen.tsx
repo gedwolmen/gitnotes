@@ -18,16 +18,38 @@ import { useTranslation } from 'react-i18next';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAccounts } from '../contexts/AccountsContext';
 import { OnboardingService } from '../services/OnboardingService';
+import { GitHubOAuthService } from '../services/GitHubOAuthService';
+import { GitHubAppService } from '../services/GitHubAppService';
 import { Button, Input, Surface } from '../components/ui';
 import { ProviderSelector } from '../components/ProviderSelector';
 import { SafeAreaView } from '../components/ui/SafeAreaView';
 import type { RootStackParamList } from '../navigation/types';
-import { GIT_HOST_API_BASES, type GitHostProvider } from '../services/git/GitHost';
+import {
+  GIT_HOST_API_BASES,
+  type GitHostProvider,
+} from '../services/git/GitHost';
+import {
+  OAUTH_CALLBACK_URL,
+  WORKER_BASE_URL,
+} from '../types/worker';
 
 interface OnboardingScreenProps {
   onComplete: () => void;
   onSkip: () => void;
 }
+
+/**
+ * Resolves the backend URL for OAuth/App handlers, normalizes the URL to avoid
+ * double /api/v1 paths, and falls back to the Worker default when no override exists.
+ */
+function resolveBackendUrl(): string {
+  const configured = process.env.EXPO_PUBLIC_GITNOTES_BACKEND_URL;
+  const base = configured ?? WORKER_BASE_URL;
+  return base.replace(/\/api\/v1\/?$/, '');
+}
+
+/** Auth method options for GitHub. */
+export type GitHubAuthMethod = 'pat' | 'oauth' | 'app';
 
 const INFO_STEP_ICONS = [
   'journal-outline',
@@ -37,7 +59,10 @@ const INFO_STEP_ICONS = [
   'bulb-outline',
 ] as const;
 
-export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScreenProps) {
+export default function OnboardingScreen({
+  onComplete,
+  onSkip,
+}: OnboardingScreenProps) {
   const { t } = useTranslation();
 
   const INFO_STEPS = [
@@ -74,13 +99,23 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
   const { colors } = useTheme();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { connectHost, refreshAccounts } = useAccounts();
+
   const [currentStep, setCurrentStep] = useState(0);
 
-  const [selectedProvider, setSelectedProvider] = useState<GitHostProvider>('github');
+  const [selectedProvider, setSelectedProvider] =
+    useState<GitHostProvider>('github');
+  const [githubAuthMethod, setGithubAuthMethod] =
+    useState<GitHubAuthMethod>('pat');
   const [token, setToken] = useState('');
-  const [instanceUrl, setInstanceUrl] = useState(GIT_HOST_API_BASES.github);
+  const [instanceUrl, setInstanceUrl] = useState(
+    GIT_HOST_API_BASES.github,
+  );
   const [isVerifying, setIsVerifying] = useState(false);
   const [tokenError, setTokenError] = useState<string | null>(null);
+
+  // GitHub OAuth / App loading and error state
+  const [isGithubAuthLoading, setIsGithubAuthLoading] = useState(false);
+  const [githubAuthError, setGithubAuthError] = useState<string | null>(null);
 
   const finish = useCallback(async () => {
     await OnboardingService.completeOnboarding();
@@ -93,7 +128,10 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
     } else if (currentStep === TOKEN_STEP) {
       if (token.trim()) {
         const normalizedInstanceUrl = instanceUrl.trim();
-        if (selectedProvider !== 'github' && normalizedInstanceUrl) {
+        if (
+          selectedProvider !== 'github' &&
+          normalizedInstanceUrl
+        ) {
           let parsedInstanceUrl: URL;
           try {
             parsedInstanceUrl = new URL(normalizedInstanceUrl);
@@ -101,7 +139,10 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
             setTokenError(t('connectHost.error.invalidUrl'));
             return;
           }
-          if (parsedInstanceUrl.protocol !== 'https:' && parsedInstanceUrl.protocol !== 'http:') {
+          if (
+            parsedInstanceUrl.protocol !== 'https:' &&
+            parsedInstanceUrl.protocol !== 'http:'
+          ) {
             setTokenError(t('connectHost.error.invalidUrl'));
             return;
           }
@@ -111,7 +152,11 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
                 t('provider.insecureUrlTitle'),
                 t('provider.insecureUrlBody'),
                 [
-                  { text: t('common.cancel'), style: 'cancel', onPress: () => resolve(false) },
+                  {
+                    text: t('common.cancel'),
+                    style: 'cancel',
+                    onPress: () => resolve(false),
+                  },
                   { text: t('common.continue'), onPress: () => resolve(true) },
                 ],
               );
@@ -124,7 +169,10 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
         const result = await connectHost({
           provider: selectedProvider,
           token: token.trim(),
-          instanceBaseUrl: selectedProvider === 'github' ? null : (normalizedInstanceUrl || null),
+          instanceBaseUrl:
+            selectedProvider === 'github'
+              ? null
+              : normalizedInstanceUrl || null,
         });
         if (result.ok) {
           await refreshAccounts();
@@ -135,22 +183,138 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
           setTokenError(result.error ?? 'Invalid token. Please check and try again.');
         }
       } else {
-        setCurrentStep(AI_STEP);
+      setCurrentStep(AI_STEP);
       }
     } else if (currentStep === AI_STEP) {
       await finish();
     }
-  }, [currentStep, token, selectedProvider, instanceUrl, connectHost, refreshAccounts, finish, AI_STEP, TOKEN_STEP, t]);
+  }, [
+    currentStep,
+    token,
+    selectedProvider,
+    instanceUrl,
+    connectHost,
+    refreshAccounts,
+    finish,
+    AI_STEP,
+    TOKEN_STEP,
+    t,
+  ]);
 
   const handleSkip = useCallback(async () => {
     await OnboardingService.completeOnboarding();
     onSkip();
   }, [onSkip]);
 
+  /**
+   * Initiate GitHub OAuth flow.
+   * Follows the same pattern as SettingsScreen.handleConnectOAuth.
+   */
+  const handleInitiateOAuth = useCallback(async () => {
+    setIsGithubAuthLoading(true);
+    setGithubAuthError(null);
+    try {
+      const backendUrl = resolveBackendUrl();
+      const clientId = process.env.EXPO_PUBLIC_GITHUB_OAUTH_CLIENT_ID;
+      if (!clientId) {
+        setGithubAuthError('OAuth not configured on this device');
+        return;
+      }
+      const redirectUri = OAUTH_CALLBACK_URL;
+      const result = await GitHubOAuthService.initiate({
+        backendUrl,
+        redirectUri,
+        clientId,
+        hostId: null,
+      });
+      if (!result.ok) {
+        setGithubAuthError(
+          result.reason === 'backend_unreachable'
+            ? 'Server unavailable. Check your connection.'
+            : 'Could not start sign-in.',
+        );
+        return;
+      }
+      const browserResult = await GitHubOAuthService.openAuthorizationUrl(
+        result.authorizationUrl,
+        redirectUri,
+      );
+      if (browserResult.outcome === 'failed') {
+        setGithubAuthError('Could not open browser');
+        return;
+      }
+      if (browserResult.outcome === 'cancelled') {
+        setGithubAuthError('GitHub sign-in was cancelled');
+        return;
+      }
+      if (browserResult.outcome === 'callback') {
+        const callback = new URL(browserResult.url);
+        navigation.navigate('OAuthCallback', {
+          code: callback.searchParams.get('code') ?? undefined,
+          state: callback.searchParams.get('state') ?? undefined,
+          error: callback.searchParams.get('error') ?? undefined,
+          error_description:
+            callback.searchParams.get('error_description') ?? undefined,
+        });
+      }
+        setCurrentStep(AI_STEP);
+    } catch (err) {
+      setGithubAuthError(
+        err instanceof Error ? err.message : 'Unknown error',
+      );
+    } finally {
+      setIsGithubAuthLoading(false);
+    }
+  }, [AI_STEP, navigation]);
+
+  /**
+   * Initiate GitHub App installation flow.
+   * Follows the same pattern as SettingsScreen.handleConnectGitHubApp.
+   */
+  const handleInitiateGitHubApp = useCallback(async () => {
+    setIsGithubAuthLoading(true);
+    setGithubAuthError(null);
+    try {
+      const backendUrl = resolveBackendUrl();
+      const result = await GitHubAppService.buildInstallUrl({
+        backendUrl,
+        hostId: null,
+        selectedRepositoryIds: [],
+      });
+      if (!result.ok) {
+        setGithubAuthError(
+          result.reason === 'backend_unreachable'
+            ? 'Server unavailable. Check your connection.'
+            : result.reason === 'not_configured'
+              ? 'GitHub App not configured on this device'
+              : 'Could not start installation.',
+        );
+        return;
+      }
+      const opened = await GitHubAppService.openInstallationUrl(
+        result.installationUrl,
+      );
+      if (!opened) {
+        setGithubAuthError('Could not open browser');
+        return;
+      }
+      // Advance past the token step while the callback runs in the background.
+      // AppCallbackScreen navigates to MainTabs on completion.
+      setCurrentStep(AI_STEP);
+    } catch (err) {
+      setGithubAuthError(
+        err instanceof Error ? err.message : 'Unknown error',
+      );
+    } finally {
+      setIsGithubAuthLoading(false);
+    }
+  }, [AI_STEP]);
+
   const isTokenStep = currentStep === TOKEN_STEP;
   const isAIStep = currentStep === AI_STEP;
 
   const showInstanceUrl = selectedProvider !== 'github';
+  const isGitHub = selectedProvider === 'github';
 
   const getTokenSettingsUrl = (): string | null => {
     if (selectedProvider === 'github') {
@@ -164,8 +328,274 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
 
   const tokenSettingsUrl = getTokenSettingsUrl();
 
+  const renderGitHubAuthMethodSelector = () => (
+    <View className="w-full gap-3" style={{ paddingBottom: 16 }}>
+      <View className="flex-row gap-2" style={{ alignSelf: 'center' }}>
+        <TouchableOpacity
+          testID="onboarding.github-auth.pat"
+          className="flex-1 items-center px-3 py-2.5 rounded-lg border"
+          style={{
+            borderColor:
+              githubAuthMethod === 'pat' ? colors.accent : colors.border,
+            backgroundColor:
+              githubAuthMethod === 'pat'
+                ? `${colors.accent}15`
+                : 'transparent',
+          }}
+          onPress={() => {
+            setGithubAuthMethod('pat');
+            setGithubAuthError(null);
+          }}
+          disabled={isGithubAuthLoading}
+        >
+          <Ionicons
+            name="key-outline"
+            size={18}
+            color={
+              githubAuthMethod === 'pat' ? colors.accent : colors.textSecondary
+            }
+          />
+          <Text
+            className="text-xs font-medium mt-1.5"
+            style={{
+              color:
+                githubAuthMethod === 'pat'
+                  ? colors.accent
+                  : colors.textSecondary,
+            }}
+          >
+            PAT
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          testID="onboarding.github-auth.oauth"
+          className="flex-1 items-center px-3 py-2.5 rounded-lg border"
+          style={{
+            borderColor:
+              githubAuthMethod === 'oauth' ? colors.accent : colors.border,
+            backgroundColor:
+              githubAuthMethod === 'oauth'
+                ? `${colors.accent}15`
+                : 'transparent',
+          }}
+          onPress={() => {
+            setGithubAuthMethod('oauth');
+            setGithubAuthError(null);
+          }}
+          disabled={isGithubAuthLoading}
+        >
+          <Ionicons
+            name="logo-github"
+            size={18}
+            color={
+              githubAuthMethod === 'oauth'
+                ? colors.accent
+                : colors.textSecondary
+            }
+          />
+          <Text
+            className="text-xs font-medium mt-1.5"
+            style={{
+              color:
+                githubAuthMethod === 'oauth'
+                  ? colors.accent
+                  : colors.textSecondary,
+            }}
+          >
+            OAuth
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          testID="onboarding.github-auth.app"
+          className="flex-1 items-center px-3 py-2.5 rounded-lg border"
+          style={{
+            borderColor:
+              githubAuthMethod === 'app' ? colors.accent : colors.border,
+            backgroundColor:
+              githubAuthMethod === 'app'
+                ? `${colors.accent}15`
+                : 'transparent',
+          }}
+          onPress={() => {
+            setGithubAuthMethod('app');
+            setGithubAuthError(null);
+          }}
+          disabled={isGithubAuthLoading}
+        >
+          <Ionicons
+            name="apps-outline"
+            size={18}
+            color={
+              githubAuthMethod === 'app' ? colors.accent : colors.textSecondary
+            }
+          />
+          <Text
+            className="text-xs font-medium mt-1.5"
+            style={{
+              color:
+                githubAuthMethod === 'app'
+                  ? colors.accent
+                  : colors.textSecondary,
+            }}
+          >
+            GitHub App
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {githubAuthMethod === 'pat' && (
+        <>
+          <Input
+            testID="onboarding.input.token"
+            placeholder={t('onboarding.tokenPlaceholder', {
+              defaultValue: 'ghpat_xxxxxxxxxxxxxxxxxxxx',
+            })}
+            value={token}
+            onChangeText={(t_) => {
+              setToken(t_);
+              setTokenError(null);
+            }}
+            secureTextEntry
+            autoCapitalize="none"
+            autoCorrect={false}
+            showSoftInputOnFocus={false}
+            containerStyle={{ width: '100%' }}
+          />
+
+          {tokenSettingsUrl && (
+            <Button
+              variant="ghost"
+              testID="onboarding.button.open-link"
+              onPress={() => Linking.openURL(tokenSettingsUrl)}
+              leadingIcon={
+                <Ionicons
+                  name="open-outline"
+                  size={14}
+                  color={colors.accent}
+                />
+              }
+              label={t('onboarding.tokenOpenLink', {
+                defaultValue: 'Open token settings',
+              })}
+              textStyle={{ color: colors.text, fontSize: 14, fontWeight: '500' }}
+              style={{ marginBottom: 16 }}
+            />
+          )}
+
+          <View style={{ alignItems: 'center' }}>
+            <TouchableOpacity
+              testID="onboarding.button.paste-token"
+              className="flex-row items-center gap-2 py-3 px-4"
+              onPress={async () => {
+                const text = await Clipboard.getStringAsync();
+                if (text) {
+                  setToken(text);
+                  setTokenError(null);
+                }
+              }}
+            >
+              <Ionicons
+                name="clipboard-outline"
+                size={16}
+                color={colors.accent}
+              />
+              <Text
+                className="text-sm font-medium"
+                style={{ color: colors.accent }}
+              >
+                {t('onboarding.tokenPaste', {
+                  defaultValue: 'Paste from Clipboard',
+                })}
+              </Text>
+            </TouchableOpacity>
+          </View>
+          {tokenError ? (
+            <Text className="text-[13px] text-center mt-2" style={{ color: '#FF3B30' }}>
+              {tokenError}
+            </Text>
+          ) : null}
+        </>
+      )}
+
+      {githubAuthMethod === 'oauth' && (
+        <View className="items-center gap-3" style={{ paddingTop: 8 }}>
+          <Button
+            variant="primary"
+            fullWidth
+            testID="onboarding.button.oauth"
+            disabled={isGithubAuthLoading}
+            onPress={handleInitiateOAuth}
+            label={
+              isGithubAuthLoading
+                ? 'Connecting...'
+                : 'Sign in with GitHub'
+            }
+            leadingIcon={
+              isGithubAuthLoading ? (
+                <ActivityIndicator color={colors.accent} size={18} />
+              ) : (
+                <Ionicons name="logo-github" size={18} color={colors.accent} />
+              )
+            }
+          />
+          <Text
+            className="text-xs text-center"
+            style={{ color: colors.textSecondary }}
+          >
+            Opens GitHub in your browser. No token needed.
+          </Text>
+        </View>
+      )}
+
+      {githubAuthMethod === 'app' && (
+        <View className="items-center gap-3" style={{ paddingTop: 8 }}>
+          <Button
+            variant="primary"
+            fullWidth
+            testID="onboarding.button.app"
+            disabled={isGithubAuthLoading}
+            onPress={handleInitiateGitHubApp}
+            label={
+              isGithubAuthLoading
+                ? 'Connecting...'
+                : 'Install GitHub App'
+            }
+            leadingIcon={
+              isGithubAuthLoading ? (
+                <ActivityIndicator color={colors.accent} size={18} />
+              ) : (
+                <Ionicons name="apps-outline" size={18} color={colors.accent} />
+              )
+            }
+          />
+          <Text
+            className="text-xs text-center"
+            style={{ color: colors.textSecondary }}
+          >
+            Install the GitNotēs GitHub App for repository access.
+          </Text>
+        </View>
+      )}
+
+      {githubAuthError ? (
+        <Text
+          className="text-[13px] text-center"
+          style={{ color: '#FF3B30' }}
+        >
+          {githubAuthError}
+        </Text>
+      ) : null}
+    </View>
+  );
+
   return (
-    <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }} edges={['top', 'bottom']}>
+    <SafeAreaView
+      className="flex-1"
+      style={{ backgroundColor: colors.background }}
+      edges={['top', 'bottom']}
+    >
       <KeyboardAvoidingView
         className="flex-1"
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -176,24 +606,54 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
           keyboardShouldPersistTaps="handled"
         >
           <View className="flex-row justify-end px-5 pt-2.5">
-            <Button variant="ghost" label="Skip" testID="onboarding.button.skip" onPress={handleSkip} />
+            <Button
+              variant="ghost"
+              label="Skip"
+              testID="onboarding.button.skip"
+              onPress={handleSkip}
+            />
           </View>
 
           {isTokenStep ? (
-            <View className="flex-1 px-10" style={{ justifyContent: 'center' }}>
-              <Surface elevation="raised" radius="pill" className="w-[140px] h-[140px] items-center justify-center mb-6 self-center">
-                <Ionicons name="git-network-outline" size={72} color={colors.accent} />
+            <View
+              className="flex-1 px-10"
+              style={{ justifyContent: 'center' }}
+            >
+              <Surface
+                elevation="raised"
+                radius="pill"
+                className="w-[140px] h-[140px] items-center justify-center mb-6 self-center"
+              >
+                <Ionicons
+                  name="git-network-outline"
+                  size={72}
+                  color={colors.accent}
+                />
               </Surface>
 
-              <Text className="text-[28px] font-bold text-center" style={{ color: colors.text }}>
-                {t('onboarding.tokenTitle', { defaultValue: 'Connect a Git Host' })}
+              <Text
+                className="text-[28px] font-bold text-center"
+                style={{ color: colors.text }}
+              >
+                {t('onboarding.tokenTitle', {
+                  defaultValue: 'Connect a Git Host',
+                })}
               </Text>
-              <Text className="text-base text-center leading-6" style={{ color: colors.textSecondary }}>
-                {t('onboarding.tokenDescription', { defaultValue: 'Select your provider and enter a Personal Access Token with read/write repository access. You can skip this and add it later in Settings.' })}
+              <Text
+                className="text-base text-center leading-6"
+                style={{ color: colors.textSecondary }}
+              >
+                {t('onboarding.tokenDescription', {
+                  defaultValue:
+                    'Select your provider and enter a Personal Access Token with read/write repository access. You can skip this and add it later in Settings.',
+                })}
               </Text>
 
               <View className="w-full gap-2" style={{ paddingBottom: 16 }}>
-                <Text className="text-sm font-medium mb-1" style={{ color: colors.textSecondary }}>
+                <Text
+                  className="text-sm font-medium mb-1"
+                  style={{ color: colors.textSecondary }}
+                >
                   {t('onboarding.provider.label', { defaultValue: 'Provider' })}
                 </Text>
                 <ProviderSelector
@@ -202,6 +662,9 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
                     if (provider === 'all') return;
                     setSelectedProvider(provider);
                     setInstanceUrl(GIT_HOST_API_BASES[provider]);
+                    setGithubAuthMethod('pat');
+                    setTokenError(null);
+                    setGithubAuthError(null);
                   }}
                 />
               </View>
@@ -211,7 +674,10 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
                   testID="onboarding.input.instance-url"
                   placeholder={GIT_HOST_API_BASES[selectedProvider]}
                   value={instanceUrl}
-                  onChangeText={(t) => { setInstanceUrl(t); setTokenError(null); }}
+                  onChangeText={(t_) => {
+                    setInstanceUrl(t_);
+                    setTokenError(null);
+                  }}
                   autoCapitalize="none"
                   autoCorrect={false}
                   keyboardType="url"
@@ -219,82 +685,166 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
                 />
               )}
 
-              <Input
-                testID="onboarding.input.token"
-                placeholder={t('onboarding.tokenPlaceholder', { defaultValue: 'glpat_xxxxxxxxxxxxxxxxxxxx' })}
-                value={token}
-                onChangeText={(t) => { setToken(t); setTokenError(null); }}
-                secureTextEntry
-                autoCapitalize="none"
-                autoCorrect={false}
-                showSoftInputOnFocus={false}
-                containerStyle={{ width: '100%' }}
-              />
+              {isGitHub ? (
+                renderGitHubAuthMethodSelector()
+              ) : (
+                <>
+                  <Input
+                    testID="onboarding.input.token"
+                    placeholder={t('onboarding.tokenPlaceholder', {
+                      defaultValue: 'glpat_xxxxxxxxxxxxxxxxxxxx',
+                    })}
+                    value={token}
+                    onChangeText={(t_) => {
+                      setToken(t_);
+                      setTokenError(null);
+                    }}
+                    secureTextEntry
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    showSoftInputOnFocus={false}
+                    containerStyle={{ width: '100%' }}
+                  />
 
-              {tokenSettingsUrl && (
-                <Button
-                  variant="ghost"
-                  testID="onboarding.button.open-link"
-                  onPress={() => Linking.openURL(tokenSettingsUrl)}
-                  leadingIcon={<Ionicons name="open-outline" size={14} color={colors.accent} />}
-                  label={t('onboarding.tokenOpenLink', { defaultValue: 'Open token settings' })}
-                  textStyle={{ color: colors.text, fontSize: 14, fontWeight: '500' }}
-                  style={{ marginBottom: 16 }}
-                />
+                  {tokenSettingsUrl && (
+                    <Button
+                      variant="ghost"
+                      testID="onboarding.button.open-link"
+                      onPress={() => Linking.openURL(tokenSettingsUrl)}
+                      leadingIcon={
+                        <Ionicons
+                          name="open-outline"
+                          size={14}
+                          color={colors.accent}
+                        />
+                      }
+                      label={t('onboarding.tokenOpenLink', {
+                        defaultValue: 'Open token settings',
+                      })}
+                      textStyle={{
+                        color: colors.text,
+                        fontSize: 14,
+                        fontWeight: '500',
+                      }}
+                      style={{ marginBottom: 16 }}
+                    />
+                  )}
+
+                  <View style={{ alignItems: 'center' }}>
+                    <TouchableOpacity
+                      testID="onboarding.button.paste-token"
+                      className="flex-row items-center gap-2 py-3 px-4"
+                      onPress={async () => {
+                        const text = await Clipboard.getStringAsync();
+                        if (text) {
+                          setToken(text);
+                          setTokenError(null);
+                        }
+                      }}
+                    >
+                      <Ionicons
+                        name="clipboard-outline"
+                        size={16}
+                        color={colors.accent}
+                      />
+                      <Text
+                        className="text-sm font-medium"
+                        style={{ color: colors.accent }}
+                      >
+                        {t('onboarding.tokenPaste', {
+                          defaultValue: 'Paste from Clipboard',
+                        })}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {tokenError ? (
+                    <Text
+                      className="text-[13px] text-center mt-2"
+                      style={{ color: '#FF3B30' }}
+                    >
+                      {tokenError}
+                    </Text>
+                  ) : null}
+                </>
               )}
 
-              <TouchableOpacity
-                testID="onboarding.button.paste-token"
-                className="flex-row items-center gap-2 py-3 px-4"
-                onPress={async () => {
-                  const text = await Clipboard.getStringAsync();
-                  if (text) {
-                    setToken(text);
-                    setTokenError(null);
-                  }
-                }}
-              >
-                <Ionicons name="clipboard-outline" size={16} color={colors.accent} />
-                <Text className="text-sm font-medium" style={{ color: colors.accent }}>
-                  {t('onboarding.tokenPaste', { defaultValue: 'Paste from Clipboard' })}
-                </Text>
-              </TouchableOpacity>
-
-              {tokenError ? (
-                <Text className="text-[13px] text-center mt-2" style={{ color: '#FF3B30' }}>{tokenError}</Text>
-              ) : null}
             </View>
           ) : isAIStep ? (
             <View className="flex-1 px-10 items-center">
-              <Surface elevation="raised" radius="pill" className="w-[140px] h-[140px] items-center justify-center mb-6">
-                <Ionicons name="sparkles-outline" size={72} color={colors.accent} />
+              <Surface
+                elevation="raised"
+                radius="pill"
+                className="w-[140px] h-[140px] items-center justify-center mb-6"
+              >
+                <Ionicons
+                  name="sparkles-outline"
+                  size={72}
+                  color={colors.accent}
+                />
               </Surface>
-              <Text className="text-[28px] font-bold text-center" style={{ color: colors.text }}>
+              <Text
+                className="text-[28px] font-bold text-center"
+                style={{ color: colors.text }}
+              >
                 {t('onboarding.pro.title', { defaultValue: 'GitNotēs Pro' })}
               </Text>
-              <Text className="text-base text-center leading-6" style={{ color: colors.textSecondary }}>
-                {t('onboarding.pro.body', { defaultValue: 'The free plan includes 1 account and 1 repo. GitNotēs Pro unlocks AI chat, thought & voice dump, personalized quotes, canvases, templates, more repos and accounts.' })}
+              <Text
+                className="text-base text-center leading-6"
+                style={{ color: colors.textSecondary }}
+              >
+                {t('onboarding.pro.body', {
+                  defaultValue:
+                    'The free plan includes 1 account and 1 repo. GitNotēs Pro unlocks AI chat, thought & voice dump, personalized quotes, canvases, templates, more repos and accounts.',
+                })}
               </Text>
-              <Text className="text-[13px] text-center leading-[18px] mt-2 opacity-80" style={{ color: colors.textSecondary }}>
-                {t('onboarding.pro.reminder', { defaultValue: 'You can upgrade anytime in Settings → GitNotēs Pro.' })}
+              <Text
+                className="text-[13px] text-center leading-[18px] mt-2 opacity-80"
+                style={{ color: colors.textSecondary }}
+              >
+                {t('onboarding.pro.reminder', {
+                  defaultValue:
+                    'You can upgrade anytime in Settings → GitNotēs Pro.',
+                })}
               </Text>
               <TouchableOpacity
                 testID="onboarding.button.configure-api-key"
-                onPress={() => navigation.navigate('MainTabs', { screen: 'SettingsTab' })}
+                onPress={() =>
+                  navigation.navigate('MainTabs', { screen: 'SettingsTab' })
+                }
                 className="mt-4"
               >
-                <Text className="text-[13px] font-medium" style={{ color: colors.accent }}>
+                <Text
+                  className="text-[13px] font-medium"
+                  style={{ color: colors.accent }}
+                >
                   Settings
                 </Text>
               </TouchableOpacity>
             </View>
           ) : (
             <View className="flex-1 px-10 items-center">
-              <Surface elevation="raised" radius="pill" className="w-[140px] h-[140px] items-center justify-center mb-6">
-                <Ionicons name={INFO_STEPS[currentStep].icon} size={72} color={colors.accent} />
+              <Surface
+                elevation="raised"
+                radius="pill"
+                className="w-[140px] h-[140px] items-center justify-center mb-6"
+              >
+                <Ionicons
+                  name={INFO_STEPS[currentStep].icon}
+                  size={72}
+                  color={colors.accent}
+                />
               </Surface>
-              <Text className="text-[28px] font-bold text-center" style={{ color: colors.text }}>{INFO_STEPS[currentStep].title}</Text>
-              <Text className="text-base text-center leading-6" style={{ color: colors.textSecondary }}>
+              <Text
+                className="text-[28px] font-bold text-center"
+                style={{ color: colors.text }}
+              >
+                {INFO_STEPS[currentStep].title}
+              </Text>
+              <Text
+                className="text-base text-center leading-6"
+                style={{ color: colors.textSecondary }}
+              >
                 {INFO_STEPS[currentStep].description}
               </Text>
             </View>
@@ -312,7 +862,8 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
                     width: 14,
                     height: 14,
                     marginHorizontal: 4,
-                    backgroundColor: index === currentStep ? colors.accent : colors.surface,
+                    backgroundColor:
+                      index === currentStep ? colors.accent : colors.surface,
                   }}
                 >
                   <View />
@@ -327,7 +878,37 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
                 testID="onboarding.button.pro-continue"
                 onPress={handleNext}
                 label={t('common.continue', { defaultValue: 'Continue' })}
-                trailingIcon={<Ionicons name="checkmark" size={20} color={colors.accent} />}
+                trailingIcon={
+                  <Ionicons name="checkmark" size={20} color={colors.accent} />
+                }
+                iconAlign="edge"
+              />
+            ) : isGitHub && githubAuthMethod !== 'pat' ? (
+              // OAuth / App selected — Next skips token step; auth runs in background
+              <Button
+                variant="primary"
+                fullWidth
+                testID="onboarding.button.next"
+                onPress={handleNext}
+                disabled={isGithubAuthLoading}
+                label={
+                  isGithubAuthLoading
+                    ? t('common.connecting', { defaultValue: 'Connecting...' })
+                    : t('onboarding.skipForNow', {
+                        defaultValue: 'Skip for Now',
+                      })
+                }
+                trailingIcon={
+                  isGithubAuthLoading ? (
+                    <ActivityIndicator color={colors.accent} />
+                  ) : (
+                    <Ionicons
+                      name="arrow-forward"
+                      size={20}
+                      color={colors.accent}
+                    />
+                  )
+                }
                 iconAlign="edge"
               />
             ) : (
@@ -341,14 +922,24 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
                   isVerifying
                     ? t('common.connecting', { defaultValue: 'Connecting...' })
                     : isTokenStep
-                      ? (token.trim() ? t('onboarding.tokenConnect', { defaultValue: 'Connect' }) : t('onboarding.skipForNow', { defaultValue: 'Skip for Now' }))
+                      ? token.trim()
+                        ? t('onboarding.tokenConnect', {
+                            defaultValue: 'Connect',
+                          })
+                        : t('onboarding.skipForNow', {
+                            defaultValue: 'Skip for Now',
+                          })
                       : t('common.next', { defaultValue: 'Next' })
                 }
                 trailingIcon={
                   isVerifying ? (
                     <ActivityIndicator color={colors.accent} />
                   ) : (
-                    <Ionicons name="arrow-forward" size={20} color={colors.accent} />
+                    <Ionicons
+                      name="arrow-forward"
+                      size={20}
+                      color={colors.accent}
+                    />
                   )
                 }
                 iconAlign="edge"
@@ -360,7 +951,11 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
               <Text
                 testID="onboarding.button.report-issue"
                 style={{ color: colors.accent, fontWeight: '600' }}
-                onPress={() => Linking.openURL('https://github.com/skepjandi/gitnotes/issues')}
+                onPress={() =>
+                  Linking.openURL(
+                    'https://github.com/skepjandi/gitnotes/issues',
+                  )
+                }
               >
                 Report it on GitHub Issues
               </Text>

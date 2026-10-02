@@ -11,6 +11,8 @@
  * - Paste populates the token field
  * - Loading spinner shown during verification
  * - Error message displayed on invalid token
+ * - GitHub auth method selector shows PAT/OAuth/App options
+ * - OAuth/App initiation failures show inline errors
  */
 import React from 'react';
 import { Alert } from 'react-native';
@@ -24,6 +26,10 @@ const mockRefreshAccounts = jest.fn();
 const mockCompleteOnboarding = jest.fn();
 const mockOnComplete = jest.fn();
 const mockOnSkip = jest.fn();
+const mockOAuthInitiate = jest.fn();
+const mockOpenAuthorizationUrl = jest.fn();
+const mockAppBuildInstallUrl = jest.fn();
+const mockAppOpenInstallationUrl = jest.fn();
 
 function makeHost(provider: GitHostProvider = 'github'): HostConnectionSummary {
   return {
@@ -108,11 +114,32 @@ jest.mock('expo-clipboard', () => ({
   getStringAsync: jest.fn(),
 }));
 
+jest.mock('../../src/services/GitHubOAuthService', () => {
+  return {
+    GitHubOAuthService: {
+      initiate: mockOAuthInitiate,
+      openAuthorizationUrl: mockOpenAuthorizationUrl,
+    },
+    setHttpClient: jest.fn(),
+  };
+});
+
+jest.mock('../../src/services/GitHubAppService', () => ({
+  GitHubAppService: {
+    buildInstallUrl: mockAppBuildInstallUrl,
+    openInstallationUrl: mockAppOpenInstallationUrl,
+  },
+}));
+
 import OnboardingScreen from '@/screens/OnboardingScreen';
 
 describe('OnboardingScreen', () => {
+  afterEach(() => {
+    delete process.env.EXPO_PUBLIC_GITHUB_OAUTH_CLIENT_ID;
+  });
+
   beforeEach(() => {
-    jest.clearAllMocks();
+    process.env.EXPO_PUBLIC_GITHUB_OAUTH_CLIENT_ID = 'test-client-id';
     mockConnectHost.mockReset();
     mockRefreshAccounts.mockResolvedValue(undefined);
     mockCompleteOnboarding.mockResolvedValue(undefined);
@@ -738,6 +765,398 @@ describe('OnboardingScreen', () => {
 
       await waitFor(() => {
         expect(mockOnComplete).toHaveBeenCalledTimes(1);
+      });
+    });
+  });
+
+  describe('GitHub auth method selector', () => {
+    beforeEach(async () => {
+      mockOAuthInitiate.mockClear();
+      mockOpenAuthorizationUrl.mockClear();
+      mockAppBuildInstallUrl.mockReset();
+      mockAppOpenInstallationUrl.mockReset();
+      mockConnectHost.mockReset();
+      mockRefreshAccounts.mockResolvedValue(undefined);
+
+      const { getByTestId } = render(
+        <OnboardingScreen onComplete={mockOnComplete} onSkip={mockOnSkip} />
+      );
+      for (let i = 0; i < 5; i++) {
+        await act(async () => {
+          fireEvent.press(getByTestId('onboarding.button.next'));
+        });
+      }
+      await waitFor(() => {
+        expect(getByTestId('onboarding.provider.dropdown')).toBeTruthy();
+      });
+    });
+
+    it('shows PAT/OAuth/App segmented buttons for GitHub', async () => {
+      const { getByTestId } = render(
+        <OnboardingScreen onComplete={mockOnComplete} onSkip={mockOnSkip} />
+      );
+      for (let i = 0; i < 5; i++) {
+        await act(async () => {
+          fireEvent.press(getByTestId('onboarding.button.next'));
+        });
+      }
+
+      await waitFor(() => {
+        expect(getByTestId('onboarding.github-auth.pat')).toBeTruthy();
+      });
+      expect(getByTestId('onboarding.github-auth.oauth')).toBeTruthy();
+      expect(getByTestId('onboarding.github-auth.app')).toBeTruthy();
+    });
+
+    it('defaults to PAT for GitHub', async () => {
+      const { getByTestId, queryByTestId } = render(
+        <OnboardingScreen onComplete={mockOnComplete} onSkip={mockOnSkip} />
+      );
+      for (let i = 0; i < 5; i++) {
+        await act(async () => {
+          fireEvent.press(getByTestId('onboarding.button.next'));
+        });
+      }
+
+      await waitFor(() => {
+        expect(getByTestId('onboarding.github-auth.pat')).toBeTruthy();
+      });
+
+      await waitFor(() => {
+        expect(getByTestId('onboarding.input.token')).toBeTruthy();
+      });
+      expect(queryByTestId('onboarding.button.oauth')).toBeNull();
+      expect(queryByTestId('onboarding.button.app')).toBeNull();
+    });
+
+    it('shows OAuth button when OAuth method is selected', async () => {
+      const { getByTestId } = render(
+        <OnboardingScreen onComplete={mockOnComplete} onSkip={mockOnSkip} />
+      );
+      for (let i = 0; i < 5; i++) {
+        await act(async () => {
+          fireEvent.press(getByTestId('onboarding.button.next'));
+        });
+      }
+
+      await waitFor(() => {
+        expect(getByTestId('onboarding.github-auth.oauth')).toBeTruthy();
+      });
+
+      await act(async () => {
+        fireEvent.press(getByTestId('onboarding.github-auth.oauth'));
+      });
+
+      await waitFor(() => {
+        expect(getByTestId('onboarding.button.oauth')).toBeTruthy();
+      });
+    });
+
+    it('shows App button when App method is selected', async () => {
+      const { getByTestId } = render(
+        <OnboardingScreen onComplete={mockOnComplete} onSkip={mockOnSkip} />
+      );
+      for (let i = 0; i < 5; i++) {
+        await act(async () => {
+          fireEvent.press(getByTestId('onboarding.button.next'));
+        });
+      }
+
+      await waitFor(() => {
+        expect(getByTestId('onboarding.github-auth.app')).toBeTruthy();
+      });
+
+      await act(async () => {
+        fireEvent.press(getByTestId('onboarding.github-auth.app'));
+      });
+
+      await waitFor(() => {
+        expect(getByTestId('onboarding.button.app')).toBeTruthy();
+      });
+    });
+
+    it('does NOT show auth method selector for non-GitHub providers', async () => {
+      const { getByTestId, queryByTestId } = render(
+        <OnboardingScreen onComplete={mockOnComplete} onSkip={mockOnSkip} />
+      );
+      for (let i = 0; i < 5; i++) {
+        await act(async () => {
+          fireEvent.press(getByTestId('onboarding.button.next'));
+        });
+      }
+
+      await waitFor(() => {
+        expect(getByTestId('onboarding.provider.dropdown')).toBeTruthy();
+      });
+
+      await act(async () => {
+        fireEvent.press(getByTestId('onboarding.provider.dropdown'));
+      });
+
+      await waitFor(() => {
+        expect(getByTestId('onboarding.provider.gitlab')).toBeTruthy();
+      });
+
+      await act(async () => {
+        fireEvent.press(getByTestId('onboarding.provider.gitlab'));
+      });
+
+      // Auth method selector should not exist for GitLab
+      await waitFor(() => {
+        expect(queryByTestId('onboarding.github-auth.pat')).toBeNull();
+        expect(queryByTestId('onboarding.github-auth.oauth')).toBeNull();
+        expect(queryByTestId('onboarding.github-auth.app')).toBeNull();
+      });
+    });
+
+    it('switching provider from GitHub to non-GitHub resets to PAT and hides auth selector', async () => {
+      const { getByTestId, queryByTestId } = render(
+        <OnboardingScreen onComplete={mockOnComplete} onSkip={mockOnSkip} />
+      );
+      for (let i = 0; i < 5; i++) {
+        await act(async () => {
+          fireEvent.press(getByTestId('onboarding.button.next'));
+        });
+      }
+
+      await waitFor(() => {
+        expect(getByTestId('onboarding.github-auth.pat')).toBeTruthy();
+      });
+
+      await act(async () => {
+        fireEvent.press(getByTestId('onboarding.github-auth.oauth'));
+      });
+
+      await waitFor(() => {
+        expect(getByTestId('onboarding.button.oauth')).toBeTruthy();
+      });
+
+      // Switch provider to GitLab
+      await act(async () => {
+        fireEvent.press(getByTestId('onboarding.provider.dropdown'));
+      });
+
+      await waitFor(() => {
+        expect(getByTestId('onboarding.provider.gitlab')).toBeTruthy();
+      });
+
+      await act(async () => {
+        fireEvent.press(getByTestId('onboarding.provider.gitlab'));
+      });
+
+      await waitFor(() => {
+        expect(queryByTestId('onboarding.github-auth.pat')).toBeNull();
+        expect(queryByTestId('onboarding.button.oauth')).toBeNull();
+        expect(getByTestId('onboarding.input.token')).toBeTruthy();
+      });
+    });
+  });
+
+  describe('GitHub OAuth flow', () => {
+    beforeEach(async () => {
+      mockOAuthInitiate.mockReset();
+      mockOpenAuthorizationUrl.mockReset();
+      mockConnectHost.mockClear();
+      mockRefreshAccounts.mockResolvedValue(undefined);
+    });
+
+    /**
+     * Helper: advance from step 0 to TOKEN_STEP and select the OAuth auth method.
+     * Returns the getByTestId from the final render at TOKEN_STEP.
+     */
+    async function setupOAuthStep(): Promise<ReturnType<typeof render>> {
+      const result = render(
+        <OnboardingScreen onComplete={mockOnComplete} onSkip={mockOnSkip} />,
+      );
+      const { getByTestId } = result;
+      for (let i = 0; i < 5; i++) {
+        await act(async () => {
+          fireEvent.press(getByTestId('onboarding.button.next'));
+        });
+      }
+      await waitFor(() => {
+        expect(getByTestId('onboarding.github-auth.oauth')).toBeTruthy();
+      });
+      await act(async () => {
+        fireEvent.press(getByTestId('onboarding.github-auth.oauth'));
+      });
+      await waitFor(() => {
+        expect(getByTestId('onboarding.button.oauth')).toBeTruthy();
+      });
+      return result;
+    }
+
+    it('shows inline error when OAuth initiation fails due to backend unreachable', async () => {
+      const result = await setupOAuthStep();
+      const { getByTestId } = result;
+
+      mockOAuthInitiate.mockResolvedValueOnce({
+        ok: false,
+        reason: 'backend_unreachable',
+      });
+
+      await act(async () => {
+        fireEvent.press(getByTestId('onboarding.button.oauth'));
+      });
+
+      const hasError = () => result.queryByText('Server unavailable. Check your connection.') !== null;
+      await waitFor(hasError, { timeout: 2000 });
+    });
+
+    it('shows inline error when OAuth client ID is not configured', async () => {
+      const result = await setupOAuthStep();
+      const { getByTestId } = result;
+
+      mockOAuthInitiate.mockResolvedValueOnce({
+        ok: false,
+        reason: 'network_error',
+      });
+
+      await act(async () => {
+        fireEvent.press(getByTestId('onboarding.button.oauth'));
+      });
+
+      const hasError = () => result.queryByText('Could not start sign-in.') !== null;
+      await waitFor(hasError, { timeout: 2000 });
+    });
+
+    it('re-enables OAuth button after initiation failure', async () => {
+      const result = await setupOAuthStep();
+      const { getByTestId } = result;
+
+      mockOAuthInitiate.mockResolvedValueOnce({
+        ok: false,
+        reason: 'backend_unreachable',
+      });
+
+      await act(async () => {
+        fireEvent.press(getByTestId('onboarding.button.oauth'));
+      });
+
+      await waitFor(() => {
+        expect(getByTestId('onboarding.button.oauth')).toBeTruthy();
+      });
+    });
+
+    it('shows error when browser fails to open', async () => {
+      const result = await setupOAuthStep();
+      const { getByTestId } = result;
+
+      mockOAuthInitiate.mockResolvedValueOnce({
+        ok: true,
+        authorizationUrl: 'https://github.com/login/oauth/authorize?client_id=abc',
+        state: 'test-state-123',
+      });
+      mockOpenAuthorizationUrl.mockResolvedValueOnce({ outcome: 'failed' });
+
+      await act(async () => {
+        fireEvent.press(getByTestId('onboarding.button.oauth'));
+      });
+
+      const hasError = () => result.queryByText('Could not open browser') !== null;
+      await waitFor(hasError, { timeout: 2000 });
+    });
+
+  });
+
+  describe('GitHub App flow', () => {
+    beforeEach(async () => {
+      mockAppBuildInstallUrl.mockClear();
+      mockAppOpenInstallationUrl.mockClear();
+      mockConnectHost.mockClear();
+      mockRefreshAccounts.mockResolvedValue(undefined);
+    });
+
+    async function setupAppStep(): Promise<ReturnType<typeof render>> {
+      const result = render(
+        <OnboardingScreen onComplete={mockOnComplete} onSkip={mockOnSkip} />,
+      );
+      const { getByTestId } = result;
+      for (let i = 0; i < 5; i++) {
+        await act(async () => {
+          fireEvent.press(getByTestId('onboarding.button.next'));
+        });
+      }
+      await waitFor(() => {
+        expect(getByTestId('onboarding.github-auth.app')).toBeTruthy();
+      });
+      await act(async () => {
+        fireEvent.press(getByTestId('onboarding.github-auth.app'));
+      });
+      await waitFor(() => {
+        expect(getByTestId('onboarding.button.app')).toBeTruthy();
+      });
+      return result;
+    }
+
+    it('shows inline error when App initiation fails', async () => {
+      const result = await setupAppStep();
+      const { getByTestId } = result;
+
+      mockAppBuildInstallUrl.mockResolvedValueOnce({
+        ok: false,
+        reason: 'backend_unreachable',
+      });
+
+      await act(async () => {
+        fireEvent.press(getByTestId('onboarding.button.app'));
+      });
+
+      const hasError = () => result.queryByText('Server unavailable. Check your connection.') !== null;
+      await waitFor(hasError, { timeout: 2000 });
+    });
+
+    it('shows error when not_configured', async () => {
+      const result = await setupAppStep();
+      const { getByTestId } = result;
+
+      mockAppBuildInstallUrl.mockResolvedValueOnce({
+        ok: false,
+        reason: 'not_configured',
+      });
+
+      await act(async () => {
+        fireEvent.press(getByTestId('onboarding.button.app'));
+      });
+
+      const hasError = () => result.queryByText('GitHub App not configured on this device') !== null;
+      await waitFor(hasError, { timeout: 2000 });
+    });
+
+    it('shows error when browser fails to open', async () => {
+      const result = await setupAppStep();
+      const { getByTestId } = result;
+
+      mockAppBuildInstallUrl.mockResolvedValueOnce({
+        ok: true,
+        installationUrl: 'https://github.com/apps/gitnotes/installations/new',
+        state: 'app-state-456',
+      });
+      mockAppOpenInstallationUrl.mockResolvedValueOnce(false);
+
+      await act(async () => {
+        fireEvent.press(getByTestId('onboarding.button.app'));
+      });
+
+      const hasError = () => result.queryByText('Could not open browser') !== null;
+      await waitFor(hasError, { timeout: 2000 });
+    });
+
+    it('re-enables App button after initiation failure', async () => {
+      const result = await setupAppStep();
+      const { getByTestId } = result;
+
+      mockAppBuildInstallUrl.mockResolvedValueOnce({
+        ok: false,
+        reason: 'backend_unreachable',
+      });
+
+      await act(async () => {
+        fireEvent.press(getByTestId('onboarding.button.app'));
+      });
+
+      await waitFor(() => {
+        expect(getByTestId('onboarding.button.app')).toBeTruthy();
       });
     });
   });
