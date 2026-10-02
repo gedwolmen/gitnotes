@@ -402,6 +402,23 @@ export function SettingsContent(props: SettingsContentProps) {
           <Text style={[styles.settingLabel, { color: colors.text }]}>{t('settings.style.neoBrutalist')}</Text>
         </GroupRow>
         <GroupRow
+          testID="settings.option.style.retrofuturistic"
+          onPress={isPro ? () => { HapticService.selection(); setStyle('retrofuturistic'); } : () => promptProUpgrade(t, onOpenPaywall)}
+          accessibilityRole="button"
+          accessibilityLabel={t('settings.style.retrofuturistic')}
+          trailing={
+            <View className="flex-row items-center gap-2">
+              {uiStyle === 'retrofuturistic' ? (
+                <Ionicons name="checkmark" size={18} color={colors.accent} />
+              ) : !isPro ? (
+                <Ionicons name="lock-closed" size={16} color={colors.textSecondary} />
+              ) : null}
+            </View>
+          }
+        >
+          <Text style={[styles.settingLabel, { color: colors.text }]}>{t('settings.style.retrofuturistic')}</Text>
+        </GroupRow>
+        <GroupRow
           trailing={
             <View className="flex-row items-center gap-2">
               <Toggle

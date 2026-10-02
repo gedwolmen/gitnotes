@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import { Canvas } from '../models/Canvas';
@@ -24,6 +24,7 @@ function CanvasCardImpl({
 }: CanvasCardProps) {
   const { colors, isDark, style: themeStyle } = useTheme();
   const isNeoBrutalist = themeStyle === 'neo-brutalist';
+  const isRetrofuturistic = themeStyle === 'retrofuturistic';
   const elementCount = canvas.scene?.elements?.length ?? 0;
   const sceneWidth = canvas.scene?.width ?? 800;
   const sceneHeight = canvas.scene?.height ?? 600;
@@ -48,10 +49,19 @@ function CanvasCardImpl({
                 shadowRadius: 0,
                 shadowOffset: { width: 3, height: 3 },
               }
-            : {
-                shadowColor: colors.shadow,
-                shadowOpacity: isDark ? 0 : 0.1,
-              }),
+            : isRetrofuturistic
+              ? {
+                  borderWidth: 1.5,
+                  borderColor: colors.accent,
+                  shadowColor: colors.accent,
+                  shadowOpacity: 0.9,
+                  shadowRadius: 8,
+                  shadowOffset: { width: 0, height: 0 },
+                }
+              : {
+                  shadowColor: colors.shadow,
+                  shadowOpacity: isDark ? 0 : 0.1,
+                }),
         },
         compact && styles.cardCompact,
       ]}

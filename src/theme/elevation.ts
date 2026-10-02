@@ -71,6 +71,37 @@ export function buildElevation(args: BuildElevationArgs): ElevationStyles {
     };
   }
 
+  if (style === 'retrofuturistic') {
+    // Retrofuturistic: colored neon glow border — no dual-shadow, no blur fallthrough.
+    // Use accent as the glow color (electric cyan/amber in dark, muted teal in light).
+    // Glow spread scales with tier: subtle=4px, raised=8px, floating=14px.
+    const glowSize = tier === 'subtle' ? 4 : tier === 'raised' ? 8 : 14;
+    const borderColor = colors.border;
+    if (platform === 'android') {
+      return {
+        outer: {
+          borderWidth: 1.5,
+          borderColor: colors.accent,
+          elevation: 0,
+        },
+        inner: {},
+        androidOverlays: undefined,
+      };
+    }
+    return {
+      outer: {
+        shadowColor: colors.accent,
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.9,
+        shadowRadius: glowSize,
+        borderWidth: 1.5,
+        borderColor,
+      },
+      inner: {},
+      androidOverlays: undefined,
+    };
+  }
+
   const { offset, blur } = TIERS[tier];
   const darkColor = colors.shadow;
   const lightColor = colors.highlight;
