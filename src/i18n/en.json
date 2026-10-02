@@ -306,6 +306,14 @@
     },
     "darkMode": "Dark Mode",
     "accentColor": "Accent Color",
+    "appIcon": {
+      "title": "App Icon",
+      "default": "Default",
+      "pickerHint": "Choose an alternate app icon",
+      "unavailable": "Unavailable",
+      "error": "Failed to change app icon",
+      "reset": "Reset to Default"
+    },
     "useSystemTheme": "Use System Theme",
     "active": "Active",
     "inactive": "Inactive",

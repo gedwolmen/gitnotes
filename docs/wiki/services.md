@@ -145,6 +145,7 @@ GitNotēs uses a **centralized branch model** for clone-mode repositories:
 |------|---------|
 | `AuthService.ts` | Handles app authentication (biometric, PIN). Manages auth state and lock screen. |
 | `AccountStorage.ts` | Secure account credential storage — SSH keys, tokens, host connections via SecureStore; managed by AccountStorage class |
+| `AppIconService.ts` | Manages alternate app icon selection and persistence. Provides `hydrate()`, `current()`, `set()`, `reset()`, and `isSupported()` for switching between Default, Neon, Grayscale, and Gold launcher icons on iOS and Android. Persists selection via AsyncStorage under `@gitnotes:app_icon`; web/unsupported platforms return unavailable. All-user, no Pro gate. |
 | `OnboardingService.ts` | Manages first-run onboarding flow — repo selection, initial clone, preferences. |
 | `StorageService.ts` | Wraps AsyncStorage for app preferences and local settings. |
 | `RevenueCatService.ts` | RevenueCat SDK wrapper — configures StoreKit 2, handles purchases, entitlements, customer info. |

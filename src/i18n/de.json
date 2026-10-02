@@ -186,6 +186,14 @@
     },
     "darkMode": "Dunkelmodus",
     "accentColor": "Akzentfarbe",
+    "appIcon": {
+      "title": "App-Symbol",
+      "default": "Standard",
+      "pickerHint": "Wählen Sie ein alternatives App-Symbol",
+      "unavailable": "Nicht verfügbar",
+      "error": "App-Symbol konnte nicht geändert werden",
+      "reset": "Auf Standard zurücksetzen"
+    },
     "useSystemTheme": "Systemdesign verwenden",
     "active": "Aktiv",
     "inactive": "Inaktiv",
