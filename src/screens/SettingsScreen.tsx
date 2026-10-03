@@ -34,6 +34,7 @@ import { LfsService } from '../services/git/lfs';
 import { AuthService, type HostConnectionSummary } from '../services/AuthService';
 import { GitHubOAuthService } from '../services/GitHubOAuthService';
 import { GitHubAppService } from '../services/GitHubAppService';
+import type { GitHubAppCredentialRecord } from '../services/git/contracts/GitHubAppCredential';
 import { OAUTH_CALLBACK_URL, WORKER_BASE_URL } from '../types/worker';
 import { OnboardingService } from '../services/OnboardingService';
 import { HapticService } from '../utils/haptics';
@@ -199,6 +200,7 @@ export default function SettingsScreen() {
   const [oauthError, setOauthError] = useState<Record<string, string | null>>({});
   const [appLoading, setAppLoading] = useState<Record<string, boolean>>({});
   const [appError, setAppError] = useState<Record<string, string | null>>({});
+  const [appCredentials, setAppCredentials] = useState<Record<string, GitHubAppCredentialRecord | null>>({});
   const pendingConfirmationRef = useRef(false);
 
   const loadHostUseSsh = useCallback(async (hosts: Array<{ id: string }>) => {
@@ -212,6 +214,28 @@ export default function SettingsScreen() {
     const allHosts = accountSummaries.flatMap((s) => s.hosts);
     void loadHostUseSsh(allHosts);
   }, [accountSummaries, loadHostUseSsh]);
+
+  useEffect(() => {
+    if (accountSummaries.length === 0) return;
+    const githubHostIds = accountSummaries
+      .flatMap((s) => s.hosts)
+      .filter((h) => h.provider === 'github')
+      .map((h) => h.id);
+    void Promise.all(
+      githubHostIds.map(async (hostId) => {
+        const cred = await AccountStorage.getGitHubAppCredential(hostId);
+        return [hostId, cred] as const;
+      }),
+    ).then((entries) => {
+      setAppCredentials((prev) => {
+        const next: Record<string, GitHubAppCredentialRecord | null> = { ...prev };
+        for (const [hostId, cred] of entries) {
+          next[hostId] = cred;
+        }
+        return next;
+      });
+    });
+  }, [accountSummaries]);
 
   useEffect(() => {
     TemplateRepoPreferenceService.get().then(setTemplatesRepoPref);
@@ -1260,6 +1284,7 @@ export default function SettingsScreen() {
         onDisconnectGitHubApp={handleDisconnectGitHubApp}
         appLoading={appLoading}
         appError={appError}
+        appCredentials={appCredentials}
         onAddHost={(preset) => {
           setConnectHostPreset(preset);
           setShowConnectHostModal(true);

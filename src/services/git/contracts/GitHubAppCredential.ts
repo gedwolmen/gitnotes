@@ -74,6 +74,8 @@ export interface GitHubAppCredentialRecord extends BaseCredentialRecord {
   accountLogin: string;
   /** Numeric id of the installing account (user or org). */
   accountId: number;
+  /** Avatar URL of the installing account, returned by the backend after App installation. */
+  accountAvatarUrl: string | null;
   /** Repositories selected during the installation flow.
    *
    * NEVER empty — the installer must choose at least one repo.

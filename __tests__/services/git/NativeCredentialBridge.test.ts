@@ -483,6 +483,53 @@ describe('resolveGitHubRepoToken', () => {
     // OAuth should be returned since no App exists
     expect(result).toEqual({ kind: 'oauth', token: 'oauth_tok' });
   });
+
+  test('local repoId plus canonical owner/repo passes when repo is selected', async () => {
+    // Regression: a local numeric ID like "github:1790980499852" must not be
+    // compared directly to "acme/repo-a" in enforceAppRepositorySelection.
+    // The canonical fullName ("acme/repo-a") must be used for the selection check
+    // while the local repoId is retained for native credential registration.
+    const cred = makeAppCred({
+      token: 'inst_tok',
+      expiresAt: Date.now() + 3600 * 1000,
+      selectedRepositories: [{ owner: 'acme', repo: 'repo-a' }],
+    });
+    const { AccountStorage } = require('@/services/AccountStorage');
+    (AccountStorage.getGitHubAppCredential as jest.Mock).mockResolvedValue(cred);
+    (AccountStorage.getOAuthCredential as jest.Mock).mockResolvedValue(null);
+    (AccountStorage.getHostToken as jest.Mock).mockResolvedValue(null);
+
+    // repoId is a local numeric ID; repoFullName is the canonical owner/repo.
+    // The call must NOT throw because "acme/repo-a" IS in the selection.
+    await expect(
+      resolveGitHubRepoToken({
+        repoId: 'github:1790980499852',
+        hostId: 'github.com',
+        repoFullName: 'acme/repo-a',
+      }),
+    ).resolves.toEqual({ kind: 'github_app', token: 'inst_tok' });
+  });
+
+  test('canonical owner/repo not in selected list still throws repo_not_in_selection', async () => {
+    const cred = makeAppCred({
+      token: 'inst_tok',
+      expiresAt: Date.now() + 3600 * 1000,
+      selectedRepositories: [{ owner: 'acme', repo: 'repo-a' }],
+    });
+    const { AccountStorage } = require('@/services/AccountStorage');
+    (AccountStorage.getGitHubAppCredential as jest.Mock).mockResolvedValue(cred);
+    (AccountStorage.getOAuthCredential as jest.Mock).mockResolvedValue(null);
+    (AccountStorage.getHostToken as jest.Mock).mockResolvedValue(null);
+
+    // Even with a canonical owner/repo, if it's not selected the App must deny access.
+    await expect(
+      resolveGitHubRepoToken({
+        repoId: 'github:1790980499852',
+        hostId: 'github.com',
+        repoFullName: 'acme/repo-b',
+      }),
+    ).rejects.toThrow(NativeCredentialBridgeError);
+  });
 });
 
 describe('initNativeCredentialBridge', () => {

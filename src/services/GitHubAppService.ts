@@ -290,6 +290,7 @@ export class GitHubAppService {
         app_slug: string;
         account_login: string;
         account_id: number;
+        account_avatar_url: string | null;
         token: string;
         expires_at: number;
           renewal_grant_token: string;
@@ -309,11 +310,12 @@ export class GitHubAppService {
       if (hostId === null) {
         // First-time App install: no existing host connection.
         // Create account + host connection from backend response.
+        const accountAvatarUrl = data.account_avatar_url ?? null;
         const account = await AccountStorage.addAccount(data.token, {
           login: data.account_login,
           name: data.account_login,
           email: '',
-          avatarUrl: '',
+          avatarUrl: accountAvatarUrl ?? '',
         });
         const host = await AccountStorage.upsertHostConnection({
           accountId: account.id,
@@ -323,7 +325,7 @@ export class GitHubAppService {
           hostUserId: data.account_id,
           name: data.account_login,
           email: null,
-          avatarUrl: null,
+          avatarUrl: accountAvatarUrl,
           token: data.token,
         });
         const currentActiveHostId = await AccountStorage.getActiveHostId();
@@ -346,6 +348,7 @@ export class GitHubAppService {
         appSlug: data.app_slug,
         accountLogin: data.account_login,
         accountId: data.account_id,
+        accountAvatarUrl: data.account_avatar_url ?? null,
         selectedRepositories: credentialRepos,
         token: data.token,
         expiresAt: data.expires_at,

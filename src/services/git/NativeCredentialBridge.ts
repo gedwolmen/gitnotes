@@ -185,9 +185,8 @@ export function enforceAppRepositorySelection(
       'repo_not_in_selection',
     );
   }
-  // Normalize repoId to owner/repo form — strip any host prefix so
-  // 'github.com/owner/repo' becomes 'owner/repo' to match selected format.
-  const normalized = repoId.replace(/^[^/]+\//, '').toLowerCase();
+  const segments = repoId.split('/');
+  const normalized = (segments.length >= 3 ? segments.slice(-2).join('/') : repoId).toLowerCase();
   const isSelected = selected.some(
     (r: { owner: string; repo: string }) => `${r.owner}/${r.repo}`.toLowerCase() === normalized,
   );
@@ -453,14 +452,24 @@ async function nativeClearCredential(repoId: string): Promise<void> {
 export async function resolveGitHubRepoToken(params: {
   repoId: string;
   hostId: string;
+  /**
+   * Canonical owner/repo name (e.g. "acme/repo-a") for the App selection check.
+   * Required when `repoId` is a local numeric ID rather than an owner/repo string.
+   * Must be supplied whenever the stored repo ID does not use owner/repo format
+   * so that enforceAppRepositorySelection can correctly match against selectedRepositories.
+   */
+  repoFullName?: string;
 }): Promise<{ token: string; kind: CredentialKindForNative }> {
-  const { repoId, hostId } = params;
+  const { repoId, hostId, repoFullName } = params;
 
   // Check App credential first (highest priority).
   const appCred = await AccountStorage.getGitHubAppCredential(hostId);
   if (appCred) {
     // App exists — enforce selected-repository membership FIRST (fail-closed).
-    enforceAppRepositorySelection(repoId, appCred);
+    // Use the canonical owner/repo name if provided; otherwise fall back to the raw repoId.
+    // The raw repoId may be a local numeric ID (e.g. "github:1790980499852") which
+    // does not match the "owner/repo" format in selectedRepositories.
+    enforceAppRepositorySelection(repoFullName ?? repoId, appCred);
 
     if (isInstallationTokenExpired(appCred)) {
       // Expired — attempt one renewal. Throw on failure; do NOT fall through.
