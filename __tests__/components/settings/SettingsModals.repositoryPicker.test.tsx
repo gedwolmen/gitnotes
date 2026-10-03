@@ -2,6 +2,7 @@ import React from 'react';
 import { fireEvent, render } from '@testing-library/react-native';
 import { SettingsModals } from '../../../src/components/settings/SettingsModals';
 import type { GitHostRepository, GitHostRepositoryResult, GitHostRepositoryUnavailable } from '../../../src/services/git/GitHost';
+import type { CredentialKind } from '../../../src/services/git/contracts';
 import type { GitRepository } from '../../../src/services/GitService';
 
 // Fixtures
@@ -150,6 +151,7 @@ const defaultProps = {
   onSetRepoSearchQuery: jest.fn(),
   onSetManualRepoInput: jest.fn(),
   accountSummaries: [] as Array<{ account: { id: string; login: string; name: string; avatarUrl: string | null }; hosts: Array<{ id: string; provider: 'github' | 'gitlab' | 'gitea' | 'forgejo'; hostLogin: string; hostUserId: number; name: string; email: string | null; avatarUrl: string | null; instanceBaseUrl: string | null; addedAt: number }>; activeHostId: string | null }>,
+  hostCredentialKinds: {} as Record<string, CredentialKind[]>,
   manualRepoHostId: null as string | null,
   onManualRepoHostIdChange: jest.fn(),
   onAddManualRepo: jest.fn(),
@@ -356,5 +358,103 @@ describe('RepoPickerList (via SettingsModals)', () => {
     );
 
     expect(getByTestId('settings-modals.repo-picker-scroll').props.automaticallyAdjustKeyboardInsets).toBe(true);
+  });
+
+  it('renders distinct host labels for duplicate-looking hosts with different auth contexts', () => {
+    const hostOAuth: (typeof defaultProps.accountSummaries)[0]['hosts'][0] = {
+      id: 'github-oauth-host-1',
+      accountId: 'account-1',
+      provider: 'github',
+      hostLogin: 'me',
+      hostUserId: 1,
+      name: 'Me (OAuth)',
+      email: 'me@example.com',
+      avatarUrl: null,
+      instanceBaseUrl: null,
+      addedAt: 1,
+    };
+
+    const hostGitHubApp: (typeof defaultProps.accountSummaries)[0]['hosts'][0] = {
+      id: 'github-app-host-1',
+      accountId: 'account-1',
+      provider: 'github',
+      hostLogin: 'me',
+      hostUserId: 1,
+      name: 'Me (GitHub App)',
+      email: 'me@example.com',
+      avatarUrl: null,
+      instanceBaseUrl: null,
+      addedAt: 2,
+    };
+
+    const { getByTestId } = render(
+      <SettingsModals
+        {...defaultProps}
+        accountSummaries={[{
+          account: { id: 'account-1', login: 'me', name: 'Me', avatarUrl: null },
+          hosts: [hostOAuth, hostGitHubApp],
+          activeHostId: 'github-oauth-host-1',
+        }]}
+        hostCredentialKinds={{
+          'github-oauth-host-1': ['oauth'],
+          'github-app-host-1': ['github_app'],
+        }}
+      />,
+    );
+
+    fireEvent.press(getByTestId('settings.repo-filter.host-dropdown'));
+
+    const getLabelText = (testId: string) => {
+      const option = getByTestId(testId);
+      const texts: string[] = [];
+      const extractText = (node: React.ReactNode) => {
+        if (typeof node === 'string') texts.push(node);
+        if (Array.isArray(node)) node.forEach(extractText);
+        if (node && typeof node === 'object' && 'props' in node) {
+          extractText((node as React.ReactElement).props.children);
+        }
+      };
+      extractText(option.props.children);
+      return texts.join('');
+    };
+
+    const label1 = getLabelText('settings.repo-filter.host.github-oauth-host-1');
+    const label2 = getLabelText('settings.repo-filter.host.github-app-host-1');
+
+    expect(label1).not.toEqual(label2);
+  });
+
+  it('host dropdown label reflects selected host with full context including auth distinction', () => {
+    const hostGitHubApp: (typeof defaultProps.accountSummaries)[0]['hosts'][0] = {
+      id: 'github-app-host-1',
+      accountId: 'account-1',
+      provider: 'github',
+      hostLogin: 'workuser',
+      hostUserId: 2,
+      name: 'Work User',
+      email: 'work@example.com',
+      avatarUrl: null,
+      instanceBaseUrl: 'https://github.enterprise.com',
+      addedAt: 1,
+    };
+
+    const { getByTestId, getAllByText } = render(
+      <SettingsModals
+        {...defaultProps}
+        accountSummaries={[{
+          account: { id: 'account-1', login: 'workuser', name: 'Work User', avatarUrl: null },
+          hosts: [hostGitHubApp],
+          activeHostId: 'github-app-host-1',
+        }]}
+        hostCredentialKinds={{
+          'github-app-host-1': ['github_app'],
+        }}
+      />,
+    );
+
+    fireEvent.press(getByTestId('settings.repo-filter.host-dropdown'));
+    fireEvent.press(getByTestId('settings.repo-filter.host.github-app-host-1'));
+
+    expect(getAllByText('GitHub · github.enterprise.com (workuser) · Work User [App]')).toHaveLength(2);
   });
 });

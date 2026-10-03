@@ -1,4 +1,4 @@
-import React, { memo, useState } from 'react';
+import React, { memo, useMemo, useState } from 'react';
 import { ActivityIndicator, Linking, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -11,6 +11,7 @@ import { GIT_HOST_LABELS, type GitHostProvider, type GitHostRepository, type Git
 import type { TemplateRepoPreference } from '../../services/TemplateRepoPreferenceService';
 import { CloneProgressContent, type CloneProgress } from './CloneProgressModal';
 import type { AccountSummary } from '../../services/AuthService';
+import type { CredentialKind } from '../../services/git/contracts';
 
 type ThemeColors = {
   background: string;
@@ -135,6 +136,7 @@ type SettingsModalsProps = {
   onSetRepoSearchQuery: (value: string) => void;
   onSetManualRepoInput: (value: string) => void;
   accountSummaries: AccountSummary[];
+  hostCredentialKinds: Record<string, CredentialKind[]>;
   manualRepoHostId: string | null;
   onManualRepoHostIdChange: (hostId: string | null) => void;
   onAddManualRepo: () => void;
@@ -157,6 +159,7 @@ type RepoPickerListProps = {
   discoverableRepos: GitHostRepositoryResult[];
   repositories: GitRepository[];
   accountSummaries: AccountSummary[];
+  hostCredentialKinds: Record<string, CredentialKind[]>;
   searchQuery: string;
   isLoading: boolean;
   isAddingRepoPath: string | null;
@@ -169,9 +172,52 @@ type RepoPickerListProps = {
 
 const PROVIDER_ORDER: GitHostProvider[] = ['github', 'gitlab', 'gitea', 'forgejo'];
 
+const CREDENTIAL_KIND_LABELS: Record<CredentialKind, string> = {
+  token: 'PAT',
+  oauth: 'OAuth',
+  github_app: 'App',
+  ssh: 'SSH',
+};
+
+const CREDENTIAL_KIND_ORDER: CredentialKind[] = ['token', 'oauth', 'github_app', 'ssh'];
+
+function buildHostLabel(
+  provider: GitHostProvider,
+  hostLogin: string,
+  instanceBaseUrl: string | null,
+  accountLabel: string,
+  credentialKinds: CredentialKind[],
+): string {
+  const providerLabel = GIT_HOST_LABELS[provider];
+  const accountSuffix = accountLabel && accountLabel.toLowerCase() !== hostLogin.toLowerCase()
+    ? ` · ${accountLabel}`
+    : '';
+  const authSuffix = credentialKinds
+    .slice()
+    .sort((a, b) => CREDENTIAL_KIND_ORDER.indexOf(a) - CREDENTIAL_KIND_ORDER.indexOf(b))
+    .map((k) => CREDENTIAL_KIND_LABELS[k])
+    .join('+');
+
+  if (instanceBaseUrl) {
+    const hostname = (() => {
+      try { return new URL(instanceBaseUrl).hostname; }
+      catch { return instanceBaseUrl; }
+    })();
+    return authSuffix
+      ? `${providerLabel} · ${hostname} (${hostLogin})${accountSuffix} [${authSuffix}]`
+      : `${providerLabel} · ${hostname} (${hostLogin})${accountSuffix}`;
+  }
+  return authSuffix
+    ? `${providerLabel} · ${hostLogin}${accountSuffix} [${authSuffix}]`
+    : `${providerLabel} · ${hostLogin}${accountSuffix}`;
+}
+
+type HostFilterOption = AccountSummary['hosts'][number] & { accountLabel: string };
+
 type HostFilterSelectorProps = {
   value: string | 'all';
-  hosts: AccountSummary['hosts'];
+  hosts: HostFilterOption[];
+  hostCredentialKinds: Record<string, CredentialKind[]>;
   onChange: (hostId: string | 'all') => void;
   colors: ThemeColors;
   allLabel: string;
@@ -181,6 +227,7 @@ type HostFilterSelectorProps = {
 const HostFilterSelector = memo(function HostFilterSelector({
   value,
   hosts,
+  hostCredentialKinds,
   onChange,
   colors,
   allLabel,
@@ -190,7 +237,13 @@ const HostFilterSelector = memo(function HostFilterSelector({
   const insets = useSafeAreaInsets();
   const selectedHost = hosts.find((host) => host.id === value);
   const selectedLabel = selectedHost
-    ? `${GIT_HOST_LABELS[selectedHost.provider]} · ${selectedHost.hostLogin}`
+    ? buildHostLabel(
+        selectedHost.provider,
+        selectedHost.hostLogin,
+        selectedHost.instanceBaseUrl,
+        selectedHost.accountLabel,
+        hostCredentialKinds[selectedHost.id] ?? [],
+      )
     : allLabel;
 
   return (
@@ -249,7 +302,13 @@ const HostFilterSelector = memo(function HostFilterSelector({
               >
                 <Ionicons name={host.provider === 'github' ? 'logo-github' : 'git-branch-outline'} size={20} color={isSelected ? colors.primary : colors.textSecondary} />
                 <Text className="flex-1" style={{ color: isSelected ? colors.primary : colors.text }} numberOfLines={1}>
-                  {GIT_HOST_LABELS[host.provider]} · {host.hostLogin}
+                  {buildHostLabel(
+                    host.provider,
+                    host.hostLogin,
+                    host.instanceBaseUrl,
+                    host.accountLabel,
+                    hostCredentialKinds[host.id] ?? [],
+                  )}
                 </Text>
                 {isSelected ? <Ionicons name="checkmark" size={18} color={colors.primary} /> : null}
               </TouchableOpacity>
@@ -265,6 +324,7 @@ const RepoPickerList = memo(function RepoPickerList({
   discoverableRepos,
   repositories,
   accountSummaries,
+  hostCredentialKinds,
   searchQuery,
   isLoading,
   isAddingRepoPath,
@@ -278,6 +338,15 @@ const RepoPickerList = memo(function RepoPickerList({
   const { t } = useTranslation();
   const [providerFilter, setProviderFilter] = useState<ProviderSelection>('all');
   const [hostFilter, setHostFilter] = useState<string | 'all'>('all');
+  const hostOptions = useMemo(
+    () => accountSummaries.flatMap((summary) =>
+      summary.hosts.map((host) => ({
+        ...host,
+        accountLabel: summary.account.name || summary.account.login,
+      })),
+    ),
+    [accountSummaries],
+  );
   const availableRepos = discoverableRepos.filter(
     (r): r is GitHostRepository => 'kind' in r && r.kind === 'unavailable' ? false : true,
   );
@@ -321,7 +390,8 @@ const RepoPickerList = memo(function RepoPickerList({
         />
         <HostFilterSelector
           value={hostFilter}
-          hosts={accountSummaries.flatMap((summary) => summary.hosts)}
+          hosts={hostOptions}
+          hostCredentialKinds={hostCredentialKinds}
           onChange={setHostFilter}
           colors={colors}
           allLabel={t('settings.hostFilter.all', { defaultValue: 'All Hosts' })}
@@ -438,6 +508,7 @@ export function SettingsModals(props: SettingsModalsProps) {
     onSetRepoSearchQuery,
     onSetManualRepoInput,
     accountSummaries,
+    hostCredentialKinds,
     manualRepoHostId,
     onManualRepoHostIdChange,
     onAddManualRepo,
@@ -485,9 +556,13 @@ export function SettingsModals(props: SettingsModalsProps) {
                   <View key={summary.account.id} className="gap-1">
                     {summary.hosts.map((host) => {
                       const isSelected = manualRepoHostId === host.id;
-                      const hostLabel = host.instanceBaseUrl
-                        ? `${GIT_HOST_LABELS[host.provider]} · ${new URL(host.instanceBaseUrl).hostname} (${host.hostLogin})`
-                        : `${GIT_HOST_LABELS[host.provider]} · ${host.hostLogin}`;
+                      const hostLabel = buildHostLabel(
+                        host.provider,
+                        host.hostLogin,
+                        host.instanceBaseUrl,
+                        summary.account.name || summary.account.login,
+                        hostCredentialKinds[host.id] ?? [],
+                      );
                       return (
                         <TouchableOpacity
                           key={host.id}
@@ -568,6 +643,7 @@ export function SettingsModals(props: SettingsModalsProps) {
               discoverableRepos={discoverableRepos}
               repositories={repositories}
               accountSummaries={accountSummaries}
+              hostCredentialKinds={hostCredentialKinds}
               searchQuery={repoSearchQuery}
               isLoading={isLoadingDiscoverableRepos}
               isAddingRepoPath={isAddingRepoPath}

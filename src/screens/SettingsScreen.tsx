@@ -35,6 +35,7 @@ import { AuthService, type HostConnectionSummary } from '../services/AuthService
 import { GitHubOAuthService } from '../services/GitHubOAuthService';
 import { GitHubAppService } from '../services/GitHubAppService';
 import type { GitHubAppCredentialRecord } from '../services/git/contracts/GitHubAppCredential';
+import type { CredentialKind } from '../services/git/contracts';
 import { OAUTH_CALLBACK_URL, WORKER_BASE_URL } from '../types/worker';
 import { OnboardingService } from '../services/OnboardingService';
 import { HapticService } from '../utils/haptics';
@@ -201,6 +202,7 @@ export default function SettingsScreen() {
   const [appLoading, setAppLoading] = useState<Record<string, boolean>>({});
   const [appError, setAppError] = useState<Record<string, string | null>>({});
   const [appCredentials, setAppCredentials] = useState<Record<string, GitHubAppCredentialRecord | null>>({});
+  const [hostCredentialKinds, setHostCredentialKinds] = useState<Record<string, CredentialKind[]>>({});
   const pendingConfirmationRef = useRef(false);
 
   const loadHostUseSsh = useCallback(async (hosts: Array<{ id: string }>) => {
@@ -236,6 +238,37 @@ export default function SettingsScreen() {
       });
     });
   }, [accountSummaries]);
+
+  const loadHostCredentialKinds = useCallback(async (hosts: Array<{ id: string }>) => {
+    const results: Record<string, CredentialKind[]> = {};
+    await Promise.all(hosts.map(async (h) => {
+      const kinds: CredentialKind[] = [];
+      const [token, oauth, githubApp] = await Promise.all([
+        AccountStorage.getHostToken(h.id),
+        AccountStorage.getOAuthCredential(h.id),
+        AccountStorage.getGitHubAppCredential(h.id),
+      ]);
+      if (token) kinds.push('token');
+      if (oauth) kinds.push('oauth');
+      if (githubApp) kinds.push('github_app');
+      const useSsh = await AccountStorage.getHostUseSsh(h.id);
+      if (useSsh) kinds.push('ssh');
+      results[h.id] = kinds;
+    }));
+    return results;
+  }, []);
+
+  useEffect(() => {
+    let disposed = false;
+    const allHosts = accountSummaries.flatMap((s) => s.hosts);
+    setHostCredentialKinds({});
+    void loadHostCredentialKinds(allHosts).then((results) => {
+      if (!disposed) setHostCredentialKinds(results);
+    });
+    return () => {
+      disposed = true;
+    };
+  }, [accountSummaries, loadHostCredentialKinds]);
 
   useEffect(() => {
     TemplateRepoPreferenceService.get().then(setTemplatesRepoPref);
@@ -1386,6 +1419,7 @@ export default function SettingsScreen() {
         onSetRepoSearchQuery={setRepoSearchQuery}
         onSetManualRepoInput={setManualRepoInput}
         accountSummaries={accountSummaries}
+        hostCredentialKinds={hostCredentialKinds}
         manualRepoHostId={manualRepoHostId}
         onManualRepoHostIdChange={setManualRepoHostId}
         onAddManualRepo={() => { void handleAddManualRepo(manualRepoHostId); }}
