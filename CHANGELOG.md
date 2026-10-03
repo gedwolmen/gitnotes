@@ -8,6 +8,14 @@ All notable fixes and feature changes to GitNotēs are documented here.
 >
 > **History**: prior fixes (pre-2026-08) lived in single-PR wiki pages. Those pages were retired in [#1047](https://github.com/skepjandi/gitnotes/pull/1047); their full diagnostic content is preserved in git history via `git log -p -- docs/wiki/<file>.md`.
 
+## 2026-10-03
+
+### fix(settings): preserve GitHub App install and host identity actions
+
+**What:** The global GitHub App install action disappeared after the first account was connected, and repository host filters could show indistinguishable provider/login labels.
+
+**Fix:** Keep the fresh GitHub App install action available and label host filters with account context, self-hosted hostname, and active credential kinds without changing host IDs or stored data.
+
 ## 2026-10-02
 
 ### fix(ui): deduplicate repository picker entries
