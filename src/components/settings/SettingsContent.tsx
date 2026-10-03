@@ -25,6 +25,7 @@ import type { AIProviderConfig } from '../../models/AIProvider';
 import { TIMEOUT_OPTIONS, type BiometricKind, type LockTimeout } from '../../contexts/BiometricLockContext';
 import type { ForegroundSyncHealth } from '../../services/ForegroundSyncService';
 import { AuthService } from '../../services/AuthService';
+import type { GitHubAppCredentialRecord } from '../../services/git/contracts/GitHubAppCredential';
 import { useProvidersAvailability } from '../../hooks/useProviderAvailability';
 import { describeAvailability } from '../../services/ai/providerAvailabilityCopy';
 import type { GitHostProvider } from '../../services/git/GitHost';
@@ -174,6 +175,7 @@ onRemoveAccount: (id: string, login: string) => void;
   onDisconnectGitHubApp: (hostId: string) => void;
   appLoading: Record<string, boolean>;
   appError: Record<string, string | null>;
+  appCredentials: Record<string, GitHubAppCredentialRecord | null>;
 };
 
 function formatLfsBytes(bytes: number): string {
@@ -280,6 +282,7 @@ export function SettingsContent(props: SettingsContentProps) {
     onConnectGitHubApp,
     appLoading = {},
     appError = {},
+    appCredentials = {},
   } = props;
   // Tokens hook gives us spacing/radii/type so the styled disconnect
   // button matches the rest of the app without hardcoded values.
@@ -799,16 +802,32 @@ export function SettingsContent(props: SettingsContentProps) {
                               </View>
                               <View className="flex-row items-center gap-1.5">
                                 <Text style={{ fontSize: type.xs, color: colors.textSecondary }}>App</Text>
-                                <TouchableOpacity
-                                  testID={`settings.button.connect-github-app.${host.id}`}
-                                  onPress={() => onConnectGitHubApp(host.id)}
-                                  disabled={appLoading[host.id]}
-                                  accessibilityRole="button"
-                                >
-                                  <Text style={{ fontSize: type.xs, color: appError[host.id] ? colors.error : colors.primary }}>
-                                    {appLoading[host.id] ? '…' : 'Install'}
-                                  </Text>
-                                </TouchableOpacity>
+                                {appCredentials[host.id] ? (
+                                  <View className="flex-row items-center gap-1.5">
+                                    {appCredentials[host.id]!.accountAvatarUrl ? (
+                                      <Image
+                                        source={{ uri: appCredentials[host.id]!.accountAvatarUrl! }}
+                                        style={{ width: 16, height: 16, borderRadius: 3 }}
+                                      />
+                                    ) : (
+                                      <Ionicons name="cube" size={14} color={colors.primary} />
+                                    )}
+                                    <Text style={{ fontSize: type.xs, color: colors.primary }}>
+                                      Installed
+                                    </Text>
+                                  </View>
+                                ) : (
+                                  <TouchableOpacity
+                                    testID={`settings.button.connect-github-app.${host.id}`}
+                                    onPress={() => onConnectGitHubApp(host.id)}
+                                    disabled={appLoading[host.id]}
+                                    accessibilityRole="button"
+                                  >
+                                    <Text style={{ fontSize: type.xs, color: appError[host.id] ? colors.error : colors.primary }}>
+                                      {appLoading[host.id] ? '…' : 'Install'}
+                                    </Text>
+                                  </TouchableOpacity>
+                                )}
                               </View>
                             </>
                           ) : null}
