@@ -460,7 +460,7 @@ async function ensureCredentialForOp(repoId: string | null | undefined): Promise
     const hostConnection = await AccountStorage.getHostConnection(repo.hostId);
     if (hostConnection?.provider === 'github') {
       // GitHub host — use the credential bridge for proper App/OAuth/PAT resolution.
-      const { token, kind } = await resolveGitHubRepoToken({ repoId, hostId: repo.hostId });
+      const { token, kind } = await resolveGitHubRepoToken({ repoId, hostId: repo.hostId, repoFullName: repo.full_name });
       switch (kind) {
         case 'github_app':
           await registerGitHubAppCredential(repoId, repo.hostId, token);
