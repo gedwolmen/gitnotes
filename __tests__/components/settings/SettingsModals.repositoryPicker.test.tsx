@@ -41,7 +41,7 @@ jest.mock('react-i18next', () => ({
 
 // Mock safe area
 jest.mock('react-native-safe-area-context', () => ({
-  useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }),
+  useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 34, left: 0 }),
 }));
 
 // Mock SearchBar
@@ -259,6 +259,39 @@ describe('RepoPickerList (via SettingsModals)', () => {
 
     expect(getByText('me/my-repo')).toBeTruthy();
     expect(queryByText('me/my-gitlab-repo')).toBeNull();
+  });
+
+  it('keeps provider and host options inside padded scrollable lists', () => {
+    const hostId = 'github-host-1';
+    const { getByTestId } = render(
+      <SettingsModals
+        {...defaultProps}
+        accountSummaries={[{
+          account: { id: 'account-1', login: 'me', name: 'Me', avatarUrl: null },
+          hosts: [{
+            id: hostId,
+            accountId: 'account-1',
+            provider: 'github',
+            hostLogin: 'me',
+            hostUserId: 1,
+            name: 'Me',
+            email: null,
+            avatarUrl: null,
+            instanceBaseUrl: null,
+            addedAt: 1,
+          }],
+          activeHostId: hostId,
+        }]}
+      />,
+    );
+
+    fireEvent.press(getByTestId('settings.repo-filter.dropdown'));
+    const providerOptions = getByTestId('settings.repo-filter.options-scroll');
+    expect(providerOptions.props.contentContainerStyle).toEqual({ paddingBottom: 42 });
+
+    fireEvent.press(getByTestId('settings.repo-filter.host-dropdown'));
+    const hostOptions = getByTestId('settings.repo-filter.host-options-scroll');
+    expect(hostOptions.props.contentContainerStyle).toEqual({ paddingBottom: 42 });
   });
 
   it('unavailable repos render with provider badge and reason', () => {

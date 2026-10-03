@@ -187,6 +187,7 @@ const HostFilterSelector = memo(function HostFilterSelector({
   title,
 }: HostFilterSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const insets = useSafeAreaInsets();
   const selectedHost = hosts.find((host) => host.id === value);
   const selectedLabel = selectedHost
     ? `${GIT_HOST_LABELS[selectedHost.provider]} · ${selectedHost.hostLogin}`
@@ -221,34 +222,40 @@ const HostFilterSelector = memo(function HostFilterSelector({
             <Ionicons name="close" size={24} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
-        <TouchableOpacity
-          testID="settings.repo-filter.host-all"
-          className="flex-row items-center gap-3 px-4 py-3 border-b"
-          style={{ borderColor: colors.border, backgroundColor: value === 'all' ? `${colors.primary}15` : undefined }}
-          onPress={() => { onChange('all'); setIsOpen(false); }}
+        <ScrollView
+          testID="settings.repo-filter.host-options-scroll"
+          style={{ flexShrink: 1 }}
+          contentContainerStyle={{ paddingBottom: 8 + insets.bottom }}
         >
-          <Ionicons name="server-outline" size={20} color={colors.primary} />
-          <Text className="flex-1" style={{ color: colors.text }}>{allLabel}</Text>
-          {value === 'all' ? <Ionicons name="checkmark" size={18} color={colors.primary} /> : null}
-        </TouchableOpacity>
-        {hosts.map((host) => {
-          const isSelected = host.id === value;
-          return (
-            <TouchableOpacity
-              key={host.id}
-              testID={`settings.repo-filter.host.${host.id}`}
-              className="flex-row items-center gap-3 px-4 py-3 border-b"
-              style={{ borderColor: colors.border, backgroundColor: isSelected ? `${colors.primary}15` : undefined }}
-              onPress={() => { onChange(host.id); setIsOpen(false); }}
-            >
-              <Ionicons name={host.provider === 'github' ? 'logo-github' : 'git-branch-outline'} size={20} color={isSelected ? colors.primary : colors.textSecondary} />
-              <Text className="flex-1" style={{ color: isSelected ? colors.primary : colors.text }} numberOfLines={1}>
-                {GIT_HOST_LABELS[host.provider]} · {host.hostLogin}
-              </Text>
-              {isSelected ? <Ionicons name="checkmark" size={18} color={colors.primary} /> : null}
-            </TouchableOpacity>
-          );
-        })}
+          <TouchableOpacity
+            testID="settings.repo-filter.host-all"
+            className="flex-row items-center gap-3 px-4 py-3 border-b"
+            style={{ borderColor: colors.border, backgroundColor: value === 'all' ? `${colors.primary}15` : undefined }}
+            onPress={() => { onChange('all'); setIsOpen(false); }}
+          >
+            <Ionicons name="server-outline" size={20} color={colors.primary} />
+            <Text className="flex-1" style={{ color: colors.text }}>{allLabel}</Text>
+            {value === 'all' ? <Ionicons name="checkmark" size={18} color={colors.primary} /> : null}
+          </TouchableOpacity>
+          {hosts.map((host) => {
+            const isSelected = host.id === value;
+            return (
+              <TouchableOpacity
+                key={host.id}
+                testID={`settings.repo-filter.host.${host.id}`}
+                className="flex-row items-center gap-3 px-4 py-3 border-b"
+                style={{ borderColor: colors.border, backgroundColor: isSelected ? `${colors.primary}15` : undefined }}
+                onPress={() => { onChange(host.id); setIsOpen(false); }}
+              >
+                <Ionicons name={host.provider === 'github' ? 'logo-github' : 'git-branch-outline'} size={20} color={isSelected ? colors.primary : colors.textSecondary} />
+                <Text className="flex-1" style={{ color: isSelected ? colors.primary : colors.text }} numberOfLines={1}>
+                  {GIT_HOST_LABELS[host.provider]} · {host.hostLogin}
+                </Text>
+                {isSelected ? <Ionicons name="checkmark" size={18} color={colors.primary} /> : null}
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
       </Modal>
     </>
   );
