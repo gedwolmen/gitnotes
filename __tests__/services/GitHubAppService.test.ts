@@ -405,6 +405,7 @@ describe('GitHubAppService', () => {
           app_slug: 'test-app',
           account_login: 'testuser',
           account_id: 789,
+          account_avatar_url: 'https://avatars.githubusercontent.com/u/789',
           token: 'installation-token-abc',
           expires_at: Date.now() + 3600000,
           renewal_grant_token: 'grant-token-xyz',
@@ -435,6 +436,7 @@ describe('GitHubAppService', () => {
         { owner: 'owner', repo: 'repo1' },
         { owner: 'owner', repo: 'repo2' },
       ]);
+      expect(stored[1].accountAvatarUrl).toBe('https://avatars.githubusercontent.com/u/789');
     });
 
     it('removes pending flow and returns duplicate when backend returns 409', async () => {
@@ -502,6 +504,7 @@ describe('GitHubAppService', () => {
           app_slug: 'my-app',
           account_login: 'appuser',
           account_id: 333,
+          account_avatar_url: 'https://avatars.githubusercontent.com/u/333',
           token: 'installation-token-null-host',
           expires_at: Date.now() + 3600000,
           renewal_grant_token: 'grant-null-host',
@@ -521,6 +524,7 @@ describe('GitHubAppService', () => {
       expect(mockAddAccount).toHaveBeenCalledWith('installation-token-null-host', expect.objectContaining({
         login: 'appuser',
         name: 'appuser',
+        avatarUrl: 'https://avatars.githubusercontent.com/u/333',
       }));
       expect(mockUpsertHostConnection).toHaveBeenCalledWith(expect.objectContaining({
         accountId: 'acc-app-456',
@@ -529,6 +533,7 @@ describe('GitHubAppService', () => {
         hostLogin: 'appuser',
         hostUserId: 333,
         token: 'installation-token-null-host',
+        avatarUrl: 'https://avatars.githubusercontent.com/u/333',
       }));
       expect(mockSetActiveAccountId).toHaveBeenCalledWith('acc-app-456');
       expect(mockSetActiveHostId).toHaveBeenCalledWith('acc-app-456:github:default');
@@ -537,6 +542,7 @@ describe('GitHubAppService', () => {
         accountLogin: 'appuser',
         accountId: 333,
         installationId: 111222,
+        accountAvatarUrl: 'https://avatars.githubusercontent.com/u/333',
       }));
     });
 
@@ -561,6 +567,7 @@ describe('GitHubAppService', () => {
           app_slug: 'another-app',
           account_login: 'anotheruser',
           account_id: 444,
+          account_avatar_url: 'https://avatars.githubusercontent.com/u/444',
           token: 'token-another',
           expires_at: Math.floor(Date.now() / 1000) + 3600,
           renewal_grant_token: 'grant-another',
@@ -581,6 +588,7 @@ describe('GitHubAppService', () => {
       expect(mockSetActiveHostId).not.toHaveBeenCalled();
       expect(mockSetGitHubAppCredential).toHaveBeenCalledWith('acc-app-456:github:default', expect.objectContaining({
         kind: 'github_app',
+        accountAvatarUrl: 'https://avatars.githubusercontent.com/u/444',
       }));
     });
   });
