@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import {
+  ScrollView,
   View,
   Text,
   TouchableOpacity,
@@ -8,6 +9,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Modal } from './ui/Modal';
 import { useTheme } from '../contexts/ThemeContext';
 import { GIT_HOST_LABELS, type GitHostProvider } from '../services/git/GitHost';
@@ -43,6 +45,7 @@ export function ProviderSelector({
   triggerStyle,
 }: ProviderSelectorProps) {
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const [isOpen, setIsOpen] = useState(false);
 
   const handleSelect = useCallback((provider: ProviderSelection) => {
@@ -100,7 +103,11 @@ export function ProviderSelector({
             <Ionicons name="close" size={24} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
-        <View style={styles.optionsList}>
+        <ScrollView
+          testID={`${testIDPrefix}.options-scroll`}
+          style={styles.optionsList}
+          contentContainerStyle={{ paddingBottom: 8 + insets.bottom }}
+        >
           {options.map((provider) => {
             const isSelected = provider === value;
             return (
@@ -135,7 +142,7 @@ export function ProviderSelector({
               </TouchableOpacity>
             );
           })}
-        </View>
+        </ScrollView>
       </Modal>
     </>
   );
@@ -170,7 +177,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   optionsList: {
-    paddingBottom: 8,
+    flexShrink: 1,
   },
   option: {
     flexDirection: 'row',
