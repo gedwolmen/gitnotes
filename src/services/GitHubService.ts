@@ -336,7 +336,7 @@ class GitHubServiceClass {
       if (userJson) {
         this.user = JSON.parse(userJson);
       } else {
-        this.user = await this.fetchUser();
+        this.user = await this.hydrateUserFromAppCredential() ?? await this.fetchUser();
         if (this.user) {
           await AsyncStorage.setItem(USER_KEY, JSON.stringify(this.user));
         }
@@ -344,6 +344,33 @@ class GitHubServiceClass {
     } catch (error) {
       console.warn('[GitHubService] Failed to initialize:', error);
     }
+  }
+
+  /**
+   * Hydrates the in-memory GitHubUser from the stored GitHub App credential
+   * + active HostConnection profile, bypassing the `/user` API call that would
+   * fail with 403 "Resource not accessible by integration" for installation
+   * tokens.
+   *
+   * Returns null when no App credential is available, leaving the caller to
+   * fall back to `fetchUser()` (PAT/OAuth path).
+   */
+  private async hydrateUserFromAppCredential(): Promise<GitHubUser | null> {
+    const hostConn = await AccountStorage.getActiveHostConnection();
+    if (!hostConn) return null;
+    const appCred = await AccountStorage.getGitHubAppCredential(hostConn.id);
+    if (!appCred) return null;
+    // App installation tokens cannot call GET /user — hydrate from stored metadata.
+    const avatar_url =
+      appCred.accountAvatarUrl ?? hostConn.avatarUrl ?? '';
+    return {
+      login: appCred.accountLogin,
+      id: appCred.accountId,
+      avatar_url,
+      html_url: `https://github.com/apps/${appCred.appSlug}`,
+      name: hostConn.name,
+      email: hostConn.email ?? '',
+    };
   }
 
   async setToken(token: string, user?: GitHubUser | null): Promise<GitHubUser | null> {
