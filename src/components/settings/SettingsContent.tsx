@@ -628,25 +628,6 @@ export function SettingsContent(props: SettingsContentProps) {
                 {t('settings.oauthFullAccessWarning')}
               </Text>
             </View>
-            {/* GitHub App install — fresh install path */}
-            <GroupRow
-              testID="settings.button.install-github-app"
-              onPress={() => onConnectGitHubApp(null)}
-              leading={<Ionicons name="cube-outline" size={20} color={colors.primary} />}
-              trailing={
-                appLoading['__fresh__'] ? (
-                  <ActivityIndicator size="small" color={colors.primary} />
-                ) : appError['__fresh__'] ? (
-                  <Text style={{ fontSize: type.xs, color: colors.error }}>{appError['__fresh__']}</Text>
-                ) : (
-                  <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
-                )
-              }
-            >
-              <Text style={[styles.settingLabel, { color: colors.primary }]}>
-                {t('settings.installGithubApp')}
-              </Text>
-            </GroupRow>
           </>
         ) : (
           <>
@@ -888,6 +869,25 @@ export function SettingsContent(props: SettingsContentProps) {
             )}
           </>
         )}
+        {/* GitHub App install — always available */}
+        <GroupRow
+          testID="settings.button.install-github-app"
+          onPress={() => onConnectGitHubApp(null)}
+          leading={<Ionicons name="cube-outline" size={20} color={colors.primary} />}
+          trailing={
+            appLoading['__fresh__'] ? (
+              <ActivityIndicator size="small" color={colors.primary} />
+            ) : appError['__fresh__'] ? (
+              <Text style={{ fontSize: type.xs, color: colors.error }}>{appError['__fresh__']}</Text>
+            ) : (
+              <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+            )
+          }
+        >
+          <Text style={[styles.settingLabel, { color: colors.primary }]}>
+            {t('settings.installGithubApp')}
+          </Text>
+        </GroupRow>
       </Group>
 
       <Group title={t('settings.repositories')}>
